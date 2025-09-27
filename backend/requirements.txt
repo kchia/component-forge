@@ -1,0 +1,50 @@
+alembic
+asyncpg
+# Core Web Framework
+fastapi
+
+# HTTP Client
+httpx
+
+# AI Stack (Latest Compatible Versions)
+langchain
+langchain-openai
+openai
+
+# Monitoring
+prometheus-client
+pydantic
+pydantic-settings
+
+# Document Processing
+pypdf
+
+# Testing
+pytest
+pytest-asyncio
+pytest-cov
+
+# Environment & Config
+python-dotenv
+
+# Utils
+pyyaml
+
+# Vector Store
+qdrant-client
+
+# Cache
+redis
+
+# Text Processing
+sentence-transformers
+
+# Database
+sqlalchemy
+
+# Server-Sent Events
+sse-starlette
+
+# Document Processing
+unstructured[pdf]
+uvicorn[standard]
