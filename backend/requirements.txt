@@ -41,6 +41,7 @@ sentence-transformers
 
 # Database
 sqlalchemy
+psycopg2-binary
 
 # Server-Sent Events
 sse-starlette
@@ -48,3 +49,12 @@ sse-starlette
 # Document Processing
 unstructured[pdf]
 uvicorn[standard]
+
+# Jupyter and Data Science
+jupyter
+ipykernel
+matplotlib
+pandas
+seaborn
+plotly
+notebook
