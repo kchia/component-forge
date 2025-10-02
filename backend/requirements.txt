@@ -9,6 +9,8 @@ httpx
 # AI Stack (Latest Compatible Versions)
 langchain
 langchain-openai
+langgraph
+langsmith
 openai
 
 # Monitoring
@@ -18,6 +20,9 @@ pydantic-settings
 
 # Document Processing
 pypdf
+
+# Image Processing
+Pillow
 
 # Testing
 pytest
