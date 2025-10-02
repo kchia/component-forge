@@ -23,6 +23,7 @@ backend/data/cache/*
 !.env.example
 !.env.*.example
 *.local
+!.env.local.example
 *.secret
 *.key
 *.pem
