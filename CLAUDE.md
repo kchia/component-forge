@@ -46,16 +46,23 @@ cd app && npm run test:e2e
 ### Frontend (`/app`)
 
 - **Next.js 15.5.4** with App Router and TypeScript
-- **Auth.js v5** for authentication
-- **Tailwind CSS v4** for styling
+- **shadcn/ui** with Radix UI primitives for component library
+- **Tailwind CSS v4** for styling with CSS variables
+- **Zustand** for client state management
+- **TanStack Query** for server state and caching
+- **axe-core/react** for accessibility testing
 - **Playwright** for E2E testing
+- **Auth.js v5** for authentication
 - Runs on port 3000
 
 ### Backend (`/backend`)
 
 - **FastAPI** for high-performance API
-- **LangChain/LangGraph** for AI workflows
+- **LangChain/LangGraph** for AI workflows and multi-agent orchestration
+- **LangSmith** for AI observability and monitoring
+- **Pillow** for image processing and screenshot analysis
 - **SQLAlchemy** with async PostgreSQL
+- **Qdrant client** for vector database operations
 - **Prometheus** metrics collection
 - Runs on port 8000
 
@@ -86,8 +93,11 @@ Copy `.env.example` files and configure:
 - AI: OpenAI, LangChain, LangGraph, LangSmith
 - Vector: Qdrant, sentence-transformers
 - Database: PostgreSQL with asyncpg, SQLAlchemy, Alembic
+- UI: shadcn/ui, Radix UI, Tailwind CSS v4, Lucide React icons
+- State: Zustand (client), TanStack Query (server), React Hook Form
+- Testing: Playwright (E2E), axe-core (a11y), pytest (backend)
 - Auth: Next-auth v5 with Auth.js core
-- Testing: Playwright (E2E), pytest (backend)
+- Image: Pillow (Python), GPT-4V for vision processing
 
 ## Code Style & Patterns
 
@@ -97,7 +107,8 @@ Copy `.env.example` files and configure:
 - Prefer server components over client components
 - Use TypeScript strict mode with proper type definitions
 - Follow Next.js 15.5.4 conventions
-- Use Tailwind CSS v4 with semantic class composition
+- Use Tailwind CSS v4 with semantic class composition and CSS variables
+- Use shadcn/ui components as base, extend with Radix UI primitives
 - Implement proper error boundaries with fallback UI
 - Use React Server Components for data fetching when possible
 - Implement proper loading states and Suspense boundaries
@@ -105,6 +116,10 @@ Copy `.env.example` files and configure:
 - Use proper TypeScript generics for reusable components
 - Implement proper form validation with Zod schemas
 - Structure components with clear separation of concerns
+- Use Zustand for client state with proper store patterns
+- Use TanStack Query for server state, caching, and mutations
+- Implement accessibility testing with axe-core in development
+- Use Lucide React for consistent iconography
 
 ### Backend (FastAPI/Python)
 
@@ -135,6 +150,8 @@ Copy `.env.example` files and configure:
 ### AI/ML Patterns (LangChain/LangGraph)
 
 - Structure LangChain workflows as composable functions
+- Use LangGraph for multi-agent orchestration and state management
+- Use LangSmith for comprehensive AI observability and tracing
 - Use proper error handling for AI model calls with retries
 - Implement streaming responses for long-running AI operations
 - Use proper vector search patterns with Qdrant
@@ -144,6 +161,9 @@ Copy `.env.example` files and configure:
 - Implement proper prompt templates and versioning
 - Handle AI model failures gracefully with fallbacks
 - Follow LangGraph patterns for complex AI workflows
+- Use Pillow for image preprocessing before vision model calls
+- Implement confidence scoring for AI outputs
+- Use proper agent state management patterns
 
 ### Security Patterns
 
@@ -170,6 +190,10 @@ Copy `.env.example` files and configure:
 8. **IMPLEMENT** proper error handling and logging
 9. **FOLLOW** the existing API patterns in `/backend/src/api/`
 10. **USE** the existing component patterns in `/app/src/components/`
+11. **USE** shadcn/ui components as the primary UI building blocks
+12. **IMPLEMENT** proper accessibility with axe-core testing
+13. **USE** Zustand for client state, TanStack Query for server state
+14. **USE** LangSmith for all AI operation monitoring and debugging
 
 ## Common Anti-Patterns to Avoid
 

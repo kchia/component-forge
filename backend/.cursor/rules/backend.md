@@ -31,6 +31,8 @@
 ### AI/ML Patterns (LangChain/LangGraph)
 
 - Structure LangChain workflows as composable functions
+- Use LangGraph for multi-agent orchestration and state management
+- Use LangSmith for comprehensive AI observability and tracing
 - Use proper error handling for AI model calls with retries
 - Implement streaming responses for long-running AI operations
 - Use proper vector search patterns with Qdrant
@@ -40,6 +42,9 @@
 - Implement proper prompt templates and versioning
 - Handle AI model failures gracefully with fallbacks
 - Follow LangGraph patterns for complex AI workflows
+- Use Pillow for image preprocessing before vision model calls
+- Implement confidence scoring for AI outputs
+- Use proper agent state management patterns
 
 ### Security Patterns
 
