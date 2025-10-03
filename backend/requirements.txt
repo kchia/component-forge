@@ -39,10 +39,13 @@ pyyaml
 qdrant-client
 
 # Cache
-redis
+redis[asyncio]>=5.0.0
 
 # Text Processing
 sentence-transformers
+
+# Epic 3 - Pattern Retrieval
+rank-bm25>=0.2.2
 
 # Database
 sqlalchemy
@@ -50,6 +53,12 @@ psycopg2-binary
 
 # Server-Sent Events
 sse-starlette
+
+# Epic 6 - Production Infrastructure
+boto3>=1.28.0
+
+# Epic 8 - Regeneration
+celery[redis]>=5.3.0
 
 # Document Processing
 unstructured[pdf]
