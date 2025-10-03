@@ -1,4 +1,6 @@
 # Data & AI Models - NEVER commit
+# Note: This ignores runtime/generated data directories
+# Allowed: fixtures/, patterns/ directories, .gitkeep, and README.md
 backend/data/documents/*
 backend/data/embeddings/*
 backend/data/evaluations/*
@@ -92,9 +94,8 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 .pnpm-debug.log*
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
+# Lock files SHOULD be committed for reproducible builds
+# package-lock.json, yarn.lock, pnpm-lock.yaml are intentionally NOT ignored
 .next/
 out/
 dist/
@@ -251,6 +252,7 @@ cache/
 # Jupyter & Research
 .ipynb_checkpoints/
 *.ipynb
+!notebooks/*.ipynb
 !docs/*.ipynb
 !examples/*.ipynb
 .jupyter/
@@ -279,6 +281,8 @@ heapdump.*
 *.dmp
 
 # Package managers
+# Lock files for package managers NOT used in this project
+# Note: npm package-lock.json should be committed (removed from ignore list)
 Pipfile.lock
 poetry.lock
 pdm.lock
