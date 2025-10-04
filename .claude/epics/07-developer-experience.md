@@ -42,6 +42,151 @@ Build excellent developer experience with comprehensive API documentation, CLI t
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [dashboard-page.html](../wireframes/dashboard-page.html)
+
+![Dashboard Page - Developer Experience](../wireframes/screenshots/05-dashboard-desktop.png)
+
+### Key UI Elements (Developer Experience Focus)
+
+**Quick Actions** (Top section)
+- "Generate New Component" → CLI or Web UI entry point
+- "View Documentation" → Task 1: OpenAPI/Swagger Documentation
+- "Download CLI" → Task 2: CLI Tool Development
+- "Browse Components" → Component library
+- "Run Tutorial" → Task 5: Tutorials & Guides
+
+**Recent Components** (Card grid)
+- Component thumbnails with preview
+- Click to open Component Preview → Task 3: Component Preview System
+- Component metadata (type, created date, status)
+- Quick actions: Download, Regenerate, Share
+
+**CLI Integration Status** → Task 2: CLI Tool Development
+- CLI version: 1.0.0
+- Installation command: `npm install -g componentforge`
+- Configuration status: ✓ Configured
+- Recent CLI commands:
+  - `componentforge generate <url>` (success)
+  - `componentforge validate <file>` (success)
+  - `componentforge list` (success)
+- CLI usage stats: 45 commands this week
+
+**API Access** → Task 1: OpenAPI/Swagger Documentation
+- Swagger UI link: `/docs`
+- ReDoc link: `/redoc`
+- OpenAPI spec download (JSON/YAML)
+- API key management
+- Rate limit status: 234 / 1000 requests today
+
+**SDK Downloads** → Task 6: API Client SDK
+- TypeScript SDK: `npm install @componentforge/sdk`
+- Python SDK: `pip install componentforge-sdk`
+- Usage examples:
+  ```typescript
+  const client = new ComponentForgeClient({...});
+  const result = await client.generateComponent({...});
+  ```
+
+**Documentation Center** → Task 5: Tutorials & Guides, Task 7: Troubleshooting
+- Getting Started (5 min tutorial)
+- Custom Tokens & Requirements
+- CI/CD Integration
+- Troubleshooting Guide
+- API Reference
+- Best Practices
+- Video Walkthroughs → Task 8: Video Walkthroughs
+
+**Local Development Mode** → Task 4: Local Development Mode
+- Status: Active (DEV_MODE=local)
+- Mock API enabled ✓
+- Local pattern library: 10 components
+- Response time: <100ms
+- No external API calls required
+- Toggle: Switch to production mode
+
+**Component Preview Features** → Task 3: Component Preview System
+- Interactive preview with prop controls
+- Hot reload status: Active ✓
+- Viewport controls (mobile, tablet, desktop)
+- Dark/light mode toggle
+- Accessibility info panel
+- Share preview URL
+- Copy code snippet
+
+**Documentation Search**
+- Search bar for docs, tutorials, troubleshooting
+- Popular searches:
+  - "Figma authentication"
+  - "Token customization"
+  - "CI/CD setup"
+  - "Error codes"
+
+**Troubleshooting Quick Links** → Task 7: Troubleshooting Guides
+- Common Issues (90% resolution rate target)
+  - "Figma authentication failed" → Solution steps
+  - "Generation timeout" → Performance tips
+  - "Token extraction failed" → Retry options
+- Error codes reference
+- Support contact: Discord, Email
+
+**Video Tutorials** → Task 8: Video Walkthroughs
+- Getting Started (5 min) [▶ Play]
+- Figma Integration (3 min) [▶ Play]
+- Token Customization (4 min) [▶ Play]
+- CI/CD Integration (6 min) [▶ Play]
+- Advanced Features (8 min) [▶ Play]
+- All videos with closed captions
+- Interactive demos embedded
+
+**Developer Resources**
+- GitHub repository link
+- Discord community
+- Changelog & release notes
+- Contributing guide
+- Example projects
+
+**System Status**
+- API status: Operational ✓
+- Documentation site: Online ✓
+- CLI update available: No
+- Support: Available 24/7
+
+### User Flow (Developer Onboarding)
+1. New user visits dashboard
+2. Clicks "Getting Started" tutorial
+3. Watches 5-minute video walkthrough
+4. Installs CLI: `npm install -g componentforge`
+5. Runs first command: `componentforge generate <url>`
+6. Views component in preview system
+7. Reads API documentation at `/docs`
+8. Installs SDK for programmatic access
+9. Explores troubleshooting guide for issues
+10. Joins Discord community for support
+
+**DX Metrics Display:**
+- CLI adoption: 50% of users
+- Tutorial completion: 80%
+- Documentation coverage: 100% endpoints
+- Support tickets: <10% of users
+
+**Quick Actions Flow:**
+- "Generate New" → Opens generation wizard
+- "View Docs" → `/docs` Swagger UI
+- "Download CLI" → Installation instructions
+- "Browse Components" → Component library
+- "Run Tutorial" → Interactive tutorial picker
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/dashboard-page.html
+```
+
+---
+
 ## Tasks
 
 ### Task 1: OpenAPI/Swagger Documentation

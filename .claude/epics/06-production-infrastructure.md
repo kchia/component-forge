@@ -3,23 +3,25 @@
 **Status**: Not Started
 **Priority**: High
 **Epic Owner**: Backend/DevOps Team
-**Estimated Tasks**: 10
+**Estimated Tasks**: 6 *(Simplified from 10 - deferred L0/L2/L3 caching to post-MVP)*
 **Depends On**: Epic 0 (Project Setup), Epic 4 (Code Generation)
 
 ---
 
 ## Overview
 
-Build production-grade infrastructure with multi-layer caching (L0-L4), distributed tracing with LangSmith, Prometheus metrics collection, S3 storage for artifacts, PostgreSQL metadata tracking, and comprehensive error handling with fallbacks.
+Build production-grade infrastructure with **simplified two-layer caching** (L1 exact + L4 baseline), distributed tracing with LangSmith, Prometheus metrics collection, S3 storage for artifacts, PostgreSQL metadata tracking, and comprehensive error handling with fallbacks.
+
+**Deferred to Post-MVP**: L0 Figma cache, L2 semantic cache, L3 pattern cache (add when usage data proves need)
 
 ---
 
 ## Goals
 
-1. Implement L0 Figma cache (5 min TTL, ~0.1s latency)
+1. ~~Implement L0 Figma cache (5 min TTL, ~0.1s latency)~~ **→ DEFERRED POST-MVP**
 2. Implement L1 exact cache (hash-based, ~0.5s latency)
-3. Implement L2 semantic cache (≥0.92 similarity, ~0.8s latency)
-4. Implement L3 pattern cache (pre-computed, ~5s latency)
+3. ~~Implement L2 semantic cache (≥0.92 similarity, ~0.8s latency)~~ **→ DEFERRED POST-MVP**
+4. ~~Implement L3 pattern cache (pre-computed, ~5s latency)~~ **→ DEFERRED POST-MVP**
 5. Track L4 full generation metrics (baseline performance)
 6. Integrate LangSmith for distributed tracing across all agents
 7. Collect Prometheus metrics (latency, cost, cache hits, errors)
@@ -31,12 +33,12 @@ Build production-grade infrastructure with multi-layer caching (L0-L4), distribu
 
 ## Success Criteria
 
-- ✅ L0 cache hit latency ~0.1s (Figma responses)
+- ~~✅ L0 cache hit latency ~0.1s (Figma responses)~~ **→ DEFERRED**
 - ✅ L1 cache hit latency ~0.5s (exact matches)
-- ✅ L2 cache hit latency ~0.8s (semantic matches)
-- ✅ L3 cache hit latency ~5s (pattern adaptation)
+- ~~✅ L2 cache hit latency ~0.8s (semantic matches)~~ **→ DEFERRED**
+- ~~✅ L3 cache hit latency ~5s (pattern adaptation)~~ **→ DEFERRED**
 - ✅ L4 baseline: p50 ≤60s for Button/Card
-- ✅ Cache hit rate ≥73% after 100 generations
+- ✅ L1 cache hit rate ≥20% after 50 generations (MVP target)
 - ✅ LangSmith traces show all agent steps with timings
 - ✅ Prometheus metrics exported on `/metrics` endpoint
 - ✅ Artifacts stored in S3 with 90-day retention
@@ -46,13 +48,154 @@ Build production-grade infrastructure with multi-layer caching (L0-L4), distribu
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [dashboard-page.html](../wireframes/dashboard-page.html)
+
+![Dashboard Page - Infrastructure Metrics](../wireframes/screenshots/05-dashboard-desktop.png)
+
+### Key UI Elements (Infrastructure Focus)
+
+**System Health** (Top banner)
+- Overall system status: Healthy ✓
+- Active services: 8/8 online
+- Error rate: 0.2% (target: <1%) → Task 10: Error Handling & Fallbacks
+- Uptime: 99.8%
+
+**Cache Performance Dashboard** (Primary section) - **Simplified MVP**
+
+**L1 Exact Cache** → Task 1: L1 Exact Cache Implementation
+- Hit rate: 22% (target: ≥20%)
+- Average latency: 0.4s (target: ~0.5s)
+- Exact matches: 89
+- Cache entries: 412
+- Cost savings: $340 (vs no caching)
+
+**L4 Full Generation (Baseline)** → Task 2: L4 Full Generation Metrics
+- Baseline latency: p50=58s, p95=85s (target: p50≤60s, p95≤90s)
+- Full generations: 89
+- Success rate: 98.9%
+- Average cost: $0.42/generation
+
+**Overall Cache Metrics (MVP)**
+- L1 hit rate: 22% ✓ (target: ≥20%)
+- Average response time: 48s (22% cached at 0.5s, 78% full gen at 60s)
+- Total generations: 114 (25 cached, 89 full)
+
+**Post-MVP Expansion (Deferred):**
+- L0 Figma Cache → Add when Figma API costs become significant
+- L2 Semantic Cache → Add when exact cache hit rate plateaus <40%
+- L3 Pattern Cache → Add when have 50+ patterns and usage data
+
+**LangSmith Tracing** → Task 3: LangSmith Distributed Tracing
+- Active traces: 12
+- Trace links to LangSmith dashboard
+- Average trace duration: 52s
+- Agent step breakdown visualization
+- Cost per operation tracking
+
+**Prometheus Metrics** → Task 4: Prometheus Metrics Collection
+- `/metrics` endpoint status: Active ✓
+- Metrics exported:
+  - Request rate: 45 req/sec
+  - Response latency: p50=48s, p95=75s
+  - Error rate: 0.2%
+  - L1 cache hit rate: 22%
+  - API costs: $0.42/generation
+  - Token usage: 2.4M tokens/day
+- Grafana dashboard link
+- Alert status: 0 active alerts
+
+**Storage & Database** → Task 5: S3 Artifact Storage + PostgreSQL Metadata
+
+**S3 Artifact Storage**
+- Components stored: 114
+- Total size: 45 MB
+- Lifecycle policy: 90-day retention ✓
+- Versioning: Enabled ✓
+- Recent uploads: 12 today
+
+**PostgreSQL Metadata**
+- Generations tracked: 114
+- Average cost: $0.38/generation
+- Database size: 28 MB
+- Active connections: 8/100
+- Query performance: avg 12ms
+
+**Error Handling & Circuit Breakers** → Task 6
+- Circuit breaker states:
+  - OpenAI API: CLOSED (healthy)
+  - Figma API: CLOSED (healthy)
+  - Qdrant: CLOSED (healthy)
+  - Redis: CLOSED (healthy)
+- Retry attempts: 23 (all successful)
+- Fallback activations: 2 (Redis unavailable)
+- Failed requests: 3 (0.2% rate)
+
+**System Resources**
+- CPU usage: 45%
+- Memory usage: 6.2 GB / 16 GB
+- Redis memory: 512 MB / 2 GB
+- PostgreSQL connections: 12 / 100
+
+**Recent Activity Log**
+- Trace links with component type, cache layer, latency
+- Error logs with severity and resolution status
+- Cost tracking per operation
+
+### User Flow (Infrastructure Monitoring)
+1. Admin views dashboard to monitor system health
+2. Cache performance reviewed (L1 exact cache + L4 baseline)
+3. LangSmith traces clicked to debug slow operations
+4. Prometheus metrics checked for anomalies
+5. S3 storage monitored for capacity
+6. Circuit breaker status verified for external services
+7. Error logs reviewed and resolved
+8. Alerts configured for threshold breaches
+9. Post-MVP: Add L0/L2/L3 caching when data shows need
+
+**Performance Targets Display (MVP):**
+- L1 cache hit rate: 22% / ≥20% ✓
+- Average latency: 48s (with 22% cache hits)
+- Error rate: 0.2% / <1% ✓
+- Cost per generation: $0.38 (tracking only)
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/dashboard-page.html
+```
+
+---
+
 ## Tasks
 
-### Task 1: L0 Figma Cache Implementation
+**MVP Scope: 6 Tasks** (Deferred: L0/L2/L3 caching)
+
+### ~~Task 1: L0 Figma Cache Implementation~~ **→ DEFERRED POST-MVP**
+
+**Rationale for Deferral**: Add when Figma API costs become significant (>$50/month) or when hit data shows caching would provide meaningful improvement.
+
+**Future Implementation Notes:**
+- Cache Figma API responses in Redis with 5 min TTL
+- Target ~0.1s latency on cache hits
+- See deferred task documentation for full implementation details
+
+---
+
+### Task 1: L1 Exact Cache Implementation *(Renumbered from Task 2)*
 **Acceptance Criteria**:
-- [ ] Cache Figma API responses in Redis
-- [ ] TTL: 5 minutes (balance freshness vs cost)
-- [ ] Cache key: `figma:file:{file_key}:{endpoint}`
+- [ ] Cache complete generation results in Redis
+- [ ] Cache key: SHA-256 hash of:
+  - Figma file key (or screenshot hash)
+  - Tokens JSON
+  - Requirements JSON
+- [ ] Cache hit returns in ~0.5s
+- [ ] No TTL (invalidate on token/requirement change)
+- [ ] Return cached component code and artifacts
+- [ ] Track cache hit rate
+- [ ] Metrics: hit rate, latency, bytes saved
 - [ ] Support endpoints:
   - `/v1/files/:key` (file structure)
   - `/v1/files/:key/styles` (styles)

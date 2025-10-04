@@ -43,6 +43,53 @@ Build a robust design token extraction system that processes both Figma files an
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [token-extraction-page.html](../wireframes/token-extraction-page.html)
+
+![Token Extraction Page](../wireframes/screenshots/01-token-extraction-desktop.png)
+
+### Key UI Elements
+
+**Screenshot Tab** (Default view)
+- Drag-and-drop upload zone → Task 1: Screenshot Upload & Validation
+- Progress indicator with stages → Task 2: GPT-4V Extraction
+- Confidence badges (color-coded) → Task 6: Confidence Scoring & Fallback
+- Token display sections (Colors, Typography, Spacing) → Tasks 2, 6
+
+**Figma Tab**
+- PAT input field with validation → Task 3: Figma PAT Authentication
+- File URL input → Task 4: Figma File & Styles Extraction
+- Cache indicator (5 min TTL) → Task 5: Figma Response Caching
+
+**Token Editor**
+- Inline editing controls → Task 7: Manual Token Override UI
+- Color pickers, font selectors, number inputs → Task 7
+- Export buttons (JSON/CSS) → Task 8: Token Export
+
+**States Shown**
+- Upload zone (hover, drag-over states)
+- Extraction progress (loading with percentage)
+- Error messages → Task 9: Error Handling & Rate Limiting
+- Confidence badges (✅ ≥0.9, ⚠️ 0.7-0.9, 🔴 <0.7)
+
+### User Flow
+1. User selects Screenshot or Figma tab
+2. Uploads design asset or enters Figma credentials
+3. System extracts tokens (shows real-time progress)
+4. Displays extracted tokens with confidence scores
+5. User reviews and manually edits if needed
+6. Exports tokens as JSON or CSS variables
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/token-extraction-page.html
+```
+
+---
+
 ## User Stories
 
 ### Story 1.1: Screenshot Token Extraction

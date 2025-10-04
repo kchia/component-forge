@@ -45,6 +45,126 @@ Build automated quality validation system that ensures every generated component
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [component-preview-page.html](../wireframes/component-preview-page.html) *(shares same page with Epic 4, validation section)*
+
+![Component Preview Page - Validation](../wireframes/screenshots/04-component-preview-desktop.png)
+
+### Key UI Elements
+
+**Validation Progress** (Runs after generation)
+- Progress bar with validation stages
+  - TypeScript Compilation → Task 1
+  - ESLint & Prettier → Task 2
+  - axe-core A11y Test → Task 3
+  - Keyboard Navigation → Task 4
+  - Focus Indicators → Task 5
+  - Color Contrast → Task 6
+  - Token Adherence → Task 7
+- Auto-fix indicator → Task 8: Auto-Fix & Retry Logic
+- Elapsed time (target: <10s)
+
+**Quality Scorecard** (Top summary)
+- Overall status: PASS / FAIL
+- Critical checks:
+  - ✓ TypeScript: Compiled successfully
+  - ✓ ESLint: 0 errors, 2 warnings
+  - ✓ Accessibility: 0 critical/serious violations
+  - ✓ Token Adherence: 94%
+- Auto-fixes applied: 3 issues resolved
+
+**Validation Results** (Tabbed sections)
+
+**TypeScript Tab** → Task 1: TypeScript Compilation Check
+- Compilation status
+- Errors/warnings with line numbers
+- Type coverage report
+- Auto-fixes applied (unused imports removed)
+
+**Code Quality Tab** → Task 2: ESLint & Prettier Validation
+- ESLint results by severity
+- Prettier formatting status
+- Auto-fixed issues list
+
+**Accessibility Tab** → Task 3, 4, 5, 6
+- axe-core audit summary → Task 3: axe-core Accessibility Testing
+  - 0 critical violations ✓
+  - 0 serious violations ✓
+  - 2 moderate issues (warnings only)
+- Keyboard navigation results → Task 4: Keyboard Navigation Testing
+  - Tab order visualization
+  - Enter/Space activation test
+- Focus indicators → Task 5: Focus Indicator Validation
+  - Contrast ratio: 3.2:1 ✓
+  - Visibility check passed
+- Color contrast → Task 6: Color Contrast Validation
+  - All text: 4.8:1 (WCAG AA ✓)
+  - UI components: 3.5:1 ✓
+  - Violations: None
+
+**Token Adherence Tab** → Task 7: Token Adherence Meter
+- Overall score: 94% ✓ (target: ≥90%)
+- By category:
+  - Colors: 96% (23/24 matches)
+  - Typography: 95% (19/20 matches)
+  - Spacing: 91% (21/23 matches)
+- Violations list with expected vs actual
+- ΔE tolerance visualization (≤2.0)
+
+**Quality Report** → Task 9: Quality Report Generation
+- Downloadable HTML/JSON report
+- All metrics and details
+- Timestamp and component metadata
+- Recommendations for improvements
+
+**Auto-Fix Summary** → Task 8: Auto-Fix & Retry Logic
+- Issues automatically fixed: 3
+  - Removed unused import (React)
+  - Added aria-label to icon button
+  - Formatted with Prettier
+- Retry validation: Passed ✓
+- Manual fixes needed: 0
+
+**Action Buttons**
+- "Download Report" (HTML/JSON)
+- "Accept & Export Component"
+- "Fix Issues Manually" (if validation failed)
+- "Regenerate Component" (if major issues)
+
+### User Flow
+1. Validation starts automatically after code generation
+2. Progress bar shows real-time validation stages
+3. Auto-fix attempts to resolve common issues
+4. Validation retries after auto-fixes
+5. Quality scorecard displays overall status
+6. User reviews detailed results by category
+7. User downloads quality report
+8. User accepts component (if PASS) or fixes issues (if FAIL)
+
+**Validation Requirements:**
+- **Blockers** (must pass):
+  - TypeScript compilation
+  - 0 critical/serious a11y violations
+  - Token adherence ≥90%
+- **Warnings** (allow but flag):
+  - ESLint warnings
+  - Moderate a11y issues
+  - Minor token deviations
+
+**Performance Display:**
+- Validation latency (target: <10s)
+- Auto-fix success rate (target: ≥80%)
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/component-preview-page.html
+```
+
+---
+
 ## Tasks
 
 ### Task 1: TypeScript Compilation Check

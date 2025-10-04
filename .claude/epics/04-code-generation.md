@@ -47,6 +47,94 @@ Build the code generation system that adapts retrieved shadcn/ui patterns to mat
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [component-preview-page.html](../wireframes/component-preview-page.html)
+
+![Component Preview Page](../wireframes/screenshots/04-component-preview-desktop.png)
+
+### Key UI Elements
+
+**Generation Progress** (Top banner - during generation)
+- Progress bar with stages → Tasks 1-10 pipeline visualization
+  - AST Parsing → Task 1
+  - Token Injection → Task 2
+  - Tailwind Generation → Task 3
+  - Requirements Implementation → Task 4
+  - A11y Enhancement → Task 5
+  - Type Generation → Task 6
+  - Storybook Generation → Task 7
+  - Provenance Headers → Task 8
+  - Import Resolution → Task 9
+  - Code Assembly → Task 10
+- Current stage indicator
+- Elapsed time display (target: ≤60s)
+
+**Component Preview** (Left panel)
+- Live component render with Tailwind CSS
+- Interactive variant selector → Task 4: Requirements Implementation
+- State toggles (hover, focus, disabled, loading)
+- Viewport size controls (mobile, tablet, desktop)
+- Dark/light mode toggle
+
+**Code Viewer** (Right panel)
+- Tabbed interface:
+  - **Component.tsx** → Main component code
+    - Provenance header → Task 8
+    - Type definitions → Task 6
+    - CSS variables → Task 2: Token Injection
+    - Component implementation → Task 4
+  - **Component.stories.tsx** → Task 7: Storybook Generation
+  - **tokens.json** → Injected tokens from Epic 1
+  - **requirements.json** → Approved requirements from Epic 2
+- Syntax highlighting
+- Copy button per tab
+- Download all button
+
+**Generation Details** (Expandable section)
+- Pattern used (from Epic 3)
+- Tokens applied → Task 2: Design Token Injection
+- Requirements implemented → Task 4: Requirements Implementation
+- ARIA attributes added → Task 5: ARIA Attributes & Semantic HTML
+- Import statements → Task 9: Import Resolution
+- TypeScript compilation status → Task 6: TypeScript Type Safety
+
+**Quality Indicators** (Right sidebar - preview of Epic 5)
+- TypeScript: ✓ Compiled successfully
+- ESLint: ✓ No errors
+- Prettier: ✓ Formatted
+- Accessibility: Pending validation (→ Epic 5)
+- Token Adherence: Calculating... (→ Epic 5)
+
+**Action Buttons**
+- "Run Quality Validation" (proceed to Epic 5)
+- "Regenerate with Changes"
+- "Export Component"
+- "Add to Project"
+
+### User Flow
+1. Generation starts with pattern, tokens, and requirements
+2. Progress bar shows real-time pipeline stages
+3. Component preview updates as generation completes
+4. Code viewer displays generated files with syntax highlighting
+5. User inspects component preview and code
+6. User proceeds to quality validation (Epic 5)
+
+**Performance Metrics:**
+- Generation latency (p50 target: ≤60s, p95: ≤90s)
+- Tokens injected count
+- Requirements implemented count
+- Lines of code generated
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/component-preview-page.html
+```
+
+---
+
 ## Tasks
 
 ### Task 1: AST Parsing & Analysis

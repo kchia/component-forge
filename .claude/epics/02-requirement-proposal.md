@@ -39,6 +39,69 @@ Build an AI-powered system that analyzes screenshots and Figma frames to propose
 
 ---
 
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [requirements-review-page.html](../wireframes/requirements-review-page.html)
+
+![Requirements Review Page](../wireframes/screenshots/02-requirements-review-desktop.png)
+
+### Key UI Elements
+
+**AI Analysis Summary** (Top banner)
+- Component type detection with confidence → Task 1: Component Type Inference
+- Completion time display (target ≤15s) → Performance monitoring
+- Analysis context (tokens + visual analysis) → Input data shown
+
+**Bulk Actions Toolbar**
+- Accept All button → Quick approval workflow
+- Review Low Confidence filter → Task 6: Approval Panel UI
+- Add Custom Requirement → Task 7: Requirement Editing
+
+**Requirement Cards** (Grouped by category)
+- **Props Section** → Task 2: Props Requirement Proposal
+  - variant, size, disabled props shown with values
+  - Confidence scores per requirement
+  - Rationales with visual cues cited
+
+- **Events Section** → Task 3: Events Requirement Proposal
+  - onClick, onHover event handlers
+  - Required vs optional indicators
+
+- **States Section** → Task 4: States/Variants Requirement Proposal
+  - hover, focus states detected
+
+- **Accessibility Section** → Task 5: Validation & Accessibility Proposal
+  - aria-label, semantic HTML, keyboard navigation
+
+**Actions Per Requirement**
+- Accept button (green checkmark)
+- Edit button (opens modal) → Task 7
+- Remove button (red X)
+
+**Summary Footer**
+- Total requirements count
+- Acceptance status breakdown
+- Target metrics display (≥80% precision, ≥70% recall)
+- Navigation buttons to previous/next steps
+
+### User Flow
+1. AI analyzes screenshot/Figma + tokens → generates requirements
+2. User reviews proposed requirements by category
+3. High-confidence items (≥0.9) highlighted for quick accept
+4. Low-confidence items (0.7-0.9) flagged for review
+5. User can edit values, names, or remove requirements
+6. Export approved requirements.json → Task 8
+7. Continue to Pattern Matching (Epic 3)
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/requirements-review-page.html
+```
+
+---
+
 ## Tasks
 
 ### Task 1: Component Type Inference

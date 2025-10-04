@@ -3,46 +3,127 @@
 **Status**: Not Started
 **Priority**: High
 **Epic Owner**: AI/ML Team
-**Estimated Tasks**: 10
+**Estimated Tasks**: 5 *(Simplified from 10 - deferred MMR/RRF/Cross-encoder to post-MVP)*
 **Depends On**: Epic 0 (Project Setup), Epic 2 (Requirement Proposal)
 
 ---
 
 ## Overview
 
-Build an ensemble retrieval system that combines BM25 (lexical), semantic search, and diversity algorithms to find the best shadcn/ui pattern matches. The system uses cross-encoder reranking and returns top-3 patterns with scores and explanations.
+Build a **simplified dual-method retrieval system** combining BM25 (lexical) and semantic search to find the best shadcn/ui pattern matches. Returns top-3 patterns with scores and explanations.
+
+**Deferred to Post-MVP**: MMR diversity search, RRF fusion, cross-encoder reranking (add when evaluation data shows quality gaps)
 
 ---
 
-## Goals
+## Goals (MVP Simplified)
 
-1. Implement BM25 lexical search for keyword matching
-2. Implement semantic search using text-embedding-3-small
-3. Add diversity search (MMR) to avoid redundant results
-4. Fuse rankings with Reciprocal Rank Fusion (RRF)
-5. Rerank with cross-encoder for accuracy
-6. Return top-3 patterns with confidence scores and explanations
-7. Curate pattern library with 10+ shadcn/ui components
-8. Achieve MRR ≥0.83 and Hit@3 ≥0.91 on evaluation set
-9. Support ablation studies for retrieval tuning
-10. Provide explainability for pattern selection
+1. Curate pattern library with 10+ shadcn/ui components
+2. Implement BM25 lexical search for keyword matching
+3. Implement semantic search using text-embedding-3-small
+4. Combine rankings with weighted average (BM25: 0.3, Semantic: 0.7)
+5. Return top-3 patterns with confidence scores and explanations
+6. Build evaluation framework to measure quality
+7. Achieve MRR ≥0.75 and Hit@3 ≥0.85 on evaluation set *(relaxed MVP targets)*
+8. Provide explainability for pattern selection
+
+**Deferred:**
+- ~~Add diversity search (MMR) to avoid redundant results~~ → Post-MVP
+- ~~Fuse rankings with Reciprocal Rank Fusion (RRF)~~ → Post-MVP
+- ~~Rerank with cross-encoder for accuracy~~ → Post-MVP
+- ~~Support ablation studies for retrieval tuning~~ → Post-MVP (can add later with eval framework)
 
 ---
 
-## Success Criteria
+## Success Criteria (MVP)
 
+- ✅ Pattern library contains ≥10 curated shadcn/ui patterns
 - ✅ BM25 search returns relevant patterns based on keywords
 - ✅ Semantic search using text-embedding-3-small (1536 dims)
-- ✅ Diversity search (MMR) reduces redundant results
-- ✅ RRF fusion combines all retrieval methods effectively
-- ✅ Cross-encoder reranking improves final ordering
+- ✅ Weighted fusion combines BM25 + semantic effectively
 - ✅ Top-3 patterns returned with confidence scores (0-1)
-- ✅ Pattern library contains ≥10 curated shadcn/ui patterns
-- ✅ MRR ≥0.83 on labeled evaluation set (20+ queries)
-- ✅ Hit@3 ≥0.91 (correct pattern in top-3)
-- ✅ Ablation mode supports testing individual retrievers
+- ✅ MRR ≥0.75 on labeled evaluation set (20+ queries) *(relaxed from 0.83)*
+- ✅ Hit@3 ≥0.85 (correct pattern in top-3) *(relaxed from 0.91)*
 - ✅ Explanations show why patterns were selected
-- ✅ Retrieval latency p50 ≤2s
+- ✅ Retrieval latency p50 ≤1s *(faster without cross-encoder)*
+- ✅ Evaluation framework tracks quality metrics
+
+**Deferred:**
+- ~~✅ Diversity search (MMR) reduces redundant results~~ → Post-MVP
+- ~~✅ RRF fusion combines all retrieval methods~~ → Post-MVP
+- ~~✅ Cross-encoder reranking improves final ordering~~ → Post-MVP
+- ~~✅ Ablation mode supports testing individual retrievers~~ → Post-MVP
+
+---
+
+## Wireframe
+
+### Interactive Prototype
+**View HTML:** [pattern-selection-page.html](../wireframes/pattern-selection-page.html)
+
+![Pattern Selection Page](../wireframes/screenshots/03-pattern-selection-desktop.png)
+
+### Key UI Elements
+
+**Search Analysis Summary** (Top banner)
+- Query construction from requirements → Requirements used as input
+- **Dual retrieval methods active** → Task 2: BM25, Task 3: Semantic Search
+- Total patterns searched display → Pattern library size
+
+**Pattern Cards** (Top-3 results)
+- **Pattern 1 (Highest Confidence)** → Task 4: Weighted Fusion (BM25 + Semantic)
+  - Pattern name and source (shadcn/ui)
+  - Confidence score (0-1 scale)
+  - Ranking explanation → Task 5: Explainability & Confidence Scoring
+  - Match highlights (matching props, variants)
+  - Code preview snippet
+  - Visual preview thumbnail
+
+- **Pattern 2 & 3** → Alternative matches with lower confidence
+  - Similar structure to Pattern 1
+  - Comparison with top pattern
+
+**Retrieval Details** (Expandable section)
+- BM25 score (weight: 0.3) → Task 2: BM25 Lexical Search
+- Semantic score (weight: 0.7) → Task 3: Semantic Search
+- Final weighted score → Task 4: Weighted Fusion
+- Match reason/explanation → Task 5: Explainability
+
+**Pattern Library Info** (Right sidebar)
+- Total patterns available → Task 1: Pattern Library Curation
+- Supported component types
+- Pattern quality metrics (MRR, Hit@3) → Task 6: Evaluation & Metrics
+
+**~~Ablation Testing~~** *(Deferred to Post-MVP)*
+- ~~Toggle individual retrievers~~
+- ~~Compare methods performance~~
+- ~~Hyperparameter controls~~
+
+**Action Buttons**
+- "Select Pattern" (primary action)
+- "Compare Patterns" (open side-by-side view)
+- "View Full Code"
+- "Continue to Generation" (proceed to Epic 4)
+
+### User Flow (Simplified MVP)
+1. Requirements from Epic 2 used to construct retrieval query
+2. Dual retrieval runs (BM25 + Semantic Search)
+3. Weighted fusion combines scores (0.3 BM25 + 0.7 Semantic)
+4. Top-3 patterns returned with explanations
+5. User reviews patterns with confidence scores and match reasons
+6. User selects pattern (typically highest confidence)
+7. Selected pattern sent to Code Generation (Epic 4)
+
+**Performance Display:**
+- Retrieval latency (target: p50 ≤1s) *(faster without cross-encoder)*
+- MRR score (target: ≥0.75) *(relaxed for MVP)*
+- Hit@3 rate (target: ≥0.85) *(relaxed for MVP)*
+
+**Quick Test:**
+```bash
+# View wireframe locally
+open .claude/wireframes/pattern-selection-page.html
+```
 
 ---
 
