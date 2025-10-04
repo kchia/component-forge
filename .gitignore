@@ -57,6 +57,8 @@ eggs/
 # Python lib directories (but not app/src/lib for TypeScript utils)
 lib/
 !app/src/lib/
+backend/lib/
+backend/lib64/
 lib64/
 parts/
 sdist/
