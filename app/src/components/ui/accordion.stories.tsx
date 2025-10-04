@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/nextjs'
 import {
   Accordion,
   AccordionContent,
@@ -41,7 +41,7 @@ export const Single: Story = {
         <AccordionTrigger>What is the purpose of this component?</AccordionTrigger>
         <AccordionContent>
           This accordion component is used to organize content in collapsible sections.
-          It's perfect for FAQs, settings panels, and content organization.
+          It&apos;s perfect for FAQs, settings panels, and content organization.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-2">
@@ -148,7 +148,7 @@ export const DefaultOpen: Story = {
       <AccordionItem value="item-2">
         <AccordionTrigger>Section 2 (Default Open)</AccordionTrigger>
         <AccordionContent>
-          This section is open by default because we set defaultValue="item-2".
+          This section is open by default because we set defaultValue=&quot;item-2&quot;.
         </AccordionContent>
       </AccordionItem>
       <AccordionItem value="item-3">
@@ -320,7 +320,6 @@ export const RequirementsCategories: Story = {
 
 // Accessibility Test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
