@@ -36,12 +36,16 @@ config/secrets.json
 
 # API Keys & Tokens
 *api_key*
-*token*
 *secret*
 *credentials*
 *.json.backup
 auth_token
 session_token
+# Allow token-related source code files
+!**/tokens/
+!*token*.tsx
+!*token*.ts
+!*token*.py
 
 # Python
 __pycache__/
