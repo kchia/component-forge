@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { Input } from './input'
 
 const meta = {
@@ -311,7 +311,6 @@ export const ValidationStates: Story = {
 
 // Accessibility Test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
   render: () => (
     <div className="space-y-4 max-w-2xl">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
@@ -344,7 +343,7 @@ export const AccessibilityTest: Story = {
             aria-describedby="email-description"
           />
           <p id="email-description" className="text-xs text-gray-600">
-            We'll never share your email with anyone else.
+            We&apos;ll never share your email with anyone else.
           </p>
         </div>
         <div className="space-y-2">
