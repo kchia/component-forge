@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { Skeleton, TokenSkeleton, CardSkeleton } from './skeleton'
 
 const meta = {
@@ -213,7 +213,6 @@ export const ComponentsListLoading: Story = {
 
 // Complex Loading Pattern
 export const ComplexLoadingPattern: Story = {
-  name: 'Complex Loading Pattern',
   render: () => (
     <div className="w-[600px] space-y-6">
       <div className="space-y-2">
@@ -278,12 +277,11 @@ export const DarkMode: Story = {
 
 // Accessibility Test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
   render: () => (
     <div className="space-y-4 w-[500px]">
       <h3 className="text-sm font-semibold">Screen Reader Support</h3>
       <p className="text-sm text-muted-foreground">
-        Each skeleton has role="status", aria-busy="true", and screen reader text "Loading..."
+        Each skeleton has role=&quot;status&quot;, aria-busy=&quot;true&quot;, and screen reader text &quot;Loading...&quot;
       </p>
       <div className="space-y-3 border border-border rounded-lg p-6">
         <Skeleton variant="text" />
@@ -293,10 +291,10 @@ export const AccessibilityTest: Story = {
         </div>
       </div>
       <div className="text-xs text-muted-foreground">
-        <p>✓ role="status" for screen readers</p>
-        <p>✓ aria-busy="true" indicates loading state</p>
-        <p>✓ aria-live="polite" for dynamic updates</p>
-        <p>✓ Hidden text "Loading..." for screen readers</p>
+        <p>✓ role=&quot;status&quot; for screen readers</p>
+        <p>✓ aria-busy=&quot;true&quot; indicates loading state</p>
+        <p>✓ aria-live=&quot;polite&quot; for dynamic updates</p>
+        <p>✓ Hidden text &quot;Loading...&quot; for screen readers</p>
       </div>
     </div>
   ),
