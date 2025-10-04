@@ -103,6 +103,50 @@ Copy `.env.example` files and configure:
 
 ### Frontend (Next.js/TypeScript)
 
+#### Component Library Usage (CRITICAL)
+
+**BEFORE creating any new component, ALWAYS:**
+
+1. **Check `.claude/BASE-COMPONENTS.md`** for the complete component library specification
+2. **Search existing components** in `app/src/components/ui/` to see what's already implemented
+3. **Reuse existing components** whenever possible - DO NOT recreate from scratch
+4. **Extend existing components** with composition rather than creating duplicates
+
+**Component Discovery Workflow:**
+```bash
+# Step 1: Check if component exists in base library
+cat .claude/BASE-COMPONENTS.md | grep -i "componentName"
+
+# Step 2: Check if component is already implemented
+ls app/src/components/ui/ | grep -i "componentName"
+
+# Step 3: If exists, import and use it
+import { ComponentName } from "@/components/ui/component-name"
+
+# Step 4: If not exists, install from shadcn/ui
+npx shadcn-ui@latest add component-name
+```
+
+**Available Base Components (P0/P1):**
+- Button (60+ uses) - variants: primary, secondary, ghost, success, warning
+- Card (35+ uses) - variants: outlined, elevated, interactive
+- Badge (25+ uses) - variants: success, warning, error, info, neutral
+- Tabs (2 uses) - for Screenshot vs Figma, Preview/Code/Storybook
+- Progress (8+ uses) - for extraction, generation, metrics
+- Alert/Banner (5 uses) - for status messages
+- Input (5+ uses) - for forms and text entry
+- Code Block (4 uses) - for syntax-highlighted code display
+- Modal/Dialog (2 uses) - for edit modals and reports
+- Accordion (4 uses) - for collapsible sections
+
+**Composite Components:**
+- RequirementCard, PatternCard, MetricCard, ComponentRow, TokenDisplay
+- ProgressStages, EditModal, CodePreviewModal
+
+See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage examples.
+
+#### General Frontend Patterns
+
 - Use App Router patterns (not Pages Router)
 - Prefer server components over client components
 - Use TypeScript strict mode with proper type definitions
@@ -180,22 +224,47 @@ Copy `.env.example` files and configure:
 
 ## Project-Specific Rules
 
-1. **NEVER** suggest using Pages Router - this project uses App Router
-2. **ALWAYS** use TypeScript - no JavaScript suggestions
-3. **PREFER** server components over client components
-4. **USE** the existing auth system (Auth.js v5)
-5. **FOLLOW** the established folder structure
-6. **MAINTAIN** the three-tier architecture (Frontend/Backend/Services)
-7. **USE** Docker Compose for services, not local installations
-8. **IMPLEMENT** proper error handling and logging
-9. **FOLLOW** the existing API patterns in `/backend/src/api/`
-10. **USE** the existing component patterns in `/app/src/components/`
-11. **USE** shadcn/ui components as the primary UI building blocks
-12. **IMPLEMENT** proper accessibility with axe-core testing
-13. **USE** Zustand for client state, TanStack Query for server state
-14. **USE** LangSmith for all AI operation monitoring and debugging
+### Component Development (HIGHEST PRIORITY)
+
+1. **ALWAYS CHECK `.claude/BASE-COMPONENTS.md` FIRST** before creating any UI component
+2. **NEVER RECREATE** components that already exist in the base library
+3. **REUSE AND COMPOSE** existing components instead of building from scratch
+4. **SEARCH `app/src/components/ui/`** to verify component implementation status
+5. **INSTALL from shadcn/ui** if the component is specified but not yet implemented
+6. **FOLLOW** the exact variant specifications from BASE-COMPONENTS.md
+7. **MAINTAIN** consistency with existing component props and API patterns
+
+### Architecture & Stack
+
+8. **NEVER** suggest using Pages Router - this project uses App Router
+9. **ALWAYS** use TypeScript - no JavaScript suggestions
+10. **PREFER** server components over client components
+11. **USE** the existing auth system (Auth.js v5)
+12. **FOLLOW** the established folder structure
+13. **MAINTAIN** the three-tier architecture (Frontend/Backend/Services)
+14. **USE** Docker Compose for services, not local installations
+
+### Patterns & Quality
+
+15. **IMPLEMENT** proper error handling and logging
+16. **FOLLOW** the existing API patterns in `/backend/src/api/`
+17. **USE** the existing component patterns in `/app/src/components/`
+18. **USE** shadcn/ui components as the primary UI building blocks
+19. **IMPLEMENT** proper accessibility with axe-core testing
+20. **USE** Zustand for client state, TanStack Query for server state
+21. **USE** LangSmith for all AI operation monitoring and debugging
 
 ## Common Anti-Patterns to Avoid
+
+### Component Development (CRITICAL)
+
+- **DON'T** create custom Button components when `@/components/ui/button` exists
+- **DON'T** recreate Card, Badge, Input, or other base components from scratch
+- **DON'T** ignore the component specifications in `.claude/BASE-COMPONENTS.md`
+- **DON'T** create inconsistent component variants (use predefined variants)
+- **DON'T** skip checking existing components before implementation
+- **DON'T** duplicate component logic that already exists
+- **DON'T** create "wrapper" components when composition is sufficient
 
 ### Architecture
 

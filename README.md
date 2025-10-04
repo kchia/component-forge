@@ -89,6 +89,7 @@ cp app/.env.local.example app/.env.local
 - **Backend API Docs**: http://localhost:8000/docs
 - **Health Check**: http://localhost:8000/health
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
+- **Storybook**: http://localhost:6006 (see below for setup)
 
 ## 🏗️ AI Pipeline Architecture
 
@@ -166,6 +167,22 @@ make clean
 # Show help
 make help
 ```
+
+### Component Development with Storybook
+
+```bash
+# Start Storybook development server
+cd app && npm run storybook
+
+# Build static Storybook for deployment
+cd app && npm run build-storybook
+```
+
+Storybook runs on http://localhost:6006 and provides:
+- **Interactive component development** - Build and test components in isolation
+- **Visual documentation** - Auto-generated docs for all component variants
+- **Accessibility testing** - Built-in a11y addon for WCAG compliance checks
+- **Component testing** - Integrated Vitest for component unit tests
 
 ## 📁 Project Structure
 
@@ -253,6 +270,9 @@ cd backend && source venv/bin/activate && pytest tests/ -v
 # Frontend unit tests (components, utilities)
 cd app && npm test
 
+# Component tests with Storybook + Vitest
+cd app && npx vitest
+
 # Accessibility testing (axe-core)
 cd app && npm run test:a11y
 
@@ -266,6 +286,7 @@ cd app && npm run test:e2e
 - **ComponentForge Health**: http://localhost:8000/health
 - **API Documentation**: http://localhost:8000/docs (FastAPI Swagger)
 - **Metrics**: http://localhost:8000/metrics (Prometheus format)
+- **Storybook**: http://localhost:6006 (Component library & testing)
 
 ### AI Observability
 - **LangSmith Traces**: Monitor agent performance and costs
