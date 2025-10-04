@@ -1,14 +1,19 @@
-.PHONY: help install dev test build deploy demo clean template-setup
+.PHONY: help install dev test build deploy demo clean template-setup lint lint-check migrate migrate-rollback seed-patterns
 
 help:
-	@echo "🤖 AI Engineering Starter Template"
-	@echo "=================================="
+	@echo "🤖 ComponentForge - AI-Powered Component Generation"
+	@echo "===================================================="
 	@echo "  make install         - Install dependencies"
 	@echo "  make dev             - Start development environment"
 	@echo "  make test            - Run all tests"
+	@echo "  make lint            - Run linters and auto-fix issues"
+	@echo "  make lint-check      - Check code style (no fixes)"
+	@echo "  make migrate         - Apply database migrations"
+	@echo "  make migrate-rollback - Rollback last migration"
+	@echo "  make seed-patterns   - Seed Qdrant with component patterns"
 	@echo "  make demo            - Prepare demo environment"
-	@echo "  make template-setup  - Setup guide for template users"
 	@echo "  make clean           - Clean up containers and dependencies"
+	@echo "  make template-setup  - Setup guide for template users"
 
 install:
 	@echo "📦 Installing dependencies..."
@@ -58,6 +63,39 @@ test:
 	cd backend && source venv/bin/activate && pytest tests/ -v
 	cd app && npm test
 	cd app && npm run test:e2e
+
+lint:
+	@echo "🧹 Running linters and auto-fixing..."
+	@echo "Linting backend (black + isort)..."
+	cd backend && source venv/bin/activate && black src/ tests/ scripts/
+	cd backend && source venv/bin/activate && isort src/ tests/ scripts/
+	@echo "Linting frontend (ESLint)..."
+	cd app && npm run lint:fix
+	@echo "✅ Linting complete!"
+
+lint-check:
+	@echo "🔍 Checking code style (no fixes)..."
+	@echo "Checking backend (black + isort)..."
+	cd backend && source venv/bin/activate && black src/ tests/ scripts/ --check
+	cd backend && source venv/bin/activate && isort src/ tests/ scripts/ --check-only
+	@echo "Checking frontend (ESLint)..."
+	cd app && npm run lint
+	@echo "✅ Style check complete!"
+
+migrate:
+	@echo "📊 Applying database migrations..."
+	cd backend && source venv/bin/activate && alembic upgrade head
+	@echo "✅ Migrations applied successfully!"
+
+migrate-rollback:
+	@echo "⏪ Rolling back last migration..."
+	cd backend && source venv/bin/activate && alembic downgrade -1
+	@echo "✅ Migration rolled back successfully!"
+
+seed-patterns:
+	@echo "🌱 Seeding Qdrant with component patterns..."
+	cd backend && source venv/bin/activate && python scripts/seed_patterns.py
+	@echo "✅ Pattern seeding complete!"
 
 demo:
 	@echo "🎬 Preparing demo..."
