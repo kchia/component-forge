@@ -1,0 +1,23 @@
+/**
+ * TanStack Query hook for token extraction from screenshots.
+ */
+
+import { useMutation } from '@tanstack/react-query';
+import { extractTokensFromScreenshot } from '@/lib/api/tokens.api';
+import { useTokenStore } from '@/stores/useTokenStore';
+import { TokenExtractionResponse } from '@/types';
+
+export function useTokenExtraction() {
+  const setTokens = useTokenStore((state) => state.setTokens);
+  
+  return useMutation<TokenExtractionResponse, Error, File>({
+    mutationFn: extractTokensFromScreenshot,
+    onSuccess: (data) => {
+      // Update Zustand store with extracted tokens
+      setTokens(data.tokens, data.metadata);
+    },
+    onError: (error) => {
+      console.error('[useTokenExtraction] Error:', error.message);
+    },
+  });
+}
