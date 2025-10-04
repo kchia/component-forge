@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { Badge, ConfidenceBadge } from './badge'
 
 const meta = {
@@ -267,7 +267,6 @@ export const DashboardPage: Story = {
 
 // Accessibility Test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Accessibility Testing</h3>

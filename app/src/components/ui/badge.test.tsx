@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { composeStories } from '@storybook/react'
-import { render, screen } from '@storybook/test'
+import { render } from '@storybook/test'
 import * as stories from './badge.stories'
 
 const { Default, Success, Warning, Error, Info, Neutral, Small, Medium, Large, ConfidenceBadges } = composeStories(stories)
