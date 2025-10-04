@@ -142,8 +142,21 @@
   }
 }
 
-@layer utilities {
+@layer utilities {  
   .animate-wave {
     animation: wave 2s ease-in-out infinite;
+  }
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(100%);
+    }
+  }
+  
+  .animate-indeterminate {
+    animation: indeterminate 1.5s ease-in-out infinite;
+    width: 50%;
   }
 }
