@@ -105,6 +105,7 @@ export const Poor: Story = {
 
 // List of components (how they appear on dashboard)
 export const ComponentList: Story = {
+  args: {} as any,
   render: () => (
     <div className="bg-white border border-gray-200 rounded-lg">
       <div className="p-6 border-b">
@@ -155,6 +156,7 @@ export const ComponentList: Story = {
 // Accessibility test with keyboard navigation
 export const AccessibilityTest: Story = {
   name: 'Accessibility Test',
+  args: {} as any,
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
@@ -216,6 +218,7 @@ export const AccessibilityTest: Story = {
 
 // Different metric states
 export const VariousMetrics: Story = {
+  args: {} as any,
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold mb-2">Different Metric States</h3>
