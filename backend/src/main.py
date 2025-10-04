@@ -89,5 +89,6 @@ else:
 
 
 # Import and register routers
-# from .api.v1.routes import chat, agents, documents
-# app.include_router(chat.router, prefix="/api/v1")
+from .api.v1.routes import figma
+
+app.include_router(figma.router, prefix="/api/v1")
