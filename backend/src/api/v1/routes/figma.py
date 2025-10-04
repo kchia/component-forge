@@ -1,7 +1,7 @@
 """Figma integration API routes."""
 
 from fastapi import APIRouter, HTTPException, status, Depends
-from pydantic import BaseModel, Field, validator
+from pydantic import BaseModel, Field, field_validator
 from typing import Optional, Dict, Any
 
 from ....services.figma_client import (
@@ -30,7 +30,8 @@ class FigmaAuthRequest(BaseModel):
         min_length=10,
     )
 
-    @validator("personal_access_token")
+    @field_validator("personal_access_token")
+    @classmethod
     def validate_pat_format(cls, v):
         """Validate PAT format (basic check)."""
         if not v or not v.strip():
@@ -56,7 +57,8 @@ class FigmaExtractRequest(BaseModel):
         description="Figma PAT (if not provided, uses environment variable)",
     )
 
-    @validator("figma_url")
+    @field_validator("figma_url")
+    @classmethod
     def validate_figma_url(cls, v):
         """Validate Figma URL format."""
         if not v or not ("figma.com/file/" in v or "figma.com/design/" in v):

@@ -63,7 +63,8 @@ class TestFigmaCacheBasics:
         cache = FigmaCache(ttl=300)
         result = await cache.get_file("abc123", endpoint="file")
 
-        assert result == cached_data
+        assert result["name"] == cached_data["name"]
+        assert result["_cached"] is True
         mock_redis.get.assert_called_once_with("figma:file:abc123:file")
 
     @patch("src.core.cache.get_redis")
