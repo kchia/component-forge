@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from '@storybook/nextjs-vite'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from './tabs'
 
 const meta = {
@@ -324,7 +324,6 @@ export const DisabledTabs: Story = {
 
 // Accessibility Test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
   render: () => (
     <div className="space-y-4 max-w-2xl">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
