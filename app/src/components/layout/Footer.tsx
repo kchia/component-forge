@@ -13,9 +13,6 @@ export function Footer() {
             ComponentForge v{appVersion} • AI-powered component generation
           </div>
           <div className="flex gap-6 text-sm text-muted-foreground">
-            <Link href="/demo/tokens" className="hover:text-foreground transition-colors">
-              Demo
-            </Link>
             <a
               href="https://github.com/kchia/component-forge"
               target="_blank"
@@ -24,9 +21,6 @@ export function Footer() {
             >
               GitHub
             </a>
-            <Link href="/" className="hover:text-foreground transition-colors">
-              Documentation
-            </Link>
           </div>
         </div>
       </div>

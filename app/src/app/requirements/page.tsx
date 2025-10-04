@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { RequirementCard } from "@/components/composite/RequirementCard";
-import { EditModal } from "@/components/composite/EditModal";
 import { ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
 import { useState } from "react";
 
@@ -43,6 +42,13 @@ const placeholderRequirements = [
 
 export default function RequirementsPage() {
   const [editModalOpen, setEditModalOpen] = useState(false);
+  const [editingRequirement, setEditingRequirement] = useState<typeof placeholderRequirements[0] | null>(null);
+
+  const handleEdit = (req: typeof placeholderRequirements[0]) => {
+    // For now, just console log since EditModal expects different structure
+    console.log("Edit requirement:", req);
+    // In Epic 2, this would open an edit modal with the actual requirement
+  };
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -96,7 +102,7 @@ export default function RequirementsPage() {
                     confidence={req.confidence}
                     onAccept={() => console.log("Accept", req.id)}
                     onReject={() => console.log("Reject", req.id)}
-                    onEdit={() => setEditModalOpen(true)}
+                    onEdit={() => handleEdit(req)}
                   />
                 ))}
             </AccordionContent>
@@ -125,17 +131,6 @@ export default function RequirementsPage() {
           </Link>
         </Button>
       </div>
-
-      {/* Edit Modal */}
-      <EditModal
-        isOpen={editModalOpen}
-        onClose={() => setEditModalOpen(false)}
-        title="Edit Requirement"
-        onSave={(value) => {
-          console.log("Save edited requirement:", value);
-          setEditModalOpen(false);
-        }}
-      />
     </main>
   );
 }

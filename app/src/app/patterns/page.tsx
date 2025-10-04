@@ -78,9 +78,13 @@ export default function PatternsPage() {
         {filteredPatterns.map((pattern) => (
           <PatternCard
             key={pattern.id}
+            patternId={pattern.id}
             name={pattern.name}
-            description={pattern.description}
-            confidence={pattern.confidence}
+            version="1.0.0"
+            matchScore={pattern.confidence}
+            metadata={{
+              description: pattern.description,
+            }}
             onSelect={() => setSelectedPattern(pattern.id)}
             onPreview={() => setSelectedPattern(pattern.id)}
           />

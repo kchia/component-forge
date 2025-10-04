@@ -13,6 +13,9 @@ interface TokenStore {
     filename?: string;
     extractionMethod?: string;
     cached?: boolean;
+    confidence?: Record<string, number>;
+    fallbacks_used?: string[];
+    review_needed?: string[];
   } | null;
   
   // Actions

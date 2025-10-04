@@ -13,8 +13,13 @@ export function useTokenExtraction() {
   return useMutation<TokenExtractionResponse, Error, File>({
     mutationFn: extractTokensFromScreenshot,
     onSuccess: (data) => {
-      // Update Zustand store with extracted tokens
-      setTokens(data.tokens, data.metadata);
+      // Update Zustand store with extracted tokens and full metadata including confidence
+      setTokens(data.tokens, {
+        ...data.metadata,
+        confidence: data.confidence,
+        fallbacks_used: data.fallbacks_used,
+        review_needed: data.review_needed,
+      });
     },
     onError: (error) => {
       console.error('[useTokenExtraction] Error:', error.message);
