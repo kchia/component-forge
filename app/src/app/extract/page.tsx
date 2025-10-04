@@ -1,11 +1,87 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Alert } from "@/components/ui/alert";
+import { Badge } from "@/components/ui/badge";
+import { Upload, FileImage } from "lucide-react";
+import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
+import { useTokenStore } from "@/stores/useTokenStore";
 
 export default function TokenExtractionPage() {
   const [activeTab, setActiveTab] = useState("screenshot");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [dragActive, setDragActive] = useState(false);
+  
+  const { mutate: extractTokens, isPending, isError, error } = useTokenExtraction();
+  const tokens = useTokenStore((state) => state.tokens);
+  const metadata = useTokenStore((state) => state.metadata);
+
+  // File validation
+  const validateFile = (file: File): string | null => {
+    const maxSize = 10 * 1024 * 1024; // 10MB
+    const allowedTypes = ['image/png', 'image/jpeg', 'image/jpg'];
+
+    if (!allowedTypes.includes(file.type)) {
+      return 'Please upload a PNG or JPEG image';
+    }
+
+    if (file.size > maxSize) {
+      return 'File size must be less than 10MB';
+    }
+
+    return null;
+  };
+
+  // Handle file selection
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const validationError = validateFile(file);
+      if (!validationError) {
+        setSelectedFile(file);
+      } else {
+        alert(validationError);
+      }
+    }
+  };
+
+  // Handle drag and drop
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    const file = e.dataTransfer.files?.[0];
+    if (file) {
+      const validationError = validateFile(file);
+      if (!validationError) {
+        setSelectedFile(file);
+      } else {
+        alert(validationError);
+      }
+    }
+  }, []);
+
+  // Handle upload
+  const handleUpload = () => {
+    if (selectedFile) {
+      extractTokens(selectedFile);
+    }
+  };
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -32,10 +108,113 @@ export default function TokenExtractionPage() {
             <CardHeader>
               <CardTitle>Upload Screenshot</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Screenshot upload coming in next commit...</p>
+            <CardContent className="space-y-4">
+              {/* Drag and Drop Zone */}
+              <div
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive
+                    ? "border-primary bg-primary/5"
+                    : "border-muted-foreground/25"
+                }`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <div className="flex flex-col items-center gap-4">
+                  <div className="rounded-full bg-muted p-4">
+                    <Upload className="h-8 w-8 text-muted-foreground" />
+                  </div>
+                  <div className="space-y-2">
+                    <p className="text-sm font-medium">
+                      Drag and drop your screenshot here, or
+                    </p>
+                    <label htmlFor="file-upload">
+                      <Button variant="outline" asChild>
+                        <span>Browse Files</span>
+                      </Button>
+                      <input
+                        id="file-upload"
+                        type="file"
+                        accept="image/png,image/jpeg,image/jpg"
+                        onChange={handleFileChange}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    PNG or JPEG, max 10MB
+                  </p>
+                </div>
               </div>
+
+              {/* Selected File */}
+              {selectedFile && !tokens && (
+                <div className="flex items-center gap-4 p-4 border rounded-lg">
+                  <FileImage className="h-8 w-8 text-muted-foreground" />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">
+                      {selectedFile.name}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {(selectedFile.size / 1024).toFixed(0)} KB
+                    </p>
+                  </div>
+                  <Button onClick={handleUpload} disabled={isPending}>
+                    {isPending ? "Extracting..." : "Extract Tokens"}
+                  </Button>
+                </div>
+              )}
+
+              {/* Progress */}
+              {isPending && (
+                <div className="space-y-2">
+                  <Progress value={66} className="h-2" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Analyzing screenshot with GPT-4V...
+                  </p>
+                </div>
+              )}
+
+              {/* Error */}
+              {isError && (
+                <Alert variant="error">
+                  <p className="font-medium">Extraction Failed</p>
+                  <p className="text-sm">{error?.message}</p>
+                </Alert>
+              )}
+
+              {/* Extracted Tokens Preview */}
+              {tokens && metadata && (
+                <div className="space-y-4">
+                  <Alert variant="success">
+                    <p className="font-medium">Tokens Extracted Successfully!</p>
+                    <p className="text-sm">
+                      From: {metadata.filename || 'Unknown file'}
+                    </p>
+                  </Alert>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {tokens.colors && Object.keys(tokens.colors).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.colors).length} Colors
+                      </Badge>
+                    )}
+                    {tokens.typography && Object.keys(tokens.typography).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.typography).length} Typography
+                      </Badge>
+                    )}
+                    {tokens.spacing && Object.keys(tokens.spacing).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.spacing).length} Spacing
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Token editing coming in next commit...
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
