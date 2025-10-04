@@ -41,6 +41,15 @@ if METRICS_ENABLED:
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("Starting FastAPI application", extra={"extra": {"event": "startup"}})
+    
+    # Validate OpenAI API key at startup
+    import os
+    api_key = os.getenv("OPENAI_API_KEY")
+    if not api_key:
+        logger.warning("OPENAI_API_KEY not set - token extraction will fail")
+    else:
+        logger.info("OpenAI API key configured")
+    
     yield
     logger.info("Shutting down FastAPI application", extra={"extra": {"event": "shutdown"}})
 
@@ -89,5 +98,6 @@ else:
 
 
 # Import and register routers
-# from .api.v1.routes import chat, agents, documents
-# app.include_router(chat.router, prefix="/api/v1")
+from .api.v1.routes import tokens
+
+app.include_router(tokens.router, prefix="/api/v1")
