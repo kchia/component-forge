@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+import * as React from "react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
-import { ConfidenceBadge } from "@/components/ui/badge"
-import { cn } from "@/lib/utils"
+  SelectValue
+} from "@/components/ui/select";
+import { ConfidenceBadge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 // Standard font families (web-safe + popular)
 const FONT_FAMILIES = [
@@ -26,70 +26,70 @@ const FONT_FAMILIES = [
   "Georgia",
   "Times New Roman",
   "Courier New",
-  "Verdana",
-] as const
+  "Verdana"
+] as const;
 
 // Standard font sizes
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 40, 48, 56, 64] as const
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 40, 48, 56, 64] as const;
 
 // Standard font weights
-const FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const
+const FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 
 export interface TypographyEditorProps {
   /**
    * Current font family value
    */
-  fontFamily?: string
-  
+  fontFamily?: string;
+
   /**
    * Font family confidence score
    */
-  fontFamilyConfidence?: number
-  
+  fontFamilyConfidence?: number;
+
   /**
    * Current font size value (with unit, e.g., "16px")
    */
-  fontSize?: string
-  
+  fontSize?: string;
+
   /**
    * Font size confidence score
    */
-  fontSizeConfidence?: number
-  
+  fontSizeConfidence?: number;
+
   /**
    * Current font weight value
    */
-  fontWeight?: string
-  
+  fontWeight?: string;
+
   /**
    * Font weight confidence score
    */
-  fontWeightConfidence?: number
-  
+  fontWeightConfidence?: number;
+
   /**
    * Callback when font family changes
    */
-  onFontFamilyChange?: (value: string) => void
-  
+  onFontFamilyChange?: (value: string) => void;
+
   /**
    * Callback when font size changes
    */
-  onFontSizeChange?: (value: string) => void
-  
+  onFontSizeChange?: (value: string) => void;
+
   /**
    * Callback when font weight changes
    */
-  onFontWeightChange?: (value: string) => void
-  
+  onFontWeightChange?: (value: string) => void;
+
   /**
    * Optional className
    */
-  className?: string
+  className?: string;
 }
 
 /**
  * TypographyEditor - Component for editing typography tokens
- * 
+ *
  * @example
  * ```tsx
  * <TypographyEditor
@@ -112,14 +112,14 @@ export function TypographyEditor({
   onFontFamilyChange,
   onFontSizeChange,
   onFontWeightChange,
-  className,
+  className
 }: TypographyEditorProps) {
   // Parse font size value (remove "px" if present)
-  const parsedFontSize = parseInt(fontSize.replace("px", ""))
-  const [customFontFamily, setCustomFontFamily] = React.useState("")
+  const parsedFontSize = parseInt(fontSize.replace("px", ""));
+  const [customFontFamily, setCustomFontFamily] = React.useState("");
   const [showCustomFont, setShowCustomFont] = React.useState(
-    !FONT_FAMILIES.includes(fontFamily as any)
-  )
+    !FONT_FAMILIES.includes(fontFamily as string)
+  );
 
   return (
     <div className={cn("space-y-4", className)} data-testid="typography-editor">
@@ -131,7 +131,7 @@ export function TypographyEditor({
           </Label>
           <ConfidenceBadge score={fontFamilyConfidence} />
         </div>
-        
+
         {showCustomFont ? (
           <div className="space-y-2">
             <Input
@@ -139,9 +139,9 @@ export function TypographyEditor({
               type="text"
               value={customFontFamily || fontFamily}
               onChange={(e) => {
-                setCustomFontFamily(e.target.value)
+                setCustomFontFamily(e.target.value);
                 if (onFontFamilyChange) {
-                  onFontFamilyChange(e.target.value)
+                  onFontFamilyChange(e.target.value);
                 }
               }}
               placeholder="Enter custom font family"
@@ -161,9 +161,9 @@ export function TypographyEditor({
               value={fontFamily}
               onValueChange={(value) => {
                 if (value === "custom") {
-                  setShowCustomFont(true)
+                  setShowCustomFont(true);
                 } else if (onFontFamilyChange) {
-                  onFontFamilyChange(value)
+                  onFontFamilyChange(value);
                 }
               }}
             >
@@ -191,12 +191,12 @@ export function TypographyEditor({
           </Label>
           <ConfidenceBadge score={fontSizeConfidence} />
         </div>
-        
+
         <Select
           value={parsedFontSize.toString()}
           onValueChange={(value) => {
             if (onFontSizeChange) {
-              onFontSizeChange(`${value}px`)
+              onFontSizeChange(`${value}px`);
             }
           }}
         >
@@ -221,12 +221,12 @@ export function TypographyEditor({
           </Label>
           <ConfidenceBadge score={fontWeightConfidence} />
         </div>
-        
+
         <Select
           value={fontWeight}
           onValueChange={(value) => {
             if (onFontWeightChange) {
-              onFontWeightChange(value)
+              onFontWeightChange(value);
             }
           }}
         >
@@ -236,22 +236,29 @@ export function TypographyEditor({
           <SelectContent>
             {FONT_WEIGHTS.map((weight) => (
               <SelectItem key={weight} value={weight.toString()}>
-                {weight} - {
-                  weight === 100 ? "Thin" :
-                  weight === 200 ? "Extra Light" :
-                  weight === 300 ? "Light" :
-                  weight === 400 ? "Regular" :
-                  weight === 500 ? "Medium" :
-                  weight === 600 ? "Semi Bold" :
-                  weight === 700 ? "Bold" :
-                  weight === 800 ? "Extra Bold" :
-                  "Black"
-                }
+                {weight} -{" "}
+                {weight === 100
+                  ? "Thin"
+                  : weight === 200
+                  ? "Extra Light"
+                  : weight === 300
+                  ? "Light"
+                  : weight === 400
+                  ? "Regular"
+                  : weight === 500
+                  ? "Medium"
+                  : weight === 600
+                  ? "Semi Bold"
+                  : weight === 700
+                  ? "Bold"
+                  : weight === 800
+                  ? "Extra Bold"
+                  : "Black"}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
       </div>
     </div>
-  )
+  );
 }

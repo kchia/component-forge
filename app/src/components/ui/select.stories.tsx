@@ -1,4 +1,4 @@
-import type { Meta, StoryObj } from '@storybook/react'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
 import {
   Select,
   SelectContent,
@@ -6,20 +6,20 @@ import {
   SelectItem,
   SelectLabel,
   SelectTrigger,
-  SelectValue,
-} from './select'
+  SelectValue
+} from "./select";
 
 const meta = {
-  title: 'UI/Select',
+  title: "UI/Select",
   component: Select,
   parameters: {
-    layout: 'centered',
+    layout: "centered"
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof Select>
+  tags: ["autodocs"]
+} satisfies Meta<typeof Select>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // Basic select dropdown
 export const Default: Story = {
@@ -36,12 +36,12 @@ export const Default: Story = {
         <SelectItem value="pineapple">Pineapple</SelectItem>
       </SelectContent>
     </Select>
-  ),
-}
+  )
+};
 
 // EditModal Category dropdown (from wireframe)
 export const CategorySelect: Story = {
-  name: 'Edit Modal - Category',
+  name: "Edit Modal - Category",
   render: () => (
     <div className="w-full max-w-md space-y-2">
       <label className="block text-sm font-medium">Category:</label>
@@ -57,12 +57,12 @@ export const CategorySelect: Story = {
         </SelectContent>
       </Select>
     </div>
-  ),
-}
+  )
+};
 
 // EditModal Type dropdown (from wireframe)
 export const TypeSelect: Story = {
-  name: 'Edit Modal - Type',
+  name: "Edit Modal - Type",
   render: () => (
     <div className="w-full max-w-md space-y-2">
       <label className="block text-sm font-medium">Type:</label>
@@ -78,8 +78,8 @@ export const TypeSelect: Story = {
         </SelectContent>
       </Select>
     </div>
-  ),
-}
+  )
+};
 
 // With grouped options
 export const WithGroups: Story = {
@@ -108,8 +108,8 @@ export const WithGroups: Story = {
         </SelectGroup>
       </SelectContent>
     </Select>
-  ),
-}
+  )
+};
 
 // Disabled state
 export const Disabled: Story = {
@@ -124,8 +124,8 @@ export const Disabled: Story = {
         <SelectItem value="orange">Orange</SelectItem>
       </SelectContent>
     </Select>
-  ),
-}
+  )
+};
 
 // With disabled items
 export const WithDisabledItems: Story = {
@@ -146,8 +146,8 @@ export const WithDisabledItems: Story = {
         </SelectItem>
       </SelectContent>
     </Select>
-  ),
-}
+  )
+};
 
 // Long list with scrolling
 export const LongList: Story = {
@@ -181,16 +181,16 @@ export const LongList: Story = {
         <SelectItem value="nz">New Zealand</SelectItem>
       </SelectContent>
     </Select>
-  ),
-}
+  )
+};
 
 // Complete EditModal example (from wireframe)
 export const EditModalForm: Story = {
-  name: 'Use Case: Edit Modal Form',
+  name: "Use Case: Edit Modal Form",
   render: () => (
     <div className="w-full max-w-md space-y-4 p-6 border border-gray-200 rounded-lg bg-white">
       <h2 className="text-lg font-semibold mb-4">Edit Requirement: req-002</h2>
-      
+
       <div className="space-y-2">
         <label className="block text-sm font-medium">ID:</label>
         <input
@@ -241,7 +241,9 @@ export const EditModalForm: Story = {
       </div>
 
       <div className="space-y-2">
-        <label className="block text-sm font-medium">Values (comma-separated):</label>
+        <label className="block text-sm font-medium">
+          Values (comma-separated):
+        </label>
         <input
           type="text"
           defaultValue="sm, md, lg"
@@ -258,17 +260,18 @@ export const EditModalForm: Story = {
         </button>
       </div>
     </div>
-  ),
-}
+  )
+};
 
 // Accessibility test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
+  name: "Accessibility Test",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
       <p className="text-sm text-gray-600">
-        Tab to focus, Enter/Space to open, Arrow keys to navigate, Enter to select
+        Tab to focus, Enter/Space to open, Arrow keys to navigate, Enter to
+        select
       </p>
       <div className="space-y-3">
         <div className="space-y-2">
@@ -324,23 +327,23 @@ export const AccessibilityTest: Story = {
       config: {
         rules: [
           {
-            id: 'color-contrast',
-            enabled: true,
+            id: "color-contrast",
+            enabled: true
           },
           {
-            id: 'label',
-            enabled: true,
+            id: "label",
+            enabled: true
           },
           {
-            id: 'aria-required-attr',
-            enabled: true,
+            id: "aria-required-attr",
+            enabled: true
           },
           {
-            id: 'aria-valid-attr-value',
-            enabled: true,
-          },
-        ],
-      },
-    },
-  },
-}
+            id: "aria-valid-attr-value",
+            enabled: true
+          }
+        ]
+      }
+    }
+  }
+};

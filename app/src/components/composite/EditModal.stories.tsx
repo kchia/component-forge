@@ -1,36 +1,42 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { useState } from 'react'
-import { EditModal, type Requirement } from './EditModal'
-import { Button } from '@/components/ui/button'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { EditModal, type Requirement } from "./EditModal";
+import { Button } from "@/components/ui/button";
 
 const meta = {
-  title: 'Composite/EditModal',
+  title: "Composite/EditModal",
   component: EditModal,
   parameters: {
-    layout: 'centered',
+    layout: "centered"
   },
-  tags: ['autodocs'],
-} satisfies Meta<typeof EditModal>
+  tags: ["autodocs"]
+} satisfies Meta<typeof EditModal>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // Sample requirement data
 const sampleRequirement: Requirement = {
-  id: 'req-001',
-  name: 'hover state',
-  category: 'Props',
-  type: 'Boolean',
-  values: 'true, false',
-  rationale: 'Button needs a hover state to provide visual feedback to users',
-  confidence: 0.95,
-}
+  id: "req-001",
+  name: "hover state",
+  category: "Props",
+  type: "Boolean",
+  values: "true, false",
+  rationale: "Button needs a hover state to provide visual feedback to users",
+  confidence: 0.95
+};
 
 // Default story
 export const Default: Story = {
+  args: {
+    requirement: sampleRequirement,
+    open: true,
+    onSave: () => {},
+    onCancel: () => {}
+  },
   render: () => {
-    const [open, setOpen] = useState(true)
-    const [requirement, setRequirement] = useState(sampleRequirement)
+    const [open, setOpen] = useState(true);
+    const [requirement, setRequirement] = useState(sampleRequirement);
 
     return (
       <div>
@@ -42,34 +48,35 @@ export const Default: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            console.log('Saved requirement:', updatedReq)
+            setRequirement(updatedReq);
+            setOpen(false);
+            console.log("Saved requirement:", updatedReq);
           }}
           onCancel={() => {
-            setOpen(false)
-            console.log('Cancelled edit')
+            setOpen(false);
+            console.log("Cancelled edit");
           }}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Edit Props requirement
 export const EditPropsRequirement: Story = {
-  name: 'Edit Props Requirement',
+  name: "Edit Props Requirement",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-002',
-      name: 'disabled state',
-      category: 'Props',
-      type: 'Boolean',
-      values: 'true, false',
-      rationale: 'Button should support a disabled state to prevent user interaction',
-      confidence: 0.92,
-    })
+      id: "req-002",
+      name: "disabled state",
+      category: "Props",
+      type: "Boolean",
+      values: "true, false",
+      rationale:
+        "Button should support a disabled state to prevent user interaction",
+      confidence: 0.92
+    });
 
     return (
       <div>
@@ -81,31 +88,31 @@ export const EditPropsRequirement: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name}`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name}`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Edit Events requirement
 export const EditEventsRequirement: Story = {
-  name: 'Edit Events Requirement',
+  name: "Edit Events Requirement",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-003',
-      name: 'onClick handler',
-      category: 'Events',
-      type: 'Function',
-      values: '(event: MouseEvent) => void',
-      rationale: 'Button must trigger an onClick event when clicked',
-      confidence: 0.98,
-    })
+      id: "req-003",
+      name: "onClick handler",
+      category: "Events",
+      type: "Function",
+      values: "(event: MouseEvent) => void",
+      rationale: "Button must trigger an onClick event when clicked",
+      confidence: 0.98
+    });
 
     return (
       <div>
@@ -117,31 +124,32 @@ export const EditEventsRequirement: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name}`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name}`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Edit States requirement
 export const EditStatesRequirement: Story = {
-  name: 'Edit States Requirement',
+  name: "Edit States Requirement",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-004',
-      name: 'loading state',
-      category: 'States',
-      type: 'Boolean',
-      values: 'true, false',
-      rationale: 'Button should display a loading indicator during async operations',
-      confidence: 0.88,
-    })
+      id: "req-004",
+      name: "loading state",
+      category: "States",
+      type: "Boolean",
+      values: "true, false",
+      rationale:
+        "Button should display a loading indicator during async operations",
+      confidence: 0.88
+    });
 
     return (
       <div>
@@ -153,31 +161,31 @@ export const EditStatesRequirement: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name}`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name}`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Edit Accessibility requirement
 export const EditAccessibilityRequirement: Story = {
-  name: 'Edit Accessibility Requirement',
+  name: "Edit Accessibility Requirement",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-005',
-      name: 'aria-label',
-      category: 'Accessibility',
-      type: 'String',
-      values: 'any descriptive text',
-      rationale: 'Button needs aria-label for screen reader accessibility',
-      confidence: 0.96,
-    })
+      id: "req-005",
+      name: "aria-label",
+      category: "Accessibility",
+      type: "String",
+      values: "any descriptive text",
+      rationale: "Button needs aria-label for screen reader accessibility",
+      confidence: 0.96
+    });
 
     return (
       <div>
@@ -189,31 +197,31 @@ export const EditAccessibilityRequirement: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name}`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name}`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // All type options
 export const AllTypeOptions: Story = {
-  name: 'All Type Options (Radio)',
+  name: "All Type Options (Radio)",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-006',
-      name: 'variant',
-      category: 'Props',
-      type: 'String',
-      values: 'primary, secondary, ghost',
-      rationale: 'Button supports multiple visual variants',
-      confidence: 0.94,
-    })
+      id: "req-006",
+      name: "variant",
+      category: "Props",
+      type: "String",
+      values: "primary, secondary, ghost",
+      rationale: "Button supports multiple visual variants",
+      confidence: 0.94
+    });
 
     return (
       <div>
@@ -225,30 +233,30 @@ export const AllTypeOptions: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name} (Type: ${updatedReq.type})`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name} (Type: ${updatedReq.type})`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Empty rationale
 export const EmptyRationale: Story = {
-  name: 'Empty Rationale',
+  name: "Empty Rationale",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirement, setRequirement] = useState<Requirement>({
-      id: 'req-007',
-      name: 'size',
-      category: 'Props',
-      type: 'String',
-      values: 'sm, md, lg',
-      confidence: 0.85,
-    })
+      id: "req-007",
+      name: "size",
+      category: "Props",
+      type: "String",
+      values: "sm, md, lg",
+      confidence: 0.85
+    });
 
     return (
       <div>
@@ -260,22 +268,22 @@ export const EmptyRationale: Story = {
           open={open}
           onOpenChange={setOpen}
           onSave={(updatedReq) => {
-            setRequirement(updatedReq)
-            setOpen(false)
-            alert(`Saved: ${updatedReq.name}`)
+            setRequirement(updatedReq);
+            setOpen(false);
+            alert(`Saved: ${updatedReq.name}`);
           }}
           onCancel={() => setOpen(false)}
         />
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Accessibility test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
+  name: "Accessibility Test",
   render: () => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <EditModal
@@ -283,69 +291,70 @@ export const AccessibilityTest: Story = {
         open={open}
         onOpenChange={setOpen}
         onSave={(updatedReq) => {
-          console.log('Saved:', updatedReq)
-          setOpen(false)
+          console.log("Saved:", updatedReq);
+          setOpen(false);
         }}
         onCancel={() => {
-          console.log('Cancelled')
-          setOpen(false)
+          console.log("Cancelled");
+          setOpen(false);
         }}
       />
-    )
+    );
   },
   parameters: {
     a11y: {
       config: {
         rules: [
           {
-            id: 'color-contrast',
-            enabled: true,
+            id: "color-contrast",
+            enabled: true
           },
           {
-            id: 'label',
-            enabled: true,
-          },
-        ],
-      },
-    },
-  },
-}
+            id: "label",
+            enabled: true
+          }
+        ]
+      }
+    }
+  }
+};
 
 // Interactive example with multiple edits
 export const InteractiveExample: Story = {
-  name: 'Interactive Example',
+  name: "Interactive Example",
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
     const [requirements, setRequirements] = useState<Requirement[]>([
       {
-        id: 'req-001',
-        name: 'hover state',
-        category: 'Props',
-        type: 'Boolean',
-        values: 'true, false',
-        rationale: 'Visual feedback on hover',
-        confidence: 0.95,
+        id: "req-001",
+        name: "hover state",
+        category: "Props",
+        type: "Boolean",
+        values: "true, false",
+        rationale: "Visual feedback on hover",
+        confidence: 0.95
       },
       {
-        id: 'req-002',
-        name: 'onClick',
-        category: 'Events',
-        type: 'Function',
-        values: '() => void',
-        rationale: 'Handle click events',
-        confidence: 0.98,
+        id: "req-002",
+        name: "onClick",
+        category: "Events",
+        type: "Function",
+        values: "() => void",
+        rationale: "Handle click events",
+        confidence: 0.98
       },
       {
-        id: 'req-003',
-        name: 'aria-label',
-        category: 'Accessibility',
-        type: 'String',
-        values: 'descriptive text',
-        rationale: 'Screen reader support',
-        confidence: 0.92,
-      },
-    ])
-    const [editingRequirement, setEditingRequirement] = useState<Requirement | null>(null)
+        id: "req-003",
+        name: "aria-label",
+        category: "Accessibility",
+        type: "String",
+        values: "descriptive text",
+        rationale: "Screen reader support",
+        confidence: 0.92
+      }
+    ]);
+    const [editingRequirement, setEditingRequirement] =
+      useState<Requirement | null>(null);
 
     return (
       <div className="space-y-4">
@@ -366,8 +375,8 @@ export const InteractiveExample: Story = {
                 variant="ghost"
                 size="sm"
                 onClick={() => {
-                  setEditingRequirement(req)
-                  setOpen(true)
+                  setEditingRequirement(req);
+                  setOpen(true);
                 }}
               >
                 ✎ Edit
@@ -383,17 +392,17 @@ export const InteractiveExample: Story = {
             onSave={(updatedReq) => {
               setRequirements((prev) =>
                 prev.map((r) => (r.id === updatedReq.id ? updatedReq : r))
-              )
-              setOpen(false)
-              setEditingRequirement(null)
+              );
+              setOpen(false);
+              setEditingRequirement(null);
             }}
             onCancel={() => {
-              setOpen(false)
-              setEditingRequirement(null)
+              setOpen(false);
+              setEditingRequirement(null);
             }}
           />
         )}
       </div>
-    )
-  },
-}
+    );
+  }
+};

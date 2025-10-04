@@ -1,12 +1,12 @@
-import type { Meta, StoryObj } from '@storybook/nextjs-vite'
-import { useState } from 'react'
-import { CodePreviewModal, Pattern } from './CodePreviewModal'
-import { Button } from '@/components/ui/button'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { useState } from "react";
+import { CodePreviewModal, Pattern } from "./CodePreviewModal";
+import { Button } from "@/components/ui/button";
 
 const samplePattern: Pattern = {
-  id: 'shadcn-button-v2',
-  name: 'shadcn/ui Button',
-  version: 'v2.1.0',
+  id: "shadcn-button-v2",
+  name: "shadcn/ui Button",
+  version: "v2.1.0",
   code: `import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
@@ -54,18 +54,19 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
 Button.displayName = "Button"
 
 export { Button, buttonVariants }`,
-  language: 'typescript',
+  language: "typescript",
   metadata: {
-    description: 'A versatile button component built on Radix UI primitives with shadcn/ui styling',
-    author: 'shadcn',
-    license: 'MIT',
-    repository: 'https://github.com/shadcn-ui/ui',
+    description:
+      "A versatile button component built on Radix UI primitives with shadcn/ui styling",
+    author: "shadcn",
+    license: "MIT",
+    repository: "https://github.com/shadcn-ui/ui",
     dependencies: [
-      '@radix-ui/react-slot',
-      'class-variance-authority',
-      'clsx',
-      'tailwind-merge',
-    ],
+      "@radix-ui/react-slot",
+      "class-variance-authority",
+      "clsx",
+      "tailwind-merge"
+    ]
   },
   visualPreview: `
     <div class="space-y-4">
@@ -92,60 +93,70 @@ export { Button, buttonVariants }`,
         </button>
       </div>
     </div>
-  `,
-}
+  `
+};
 
 const meta = {
-  title: 'Composite/CodePreviewModal',
+  title: "Composite/CodePreviewModal",
   component: CodePreviewModal,
   parameters: {
-    layout: 'centered',
+    layout: "centered",
     docs: {
       description: {
-        component: 'A composite modal that displays code, visual preview, and metadata for design patterns. Composes Dialog, Tabs, CodeBlock, and Button components.',
-      },
-    },
+        component:
+          "A composite modal that displays code, visual preview, and metadata for design patterns. Composes Dialog, Tabs, CodeBlock, and Button components."
+      }
+    }
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   argTypes: {
     pattern: {
-      description: 'The pattern object containing code, metadata, and preview information',
+      description:
+        "The pattern object containing code, metadata, and preview information"
     },
     onSelect: {
-      description: 'Callback function when the user selects the pattern',
-      action: 'selected',
+      description: "Callback function when the user selects the pattern",
+      action: "selected"
     },
     onClose: {
-      description: 'Callback function when the user closes the modal',
-      action: 'closed',
+      description: "Callback function when the user closes the modal",
+      action: "closed"
     },
     open: {
-      control: 'boolean',
-      description: 'Controls whether the modal is open',
-    },
-  },
-} satisfies Meta<typeof CodePreviewModal>
+      control: "boolean",
+      description: "Controls whether the modal is open"
+    }
+  }
+} satisfies Meta<typeof CodePreviewModal>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // Default story with interactive trigger
 export const Default: Story = {
+  args: {
+    pattern: samplePattern,
+    onSelect: () => {},
+    onClose: () => {},
+    open: false
+  },
   render: () => {
-    const [open, setOpen] = useState(false)
-    const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(null)
+    const [open, setOpen] = useState(false);
+    const [selectedPattern, setSelectedPattern] = useState<Pattern | null>(
+      null
+    );
 
     return (
       <div>
         <Button onClick={() => setOpen(true)}>👁️ Preview Code</Button>
-        
+
         {open && (
           <CodePreviewModal
             pattern={samplePattern}
             open={open}
             onSelect={(pattern) => {
-              setSelectedPattern(pattern)
-              console.log('Selected pattern:', pattern)
+              setSelectedPattern(pattern);
+              console.log("Selected pattern:", pattern);
             }}
             onClose={() => setOpen(false)}
           />
@@ -160,157 +171,172 @@ export const Default: Story = {
           </div>
         )}
       </div>
-    )
-  },
-}
+    );
+  }
+};
 
 // Always open for documentation
 export const AlwaysOpen: Story = {
   args: {
     pattern: samplePattern,
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Pattern without visual preview
 export const NoVisualPreview: Story = {
   args: {
     pattern: {
       ...samplePattern,
-      visualPreview: undefined,
+      visualPreview: undefined
     },
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Pattern without metadata
 export const NoMetadata: Story = {
   args: {
     pattern: {
       ...samplePattern,
-      metadata: undefined,
+      metadata: undefined
     },
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Minimal pattern (only required fields)
 export const MinimalPattern: Story = {
   args: {
     pattern: {
-      id: 'minimal-component',
-      name: 'Minimal Component',
-      version: 'v1.0.0',
-      code: 'export const MinimalComponent = () => <div>Hello World</div>',
+      id: "minimal-component",
+      name: "Minimal Component",
+      version: "v1.0.0",
+      code: "export const MinimalComponent = () => <div>Hello World</div>"
     },
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Long code example
 export const LongCode: Story = {
   args: {
     pattern: {
-      id: 'long-example',
-      name: 'Complex Component',
-      version: 'v3.0.0',
+      id: "long-example",
+      name: "Complex Component",
+      version: "v3.0.0",
       code: Array(50)
         .fill(null)
-        .map((_, i) => `// Line ${i + 1}\nconst example${i} = () => console.log("Example ${i}");`)
-        .join('\n\n'),
-      language: 'javascript',
+        .map(
+          (_, i) =>
+            `// Line ${
+              i + 1
+            }\nconst example${i} = () => console.log("Example ${i}");`
+        )
+        .join("\n\n"),
+      language: "javascript",
       metadata: {
-        description: 'A very long code example to test scrolling behavior',
-        author: 'Test Author',
-        license: 'MIT',
-      },
+        description: "A very long code example to test scrolling behavior",
+        author: "Test Author",
+        license: "MIT"
+      }
     },
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Different language example
 export const PythonCode: Story = {
   args: {
     pattern: {
-      id: 'python-example',
-      name: 'Python Component',
-      version: 'v1.0.0',
+      id: "python-example",
+      name: "Python Component",
+      version: "v1.0.0",
       code: `from typing import List, Optional
 
 class DataProcessor:
@@ -329,43 +355,53 @@ class DataProcessor:
         if not self.data:
             return None
         return sum(self.data) / len(self.data)`,
-      language: 'python',
+      language: "python",
       metadata: {
-        description: 'A Python data processor example',
-        author: 'Python Team',
-        license: 'Apache-2.0',
-        dependencies: ['typing'],
-      },
+        description: "A Python data processor example",
+        author: "Python Team",
+        license: "Apache-2.0",
+        dependencies: ["typing"]
+      }
     },
-    open: true,
+    onSelect: () => {},
+    onClose: () => {},
+    open: true
   },
   render: (args) => {
-    const [open, setOpen] = useState(true)
+    const [open, setOpen] = useState(true);
 
     return (
       <CodePreviewModal
         {...args}
         open={open}
         onSelect={(pattern) => {
-          console.log('Selected:', pattern)
-          setOpen(false)
+          console.log("Selected:", pattern);
+          setOpen(false);
         }}
         onClose={() => setOpen(false)}
       />
-    )
-  },
-}
+    );
+  }
+};
 
 // Accessibility test story
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Features',
+  name: "Accessibility Features",
+  args: {
+    pattern: samplePattern,
+    onSelect: () => {},
+    onClose: () => {},
+    open: false
+  },
   render: () => {
-    const [open, setOpen] = useState(false)
+    const [open, setOpen] = useState(false);
 
     return (
       <div className="space-y-4">
         <div className="p-4 border rounded-lg bg-muted">
-          <h3 className="text-sm font-semibold mb-2">Accessibility Features:</h3>
+          <h3 className="text-sm font-semibold mb-2">
+            Accessibility Features:
+          </h3>
           <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside">
             <li>Keyboard navigation (Tab, Shift+Tab, Enter, Escape)</li>
             <li>Focus management with focus trap in modal</li>
@@ -375,7 +411,7 @@ export const AccessibilityTest: Story = {
             <li>Close button accessible via keyboard</li>
           </ul>
         </div>
-        
+
         <Button onClick={() => setOpen(true)}>
           Test Accessibility (Try Tab, Arrow keys, Escape)
         </Button>
@@ -385,33 +421,33 @@ export const AccessibilityTest: Story = {
             pattern={samplePattern}
             open={open}
             onSelect={(pattern) => {
-              console.log('Selected:', pattern)
-              setOpen(false)
+              console.log("Selected:", pattern);
+              setOpen(false);
             }}
             onClose={() => setOpen(false)}
           />
         )}
       </div>
-    )
+    );
   },
   parameters: {
     a11y: {
       config: {
         rules: [
           {
-            id: 'color-contrast',
-            enabled: true,
+            id: "color-contrast",
+            enabled: true
           },
           {
-            id: 'button-name',
-            enabled: true,
+            id: "button-name",
+            enabled: true
           },
           {
-            id: 'aria-allowed-attr',
-            enabled: true,
-          },
-        ],
-      },
-    },
-  },
-}
+            id: "aria-allowed-attr",
+            enabled: true
+          }
+        ]
+      }
+    }
+  }
+};

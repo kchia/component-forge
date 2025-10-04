@@ -1,30 +1,30 @@
-import type { Meta, StoryObj } from '@storybook/react'
-import { Button } from './button'
+import type { Meta, StoryObj } from "@storybook/nextjs-vite";
+import { Button } from "./button";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
-  TooltipTrigger,
-} from './tooltip'
+  TooltipTrigger
+} from "./tooltip";
 
 const meta = {
-  title: 'UI/Tooltip',
+  title: "UI/Tooltip",
   component: Tooltip,
   parameters: {
-    layout: 'centered',
+    layout: "centered"
   },
-  tags: ['autodocs'],
+  tags: ["autodocs"],
   decorators: [
     (Story) => (
       <TooltipProvider>
         <Story />
       </TooltipProvider>
-    ),
-  ],
-} satisfies Meta<typeof Tooltip>
+    )
+  ]
+} satisfies Meta<typeof Tooltip>;
 
-export default meta
-type Story = StoryObj<typeof meta>
+export default meta;
+type Story = StoryObj<typeof meta>;
 
 // Basic tooltip
 export const Default: Story = {
@@ -37,12 +37,12 @@ export const Default: Story = {
         <p>This is a tooltip</p>
       </TooltipContent>
     </Tooltip>
-  ),
-}
+  )
+};
 
 // Tooltip with different placements
 export const Placements: Story = {
-  name: 'Different Placements',
+  name: "Different Placements",
   render: () => (
     <div className="flex flex-col gap-8 items-center">
       <Tooltip>
@@ -81,12 +81,12 @@ export const Placements: Story = {
         </TooltipContent>
       </Tooltip>
     </div>
-  ),
-}
+  )
+};
 
 // Tooltip with custom delay
 export const CustomDelay: Story = {
-  name: 'Custom Delay',
+  name: "Custom Delay",
   render: () => (
     <div className="flex gap-4">
       <Tooltip delayDuration={0}>
@@ -116,12 +116,12 @@ export const CustomDelay: Story = {
         </TooltipContent>
       </Tooltip>
     </div>
-  ),
-}
+  )
+};
 
 // Use case: Confidence score explanation
 export const ConfidenceScore: Story = {
-  name: 'Use Case: Confidence Score',
+  name: "Use Case: Confidence Score",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Requirements Page</h3>
@@ -134,7 +134,10 @@ export const ConfidenceScore: Story = {
             </span>
           </TooltipTrigger>
           <TooltipContent>
-            <p>High confidence based on clear design tokens and multiple pattern matches</p>
+            <p>
+              High confidence based on clear design tokens and multiple pattern
+              matches
+            </p>
           </TooltipContent>
         </Tooltip>
       </div>
@@ -167,12 +170,12 @@ export const ConfidenceScore: Story = {
         </Tooltip>
       </div>
     </div>
-  ),
-}
+  )
+};
 
 // Use case: Pattern match score
 export const PatternMatch: Story = {
-  name: 'Use Case: Pattern Match Score',
+  name: "Use Case: Pattern Match Score",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Pattern Selection</h3>
@@ -181,7 +184,9 @@ export const PatternMatch: Story = {
           <span className="text-sm font-medium">shadcn/ui Button</span>
           <Tooltip>
             <TooltipTrigger asChild>
-              <span className="text-sm text-gray-600 cursor-help">Match: 92%</span>
+              <span className="text-sm text-gray-600 cursor-help">
+                Match: 92%
+              </span>
             </TooltipTrigger>
             <TooltipContent>
               <div className="space-y-1">
@@ -195,12 +200,12 @@ export const PatternMatch: Story = {
         </div>
       </div>
     </div>
-  ),
-}
+  )
+};
 
 // Use case: Token adherence
 export const TokenAdherence: Story = {
-  name: 'Use Case: Token Adherence',
+  name: "Use Case: Token Adherence",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Component Preview</h3>
@@ -211,7 +216,10 @@ export const TokenAdherence: Story = {
             <TooltipTrigger asChild>
               <div className="flex items-center gap-2 cursor-help">
                 <div className="w-24 h-2 bg-gray-200 rounded-full overflow-hidden">
-                  <div className="h-full bg-green-500" style={{ width: '88%' }} />
+                  <div
+                    className="h-full bg-green-500"
+                    style={{ width: "88%" }}
+                  />
                 </div>
                 <span className="text-sm font-medium text-gray-900">88%</span>
               </div>
@@ -228,12 +236,12 @@ export const TokenAdherence: Story = {
         </div>
       </div>
     </div>
-  ),
-}
+  )
+};
 
 // Use case: Dashboard metrics
 export const DashboardMetric: Story = {
-  name: 'Use Case: Dashboard Metric',
+  name: "Use Case: Dashboard Metric",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Dashboard</h3>
@@ -267,12 +275,12 @@ export const DashboardMetric: Story = {
         </div>
       </div>
     </div>
-  ),
-}
+  )
+};
 
 // Accessibility test
 export const AccessibilityTest: Story = {
-  name: 'Accessibility Test',
+  name: "Accessibility Test",
   render: () => (
     <div className="space-y-4">
       <h3 className="text-sm font-semibold">Keyboard Navigation Test</h3>
@@ -314,26 +322,26 @@ export const AccessibilityTest: Story = {
       config: {
         rules: [
           {
-            id: 'color-contrast',
-            enabled: true,
+            id: "color-contrast",
+            enabled: true
           },
           {
-            id: 'aria-allowed-attr',
-            enabled: true,
+            id: "aria-allowed-attr",
+            enabled: true
           },
           {
-            id: 'aria-required-attr',
-            enabled: true,
-          },
-        ],
-      },
-    },
-  },
-}
+            id: "aria-required-attr",
+            enabled: true
+          }
+        ]
+      }
+    }
+  }
+};
 
 // Multi-line content
 export const MultiLineContent: Story = {
-  name: 'Multi-line Content',
+  name: "Multi-line Content",
   render: () => (
     <Tooltip>
       <TooltipTrigger asChild>
@@ -351,5 +359,5 @@ export const MultiLineContent: Story = {
         </div>
       </TooltipContent>
     </Tooltip>
-  ),
-}
+  )
+};
