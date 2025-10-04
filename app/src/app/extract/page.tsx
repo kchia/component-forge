@@ -1,17 +1,20 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Link from "next/link";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileImage, CheckCircle2, AlertCircle } from "lucide-react";
+import { Upload, FileImage, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
 import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
 import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
 import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
 import { useTokenStore } from "@/stores/useTokenStore";
+import { TokenEditor, TokenData } from "@/components/tokens/TokenEditor";
+import { TokenExport } from "@/components/tokens/TokenExport";
 
 export default function TokenExtractionPage() {
   const [activeTab, setActiveTab] = useState("screenshot");
@@ -28,6 +31,33 @@ export default function TokenExtractionPage() {
   const { mutate: extractFromFigma, isPending: isFigmaPending } = useFigmaExtraction();
   const tokens = useTokenStore((state) => state.tokens);
   const metadata = useTokenStore((state) => state.metadata);
+  const updateToken = useTokenStore((state) => state.updateToken);
+
+  // Convert tokens to TokenEditor format
+  const getEditorTokens = (): TokenData | null => {
+    if (!tokens) return null;
+    
+    return {
+      colors: tokens.colors
+        ? Object.entries(tokens.colors).reduce((acc, [key, value]) => ({
+            ...acc,
+            [key]: { value, confidence: 0.85 }, // Default confidence
+          }), {})
+        : {},
+      typography: tokens.typography
+        ? Object.entries(tokens.typography).reduce((acc, [key, value]) => ({
+            ...acc,
+            [key]: { value: typeof value === 'string' ? value : JSON.stringify(value), confidence: 0.85 },
+          }), {})
+        : {},
+      spacing: tokens.spacing
+        ? Object.entries(tokens.spacing).reduce((acc, [key, value]) => ({
+            ...acc,
+            [key]: { value: typeof value === 'string' ? value : JSON.stringify(value), confidence: 0.85 },
+          }), {})
+        : {},
+    };
+  };
 
   // File validation
   const validateFile = (file: File): string | null => {
@@ -227,30 +257,52 @@ export default function TokenExtractionPage() {
                       From: {metadata.filename || 'Unknown file'}
                     </p>
                   </Alert>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {tokens.colors && Object.keys(tokens.colors).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.colors).length} Colors
-                      </Badge>
-                    )}
-                    {tokens.typography && Object.keys(tokens.typography).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.typography).length} Typography
-                      </Badge>
-                    )}
-                    {tokens.spacing && Object.keys(tokens.spacing).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.spacing).length} Spacing
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Token editing coming in next commit...
-                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Token Editor */}
+          {tokens && getEditorTokens() && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Tokens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TokenEditor tokens={getEditorTokens()!} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Token Export */}
+          {tokens && getEditorTokens() && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Tokens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TokenExport
+                  tokens={getEditorTokens()!}
+                  metadata={{
+                    method: "screenshot",
+                    timestamp: new Date().toISOString(),
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation */}
+          {tokens && (
+            <div className="flex justify-end">
+              <Button asChild size="lg">
+                <Link href="/requirements">
+                  Continue to Requirements
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          )}
         </TabsContent>
 
         {/* Figma Tab */}
@@ -361,30 +413,52 @@ export default function TokenExtractionPage() {
                       From: {metadata.filename || 'Figma file'}
                     </p>
                   </Alert>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-                    {tokens.colors && Object.keys(tokens.colors).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.colors).length} Colors
-                      </Badge>
-                    )}
-                    {tokens.typography && Object.keys(tokens.typography).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.typography).length} Typography
-                      </Badge>
-                    )}
-                    {tokens.spacing && Object.keys(tokens.spacing).length > 0 && (
-                      <Badge variant="outline">
-                        {Object.keys(tokens.spacing).length} Spacing
-                      </Badge>
-                    )}
-                  </div>
-                  <p className="text-sm text-muted-foreground">
-                    Token editing coming in next commit...
-                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
+
+          {/* Token Editor (shared for Figma) */}
+          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Edit Tokens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TokenEditor tokens={getEditorTokens()!} />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Token Export (shared for Figma) */}
+          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Export Tokens</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <TokenExport
+                  tokens={getEditorTokens()!}
+                  metadata={{
+                    method: "figma",
+                    timestamp: new Date().toISOString(),
+                  }}
+                />
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Navigation (shared for Figma) */}
+          {tokens && metadata?.extractionMethod === 'figma' && (
+            <div className="flex justify-end">
+              <Button asChild size="lg">
+                <Link href="/requirements">
+                  Continue to Requirements
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </main>
