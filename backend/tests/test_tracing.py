@@ -57,6 +57,7 @@ class TestTracingConfig:
                 "LANGCHAIN_TRACING_V2": "true",
                 "LANGCHAIN_API_KEY": "test-key",
             },
+            clear=True,
         ):
             config = TracingConfig()
             assert config.project == "componentforge-dev"
@@ -100,6 +101,10 @@ class TestTracingInitialization:
     def test_init_tracing_not_configured(self, caplog):
         """Test init_tracing when tracing is not configured."""
         with patch.dict(os.environ, {}, clear=True):
+            # Reset the global config to test fresh initialization
+            import src.core.tracing as tracing_module
+            tracing_module._tracing_config = None
+            
             result = init_tracing()
             assert result is False
             assert "not configured" in caplog.text.lower()
