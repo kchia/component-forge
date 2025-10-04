@@ -133,7 +133,19 @@
   }
 }
 
-@layer utilities {
+@keyframes wave {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+@layer utilities {  
+  .animate-wave {
+    animation: wave 2s ease-in-out infinite;
+  }
   @keyframes indeterminate {
     0% {
       transform: translateX(-100%);
