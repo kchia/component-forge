@@ -8,7 +8,8 @@ import base64
 # Configuration
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
 MAX_IMAGE_WIDTH = 2000  # Max width in pixels
-ALLOWED_FORMATS = {"PNG", "JPEG", "JPG"}
+# PIL returns "JPEG" for both .jpg and .jpeg files
+ALLOWED_FORMATS = {"PNG", "JPEG"}
 ALLOWED_MIME_TYPES = {"image/png", "image/jpeg", "image/jpg"}
 
 
@@ -72,8 +73,27 @@ def validate_and_process_image(
         validate_mime_type(mime_type)
     
     try:
-        # Try to open and validate image
+        # Try to open and validate image with decompression bomb check
         image = Image.open(io.BytesIO(image_data))
+        
+        # Verify image to detect corruption early
+        try:
+            image.verify()
+        except Exception as e:
+            raise ImageValidationError(f"Image verification failed: {str(e)}")
+        
+        # Re-open image after verify (verify() closes the file)
+        image = Image.open(io.BytesIO(image_data))
+        
+        # Check for decompression bombs (PIL's default limit is 178956970 pixels)
+        # We add an additional conservative check
+        width, height = image.size
+        max_pixels = 25_000_000  # ~5000x5000, reasonable for design screenshots
+        if width * height > max_pixels:
+            raise ImageValidationError(
+                f"Image too large ({width}x{height} = {width*height} pixels). "
+                f"Maximum is {max_pixels} pixels to prevent memory issues."
+            )
         
         # Verify image format
         if image.format not in ALLOWED_FORMATS:
@@ -82,7 +102,6 @@ def validate_and_process_image(
             )
         
         # Get image metadata
-        width, height = image.size
         metadata = {
             "format": image.format,
             "width": width,

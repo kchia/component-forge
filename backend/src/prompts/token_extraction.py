@@ -59,14 +59,19 @@ EXTRACTION GUIDELINES:
 
 CONFIDENCE SCORING (0.0 to 1.0):
 - 0.9-1.0: Very certain (clear, consistent, obvious)
+  Example: Button color is solid and uniform throughout (e.g., #3B82F6 with no variation)
 - 0.7-0.9: Confident (visible but some ambiguity)
+  Example: Color varies slightly due to gradient, shadow, or hover state visible
 - 0.5-0.7: Moderate (estimated, not very clear)
+  Example: Color is partially obscured or affected by transparency/overlay
 - 0.0-0.5: Low confidence (guessing, unclear)
+  Example: Token not clearly visible in the image
 
 IMPORTANT NOTES:
 - If a token is not visible in the image, set confidence to 0.0 and provide a reasonable default
-- For font family, confidence should typically be 0.5-0.7 (hard to identify exact font)
-- For colors, confidence should be high (0.8-1.0) if clearly visible
+- For font family, confidence should typically be 0.5-0.7 (hard to identify exact font from visuals)
+- For colors, confidence should be high (0.8-1.0) if clearly visible with consistent appearance
+- For spacing, confidence should be high (0.8-1.0) if elements have clear, measurable gaps
 - Return ONLY the JSON object, no additional text
 - All color values must be in uppercase hex format (e.g., "#3B82F6")
 - All size values must include "px" unit

@@ -39,7 +39,18 @@ echo ""
 
 # Create a test image using Python
 echo "3. Creating test image..."
-python3 << 'EOF'
+# Check for python3 or python
+PYTHON_CMD=""
+if command -v python3 &> /dev/null; then
+    PYTHON_CMD="python3"
+elif command -v python &> /dev/null; then
+    PYTHON_CMD="python"
+else
+    echo "❌ Python not found. Please install Python 3."
+    exit 1
+fi
+
+$PYTHON_CMD << 'EOF'
 from PIL import Image, ImageDraw
 import os
 

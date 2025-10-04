@@ -12,6 +12,11 @@ CONFIDENCE_THRESHOLD_FALLBACK = 0.7
 def calculate_confidence_from_logprobs(logprobs: list) -> float:
     """Calculate confidence score from OpenAI logprobs.
     
+    NOTE: This function is currently unused. The current implementation relies on
+    GPT-4V's self-assessed confidence scores provided in the JSON response, not
+    actual token log probabilities from the API. This function is kept for potential
+    future use if we switch to logprob-based confidence calculation.
+    
     Args:
         logprobs: List of log probabilities from OpenAI API
         

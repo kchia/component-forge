@@ -93,14 +93,12 @@ class TokenExtractor:
             logger.info("Received response from GPT-4V")
             
             # Parse JSON response
-            # Remove markdown code blocks if present
+            # Remove markdown code blocks if present (robust handling)
+            import re
             content = content.strip()
-            if content.startswith("```json"):
-                content = content[7:]
-            elif content.startswith("```"):
-                content = content[3:]
-            if content.endswith("```"):
-                content = content[:-3]
+            # Remove markdown code blocks with optional language specifier
+            content = re.sub(r'^```(?:json|JSON)?\s*\n?', '', content, flags=re.IGNORECASE)
+            content = re.sub(r'\n?```\s*$', '', content, flags=re.IGNORECASE)
             content = content.strip()
             
             try:

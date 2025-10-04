@@ -36,8 +36,12 @@ async def extract_tokens_from_screenshot(
     Raises:
         HTTPException: For validation or extraction errors
     """
+    # Sanitize filename to prevent path traversal issues
+    import os
+    safe_filename = os.path.basename(file.filename) if file.filename else "unknown"
+    
     logger.info(
-        f"Received screenshot upload: {file.filename}, "
+        f"Received screenshot upload: {safe_filename}, "
         f"content_type: {file.content_type}"
     )
     
@@ -69,7 +73,7 @@ async def extract_tokens_from_screenshot(
             
             # Add metadata to response
             result["metadata"] = {
-                "filename": file.filename,
+                "filename": safe_filename,
                 "image": metadata,
                 "extraction_method": "gpt-4v",
             }
