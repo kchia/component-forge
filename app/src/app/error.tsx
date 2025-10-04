@@ -51,7 +51,7 @@ export default function Error({
               This error has been logged. You can try the following:
             </p>
             <ul className="text-sm text-muted-foreground space-y-2 list-disc list-inside">
-              <li>Click "Try Again" to reload the page</li>
+              <li>Click &quot;Try Again&quot; to reload the page</li>
               <li>Go back to the previous page</li>
               <li>Return to the dashboard and try again</li>
               <li>Clear your browser cache and cookies</li>

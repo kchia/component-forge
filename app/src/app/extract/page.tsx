@@ -7,8 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
-import { Badge } from "@/components/ui/badge";
-import { Upload, FileImage, CheckCircle2, AlertCircle, ArrowRight } from "lucide-react";
+import { Upload, FileImage, CheckCircle2, ArrowRight } from "lucide-react";
 import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
 import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
 import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
@@ -31,7 +30,6 @@ export default function TokenExtractionPage() {
   const { mutate: extractFromFigma, isPending: isFigmaPending } = useFigmaExtraction();
   const tokens = useTokenStore((state) => state.tokens);
   const metadata = useTokenStore((state) => state.metadata);
-  const updateToken = useTokenStore((state) => state.updateToken);
 
   // Convert tokens to TokenEditor format
   const getEditorTokens = (): TokenData | null => {
