@@ -51,7 +51,7 @@ class RateLimiter:
             self._locks[service] = asyncio.Lock()
         return self._locks[service]
 
-    async def acquire(self, service: str) -> "RateLimiterContext":
+    def acquire(self, service: str) -> "RateLimiterContext":
         """
         Acquire permission to make an API call.
         

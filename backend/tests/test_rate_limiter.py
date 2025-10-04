@@ -4,8 +4,14 @@ Tests for Rate Limiter
 
 import pytest
 import asyncio
-from backend.src.core.rate_limiter import RateLimiter, get_rate_limiter
-from backend.src.core.errors import RateLimitError
+import sys
+from pathlib import Path
+
+# Add src to path
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+
+from core.rate_limiter import RateLimiter, get_rate_limiter
+from core.errors import RateLimitError
 
 
 class TestRateLimiter:

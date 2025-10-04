@@ -4,7 +4,7 @@ Token Exporter Service
 Handles exporting design tokens to various formats (JSON, CSS).
 """
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Literal
 
 
@@ -77,7 +77,7 @@ class TokenExporter:
         if metadata:
             output["_metadata"] = {
                 "extractionMethod": metadata.get("method", "unknown"),
-                "extractedAt": metadata.get("timestamp", datetime.utcnow().isoformat()),
+                "extractedAt": metadata.get("timestamp", datetime.now(timezone.utc).isoformat()),
                 "averageConfidence": metadata.get("averageConfidence"),
             }
 
@@ -114,7 +114,7 @@ class TokenExporter:
         if metadata:
             method = metadata.get("method", "unknown")
             lines.append(f" * Extracted via: {method}")
-            timestamp = metadata.get("timestamp", datetime.utcnow().isoformat())
+            timestamp = metadata.get("timestamp", datetime.now(timezone.utc).isoformat())
             lines.append(f" * Generated at: {timestamp}")
             if "averageConfidence" in metadata and metadata["averageConfidence"] is not None:
                 conf_pct = int(metadata["averageConfidence"] * 100)
