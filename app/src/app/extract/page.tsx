@@ -7,8 +7,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
 import { Badge } from "@/components/ui/badge";
-import { Upload, FileImage } from "lucide-react";
+import { Upload, FileImage, CheckCircle2, AlertCircle } from "lucide-react";
 import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
+import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
+import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
 import { useTokenStore } from "@/stores/useTokenStore";
 
 export default function TokenExtractionPage() {
@@ -16,7 +18,14 @@ export default function TokenExtractionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   
+  // Figma state
+  const [figmaPat, setFigmaPat] = useState("");
+  const [figmaUrl, setFigmaUrl] = useState("");
+  const [isPatValid, setIsPatValid] = useState(false);
+  
   const { mutate: extractTokens, isPending, isError, error } = useTokenExtraction();
+  const { mutate: authFigma, isPending: isAuthPending } = useFigmaAuth();
+  const { mutate: extractFromFigma, isPending: isFigmaPending } = useFigmaExtraction();
   const tokens = useTokenStore((state) => state.tokens);
   const metadata = useTokenStore((state) => state.metadata);
 
@@ -80,6 +89,31 @@ export default function TokenExtractionPage() {
   const handleUpload = () => {
     if (selectedFile) {
       extractTokens(selectedFile);
+    }
+  };
+
+  // Handle Figma PAT validation
+  const handleValidatePat = () => {
+    if (figmaPat.trim()) {
+      authFigma(figmaPat, {
+        onSuccess: (data) => {
+          if (data.valid) {
+            setIsPatValid(true);
+          } else {
+            alert(data.message);
+          }
+        },
+      });
+    }
+  };
+
+  // Handle Figma extraction
+  const handleFigmaExtract = () => {
+    if (figmaUrl.trim() && figmaPat.trim()) {
+      extractFromFigma({
+        figmaUrl,
+        personalAccessToken: figmaPat,
+      });
     }
   };
 
@@ -225,10 +259,130 @@ export default function TokenExtractionPage() {
             <CardHeader>
               <CardTitle>Figma Integration</CardTitle>
             </CardHeader>
-            <CardContent>
-              <div className="text-center py-8 text-muted-foreground">
-                <p>Figma integration coming in next commit...</p>
+            <CardContent className="space-y-4">
+              {/* PAT Input */}
+              <div className="space-y-2">
+                <label className="text-sm font-medium" htmlFor="figma-pat">
+                  Figma Personal Access Token
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="figma-pat"
+                    type="password"
+                    value={figmaPat}
+                    onChange={(e) => {
+                      setFigmaPat(e.target.value);
+                      setIsPatValid(false);
+                    }}
+                    placeholder="figd_..."
+                    className="flex-1 px-3 py-2 border rounded-md text-sm"
+                    disabled={isPatValid}
+                  />
+                  {!isPatValid ? (
+                    <Button
+                      onClick={handleValidatePat}
+                      disabled={!figmaPat.trim() || isAuthPending}
+                    >
+                      {isAuthPending ? "Validating..." : "Validate"}
+                    </Button>
+                  ) : (
+                    <Button variant="outline" disabled>
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Valid
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Get your token from{" "}
+                  <a
+                    href="https://www.figma.com/developers/api#access-tokens"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="underline"
+                  >
+                    Figma Settings
+                  </a>
+                </p>
               </div>
+
+              {/* Figma URL Input */}
+              {isPatValid && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium" htmlFor="figma-url">
+                    Figma File URL
+                  </label>
+                  <div className="flex gap-2">
+                    <input
+                      id="figma-url"
+                      type="url"
+                      value={figmaUrl}
+                      onChange={(e) => setFigmaUrl(e.target.value)}
+                      placeholder="https://www.figma.com/file/..."
+                      className="flex-1 px-3 py-2 border rounded-md text-sm"
+                    />
+                    <Button
+                      onClick={handleFigmaExtract}
+                      disabled={!figmaUrl.trim() || isFigmaPending}
+                    >
+                      {isFigmaPending ? "Extracting..." : "Extract"}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Paste the full URL of your Figma file
+                  </p>
+                </div>
+              )}
+
+              {/* Progress */}
+              {isFigmaPending && (
+                <div className="space-y-2">
+                  <Progress value={66} className="h-2" />
+                  <p className="text-sm text-muted-foreground text-center">
+                    Fetching file from Figma API...
+                  </p>
+                </div>
+              )}
+
+              {/* Cache Indicator */}
+              {metadata?.cached && metadata?.extractionMethod === 'figma' && (
+                <Alert>
+                  <p className="text-sm">
+                    ⚡ Results from cache (5 min TTL)
+                  </p>
+                </Alert>
+              )}
+
+              {/* Extracted Tokens Preview */}
+              {tokens && metadata?.extractionMethod === 'figma' && (
+                <div className="space-y-4">
+                  <Alert variant="success">
+                    <p className="font-medium">Tokens Extracted Successfully!</p>
+                    <p className="text-sm">
+                      From: {metadata.filename || 'Figma file'}
+                    </p>
+                  </Alert>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                    {tokens.colors && Object.keys(tokens.colors).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.colors).length} Colors
+                      </Badge>
+                    )}
+                    {tokens.typography && Object.keys(tokens.typography).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.typography).length} Typography
+                      </Badge>
+                    )}
+                    {tokens.spacing && Object.keys(tokens.spacing).length > 0 && (
+                      <Badge variant="outline">
+                        {Object.keys(tokens.spacing).length} Spacing
+                      </Badge>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    Token editing coming in next commit...
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>
