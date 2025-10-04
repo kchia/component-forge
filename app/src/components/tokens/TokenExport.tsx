@@ -29,11 +29,22 @@ export interface TokenExportProps {
   className?: string
 }
 
+interface TokenExportOutput {
+  colors: Record<string, string>
+  typography: Record<string, string>
+  spacing: Record<string, string>
+  _metadata?: {
+    extractionMethod: string
+    extractedAt: string
+    averageConfidence?: number
+  }
+}
+
 /**
  * Generates JSON export format
  */
 function generateJSON(tokens: TokenData, metadata?: TokenExportProps['metadata']): string {
-  const output: any = {
+  const output: TokenExportOutput = {
     colors: {},
     typography: {},
     spacing: {},

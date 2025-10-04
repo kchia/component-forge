@@ -76,7 +76,7 @@ export function ColorPicker({
   }, [value])
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const newValue = e.target.value
+    const newValue = e.target.value.toUpperCase()
     setLocalValue(newValue)
     
     const valid = isValidHex(newValue)

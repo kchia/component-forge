@@ -39,14 +39,14 @@ export interface SpacingEditorProps {
 }
 
 /**
- * Validates spacing value (must be multiple of 4px)
+ * Validates spacing value (must be multiple of 4px, minimum 4px)
  */
 function isValidSpacing(value: string): boolean {
   const match = value.match(/^(\d+)px$/)
   if (!match) return false
   
   const num = parseInt(match[1])
-  return num >= 0 && num % 4 === 0
+  return num > 0 && num % 4 === 0
 }
 
 /**

@@ -9,6 +9,8 @@ import time
 from typing import Dict, Optional
 import logging
 
+from .errors import RateLimitError
+
 logger = logging.getLogger(__name__)
 
 
@@ -105,7 +107,6 @@ class RateLimiter:
                 )
                 
                 # Option 1: Raise error (fail fast)
-                from .errors import RateLimitError
                 raise RateLimitError(
                     f"{service} rate limit exceeded. "
                     f"Try again in {int(wait_time)} seconds."

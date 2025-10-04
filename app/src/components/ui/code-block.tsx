@@ -1,22 +1,15 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "./button"
 import { Copy, Check } from "lucide-react"
-
-// NOTE: This component currently does not include Prism.js syntax highlighting
-// To enable full syntax highlighting, install prismjs:
-//   npm install prismjs
-//   npm install --save-dev @types/prismjs
-// Then uncomment the Prism imports and highlighted code section below
-
-// import Prism from "prismjs"
-// import "prismjs/themes/prism-tomorrow.css"
-// import "prismjs/components/prism-typescript"
-// import "prismjs/components/prism-tsx"
-// import "prismjs/components/prism-json"
-// import "prismjs/components/prism-javascript"
-// import "prismjs/components/prism-css"
+import Prism from "prismjs"
+import "prismjs/themes/prism-tomorrow.css"
+import "prismjs/components/prism-typescript"
+import "prismjs/components/prism-tsx"
+import "prismjs/components/prism-json"
+import "prismjs/components/prism-javascript"
+import "prismjs/components/prism-css"
 
 export interface CodeBlockProps {
   code: string
@@ -34,6 +27,17 @@ export function CodeBlock({
   className = "",
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
+  const [highlightedCode, setHighlightedCode] = useState(code)
+
+  useEffect(() => {
+    // Highlight code when it changes or language changes
+    if (Prism.languages[language]) {
+      const highlighted = Prism.highlight(code, Prism.languages[language], language)
+      setHighlightedCode(highlighted)
+    } else {
+      setHighlightedCode(code)
+    }
+  }, [code, language])
 
   const handleCopy = async () => {
     try {
@@ -44,11 +48,6 @@ export function CodeBlock({
       console.error("Failed to copy code:", err)
     }
   }
-
-  // When Prism.js is installed, uncomment this section:
-  // const highlighted = Prism.languages[language]
-  //   ? Prism.highlight(code, Prism.languages[language], language)
-  //   : code
 
   const lines = code.split("\n")
 
@@ -87,17 +86,26 @@ export function CodeBlock({
         <pre className="p-4 text-sm font-mono leading-relaxed">
           {showLineNumbers ? (
             <code className="block">
-              {lines.map((line, index) => (
-                <div key={index} className="table-row">
-                  <span className="table-cell pr-4 text-gray-500 select-none text-right">
-                    {index + 1}
-                  </span>
-                  <span className="table-cell text-gray-100">{line}</span>
-                </div>
-              ))}
+              {lines.map((line, index) => {
+                const lineNumber = index + 1
+                const highlightedLines = highlightedCode.split("\n")
+                const highlightedLine = highlightedLines[index] || line
+                
+                return (
+                  <div key={index} className="table-row">
+                    <span className="table-cell pr-4 text-gray-500 select-none text-right">
+                      {lineNumber}
+                    </span>
+                    <span 
+                      className="table-cell" 
+                      dangerouslySetInnerHTML={{ __html: highlightedLine }}
+                    />
+                  </div>
+                )
+              })}
             </code>
           ) : (
-            <code className="text-gray-100">{code}</code>
+            <code dangerouslySetInnerHTML={{ __html: highlightedCode }} />
           )}
         </pre>
       </div>

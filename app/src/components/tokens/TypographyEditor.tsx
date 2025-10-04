@@ -150,6 +150,7 @@ export function TypographyEditor({
               type="button"
               onClick={() => setShowCustomFont(false)}
               className="text-sm text-blue-600 hover:text-blue-700"
+              aria-label="Switch to font family presets"
             >
               Choose from presets
             </button>
