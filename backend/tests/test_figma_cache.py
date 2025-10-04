@@ -26,7 +26,7 @@ class TestFigmaCacheBasics:
         key = cache._build_metrics_key("abc123", "hits")
         assert key == "figma:metrics:abc123:hits"
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_set_file_success(self, mock_get_redis):
         """Test successful file caching."""
         mock_redis = AsyncMock()
@@ -47,7 +47,7 @@ class TestFigmaCacheBasics:
         assert call_args[1] == 300
         assert json.loads(call_args[2]) == data
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_get_file_cache_hit(self, mock_get_redis):
         """Test cache hit returns data."""
         cached_data = {"name": "Cached File"}
@@ -66,7 +66,7 @@ class TestFigmaCacheBasics:
         assert result == cached_data
         mock_redis.get.assert_called_once_with("figma:file:abc123:file")
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_get_file_cache_miss(self, mock_get_redis):
         """Test cache miss returns None."""
         mock_redis = AsyncMock()
@@ -85,7 +85,7 @@ class TestFigmaCacheBasics:
 class TestFigmaCacheInvalidation:
     """Tests for cache invalidation."""
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_invalidate_file_success(self, mock_get_redis):
         """Test successful cache invalidation."""
         mock_redis = AsyncMock()
@@ -102,12 +102,14 @@ class TestFigmaCacheInvalidation:
         deleted = await cache.invalidate_file("abc123")
 
         assert deleted == 2
-        mock_redis.keys.assert_called_with("figma:file:abc123:*")
         
-        # Also check metrics were cleared
-        assert mock_redis.keys.call_count == 2  # Once for cache, once for metrics
+        # Check that both cache and metrics patterns were queried
+        metrics_calls = [call for call in mock_redis.keys.call_args_list]
+        assert len(metrics_calls) == 2  # Once for cache, once for metrics
+        assert "figma:file:abc123:*" in str(metrics_calls[0])
+        assert "figma:metrics:abc123:*" in str(metrics_calls[1])
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_invalidate_file_no_entries(self, mock_get_redis):
         """Test invalidation when no cache entries exist."""
         mock_redis = AsyncMock()
@@ -125,7 +127,7 @@ class TestFigmaCacheInvalidation:
 class TestFigmaCacheMetrics:
     """Tests for cache metrics tracking."""
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_track_hit(self, mock_get_redis):
         """Test tracking cache hits."""
         mock_redis = AsyncMock()
@@ -147,7 +149,7 @@ class TestFigmaCacheMetrics:
         mock_redis.rpush.assert_called_once()
         mock_redis.ltrim.assert_called_once()
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_track_miss(self, mock_get_redis):
         """Test tracking cache misses."""
         mock_redis = AsyncMock()
@@ -162,7 +164,7 @@ class TestFigmaCacheMetrics:
         mock_redis.incr.assert_called_once()
         assert "figma:metrics:abc123:misses" in str(mock_redis.incr.call_args)
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_get_hit_rate_with_data(self, mock_get_redis):
         """Test calculating hit rate with data."""
         mock_redis = AsyncMock()
@@ -181,7 +183,7 @@ class TestFigmaCacheMetrics:
         assert metrics["hit_rate"] == 10 / 12
         assert metrics["avg_latency_ms"] == (95 + 100 + 90) / 3
 
-    @patch("src.cache.figma_cache.get_redis")
+    @patch("src.core.cache.get_redis")
     async def test_get_hit_rate_no_data(self, mock_get_redis):
         """Test calculating hit rate with no data."""
         mock_redis = AsyncMock()
@@ -201,7 +203,6 @@ class TestFigmaCacheMetrics:
         assert metrics["avg_latency_ms"] == 0.0
 
 
-@pytest.mark.asyncio
 class TestFigmaCacheConfiguration:
     """Tests for cache configuration."""
 
@@ -215,10 +216,12 @@ class TestFigmaCacheConfiguration:
         cache = FigmaCache(ttl=600)
         assert cache.ttl == 600
 
-    async def test_get_all_metrics(self):
+    def test_get_all_metrics(self):
         """Test getting aggregated metrics."""
         cache = FigmaCache(ttl=300)
-        metrics = await cache.get_all_metrics()
+        # get_all_metrics is a sync method that returns a dict
+        import asyncio
+        metrics = asyncio.run(cache.get_all_metrics())
 
         assert "cache_enabled" in metrics
         assert "ttl_seconds" in metrics
