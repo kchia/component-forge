@@ -305,3 +305,4 @@ profile.out
 *.prof
 *.trace
 .benchmark/
+screenshots/
