@@ -60,6 +60,7 @@ lib/
 backend/lib/
 backend/lib64/
 lib64/
+!app/src/lib/
 parts/
 sdist/
 var/
