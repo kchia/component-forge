@@ -54,7 +54,8 @@ develop-eggs/
 downloads/
 eggs/
 .eggs/
-lib/
+backend/lib/
+backend/lib64/
 lib64/
 parts/
 sdist/
