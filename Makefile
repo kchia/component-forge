@@ -1,4 +1,4 @@
-.PHONY: help install dev test build deploy demo clean template-setup lint migrate migrate-rollback seed-patterns
+.PHONY: help install dev test build deploy demo clean template-setup lint lint-check migrate migrate-rollback seed-patterns
 
 help:
 	@echo "🤖 ComponentForge - AI-Powered Component Generation"
@@ -6,7 +6,8 @@ help:
 	@echo "  make install         - Install dependencies"
 	@echo "  make dev             - Start development environment"
 	@echo "  make test            - Run all tests"
-	@echo "  make lint            - Run linters (ESLint, black, isort)"
+	@echo "  make lint            - Run linters and auto-fix issues"
+	@echo "  make lint-check      - Check code style (no fixes)"
 	@echo "  make migrate         - Apply database migrations"
 	@echo "  make migrate-rollback - Rollback last migration"
 	@echo "  make seed-patterns   - Seed Qdrant with component patterns"
@@ -64,13 +65,22 @@ test:
 	cd app && npm run test:e2e
 
 lint:
-	@echo "🧹 Running linters..."
+	@echo "🧹 Running linters and auto-fixing..."
 	@echo "Linting backend (black + isort)..."
+	cd backend && source venv/bin/activate && black src/ tests/ scripts/
+	cd backend && source venv/bin/activate && isort src/ tests/ scripts/
+	@echo "Linting frontend (ESLint)..."
+	cd app && npm run lint:fix
+	@echo "✅ Linting complete!"
+
+lint-check:
+	@echo "🔍 Checking code style (no fixes)..."
+	@echo "Checking backend (black + isort)..."
 	cd backend && source venv/bin/activate && black src/ tests/ scripts/ --check
 	cd backend && source venv/bin/activate && isort src/ tests/ scripts/ --check-only
-	@echo "Linting frontend (ESLint)..."
+	@echo "Checking frontend (ESLint)..."
 	cd app && npm run lint
-	@echo "✅ Linting complete!"
+	@echo "✅ Style check complete!"
 
 migrate:
 	@echo "📊 Applying database migrations..."

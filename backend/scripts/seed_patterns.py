@@ -258,8 +258,10 @@ class PatternSeeder:
 
         logger.info(f"Found {len(pattern_files)} pattern files")
 
-        # Seed each pattern
+        # Seed each pattern and track failures
         seeded_count = 0
+        failed_patterns = []
+        
         for idx, pattern_file in enumerate(pattern_files, start=1):
             try:
                 pattern = self.load_pattern(pattern_file)
@@ -267,9 +269,17 @@ class PatternSeeder:
                 seeded_count += 1
             except Exception as e:
                 logger.error(f"Failed to seed pattern from {pattern_file}: {e}")
+                failed_patterns.append((pattern_file.name, str(e)))
                 # Continue with other patterns
 
+        # Report results
         logger.info(f"Successfully seeded {seeded_count}/{len(pattern_files)} patterns")
+        
+        if failed_patterns:
+            logger.warning(f"Failed to seed {len(failed_patterns)} pattern(s):")
+            for filename, error in failed_patterns:
+                logger.warning(f"  - {filename}: {error}")
+        
         return seeded_count
 
 

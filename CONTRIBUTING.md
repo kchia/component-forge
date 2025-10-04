@@ -13,13 +13,15 @@ Before you begin, ensure you have the following installed:
 
 ### Recommended Tools
 
-- **VS Code** with extensions:
-  - Python
-  - ESLint
-  - Prettier
-  - Tailwind CSS IntelliSense
-- **pyenv** for Python version management
-- **nvm** for Node.js version management
+- **Code Editor**: Any modern editor works (VS Code, WebStorm, Vim, etc.)
+  - VS Code users may find these extensions helpful:
+    - Python
+    - ESLint
+    - Prettier
+    - Tailwind CSS IntelliSense
+- **Version Management** (optional but recommended):
+  - **pyenv** for Python version management
+  - **nvm** for Node.js version management
 
 ## 🚀 Getting Started
 
@@ -129,19 +131,24 @@ cd app && npm run test:e2e
 ### Linting and Code Style
 
 ```bash
-# Run all linters
+# Auto-fix linting issues (recommended)
 make lint
 
-# Backend linting (black + isort)
-cd backend && source venv/bin/activate
-black src/ tests/
-isort src/ tests/
+# Check code style without fixing (for CI/CD)
+make lint-check
 
-# Frontend linting
+# Backend linting (manual)
+cd backend && source venv/bin/activate
+black src/ tests/ scripts/      # Auto-fix formatting
+isort src/ tests/ scripts/      # Auto-fix imports
+
+# Frontend linting (manual)
 cd app
-npm run lint
-npm run lint:fix
+npm run lint:fix                # Auto-fix issues
+npm run lint                    # Check only
 ```
+
+**Note**: `make lint` will automatically fix most style issues. Use `make lint-check` in CI/CD pipelines to verify code style without making changes.
 
 ### Code Style Guidelines
 
