@@ -68,12 +68,73 @@ class FigmaExtractRequest(BaseModel):
         return v
 
 
-class DesignTokens(BaseModel):
-    """Normalized design tokens."""
+class ColorTokens(BaseModel):
+    """Semantic color tokens matching shadcn/ui convention."""
+    primary: Optional[str] = Field(None, description="Primary brand color")
+    secondary: Optional[str] = Field(None, description="Secondary accent color")
+    accent: Optional[str] = Field(None, description="Accent highlight color")
+    destructive: Optional[str] = Field(None, description="Destructive/error color")
+    muted: Optional[str] = Field(None, description="Muted/subtle color")
+    background: Optional[str] = Field(None, description="Main background")
+    foreground: Optional[str] = Field(None, description="Main text color")
+    border: Optional[str] = Field(None, description="Border color")
 
-    colors: Dict[str, str] = Field(default_factory=dict, description="Color tokens")
-    typography: Dict[str, Any] = Field(default_factory=dict, description="Typography tokens")
-    spacing: Dict[str, Any] = Field(default_factory=dict, description="Spacing tokens")
+
+class TypographyTokens(BaseModel):
+    """Typography scale and properties."""
+    # Font families
+    fontFamily: Optional[str] = Field(None, description="Primary font family")
+    fontFamilyHeading: Optional[str] = Field(None, description="Heading font family")
+    fontFamilyMono: Optional[str] = Field(None, description="Monospace font family")
+    
+    # Font scale (xs to 4xl)
+    fontSizeXs: Optional[str] = Field(None, description="12px")
+    fontSizeSm: Optional[str] = Field(None, description="14px")
+    fontSizeBase: Optional[str] = Field(None, description="16px")
+    fontSizeLg: Optional[str] = Field(None, description="18px")
+    fontSizeXl: Optional[str] = Field(None, description="20px")
+    fontSize2xl: Optional[str] = Field(None, description="24px")
+    fontSize3xl: Optional[str] = Field(None, description="30px")
+    fontSize4xl: Optional[str] = Field(None, description="36px")
+    
+    # Font weights
+    fontWeightNormal: Optional[int] = Field(None, description="400")
+    fontWeightMedium: Optional[int] = Field(None, description="500")
+    fontWeightSemibold: Optional[int] = Field(None, description="600")
+    fontWeightBold: Optional[int] = Field(None, description="700")
+    
+    # Line heights
+    lineHeightTight: Optional[str] = Field(None, description="1.25")
+    lineHeightNormal: Optional[str] = Field(None, description="1.5")
+    lineHeightRelaxed: Optional[str] = Field(None, description="1.75")
+
+
+class SpacingTokens(BaseModel):
+    """Tailwind-compatible spacing scale."""
+    xs: Optional[str] = Field(None, description="4px")
+    sm: Optional[str] = Field(None, description="8px")
+    md: Optional[str] = Field(None, description="16px")
+    lg: Optional[str] = Field(None, description="24px")
+    xl: Optional[str] = Field(None, description="32px")
+    xl2: Optional[str] = Field(None, alias="2xl", description="48px")
+    xl3: Optional[str] = Field(None, alias="3xl", description="64px")
+
+
+class BorderRadiusTokens(BaseModel):
+    """Border radius scale."""
+    sm: Optional[str] = Field(None, description="2px")
+    md: Optional[str] = Field(None, description="6px")
+    lg: Optional[str] = Field(None, description="8px")
+    xl: Optional[str] = Field(None, description="12px")
+    full: Optional[str] = Field(None, description="9999px or 50%")
+
+
+class DesignTokens(BaseModel):
+    """Structured design tokens with semantic naming."""
+    colors: ColorTokens = Field(default_factory=ColorTokens)
+    typography: TypographyTokens = Field(default_factory=TypographyTokens)
+    spacing: SpacingTokens = Field(default_factory=SpacingTokens)
+    borderRadius: BorderRadiusTokens = Field(default_factory=BorderRadiusTokens)
 
 
 class FigmaExtractResponse(BaseModel):
@@ -263,6 +324,12 @@ async def get_figma_cache_metrics(file_key: str):
 
 
 # Helper Functions
+#
+# Confidence Score Guidelines:
+# - 0.9-1.0: Extracted from actual Figma data with high certainty
+# - 0.7-0.9: Extracted with some inference or pattern matching
+# - 0.4-0.6: Partial match, keyword-based inference, or semantic defaults
+# - 0.0-0.3: Fallback defaults with no extracted data
 
 
 def _extract_tokens(file_data: Dict[str, Any], styles_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -278,29 +345,129 @@ def _extract_tokens(file_data: Dict[str, Any], styles_data: Dict[str, Any]) -> D
         Format: {
             "colors": {"primary": {"value": "#HEX", "confidence": 0.6}},
             "typography": {...},
-            "spacing": {...}
+            "spacing": {...},
+            "borderRadius": {...}
         }
     """
     tokens = {
         "colors": _extract_color_tokens(styles_data),
         "typography": _extract_typography_tokens(styles_data),
         "spacing": _extract_spacing_tokens(file_data),
+        "borderRadius": _extract_border_radius_tokens(file_data),
     }
 
     return tokens
 
 
+def _extract_border_radius_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
+    """
+    Extract border radius tokens from Figma nodes with confidence scores.
+
+    Args:
+        file_data: Figma file data from /files/{key} endpoint
+
+    Returns:
+        Dictionary of border radius tokens with {value, confidence}
+    """
+    border_radius_values = set()
+
+    # Recursively traverse the document tree to find nodes with border radius
+    def traverse_nodes(node: Dict[str, Any]):
+        """Recursively traverse node tree to find border radius values."""
+        if not isinstance(node, dict):
+            return
+
+        # Check for cornerRadius property (Figma uses this for rounded corners)
+        corner_radius = node.get("cornerRadius", 0)
+        if corner_radius > 0:
+            border_radius_values.add(corner_radius)
+        
+        # Also check for individual corner radii
+        top_left = node.get("topLeftRadius", 0)
+        top_right = node.get("topRightRadius", 0)
+        bottom_left = node.get("bottomLeftRadius", 0)
+        bottom_right = node.get("bottomRightRadius", 0)
+        
+        if top_left > 0:
+            border_radius_values.add(top_left)
+        if top_right > 0:
+            border_radius_values.add(top_right)
+        if bottom_left > 0:
+            border_radius_values.add(bottom_left)
+        if bottom_right > 0:
+            border_radius_values.add(bottom_right)
+
+        # Recursively process children
+        children = node.get("children", [])
+        for child in children:
+            traverse_nodes(child)
+
+    # Start traversal from document root
+    document = file_data.get("document", {})
+    traverse_nodes(document)
+
+    border_radius = {}
+
+    # Convert border radius values to semantic tokens with confidence
+    if border_radius_values:
+        # Sort values to create a consistent token system
+        sorted_values = sorted(border_radius_values)
+        
+        # Map to semantic scale (sm, md, lg, xl, full)
+        # Higher confidence because extracted from actual data
+        if len(sorted_values) >= 1:
+            border_radius["sm"] = {"value": f"{sorted_values[0]}px", "confidence": 0.8}
+        if len(sorted_values) >= 2:
+            border_radius["md"] = {"value": f"{sorted_values[1]}px", "confidence": 0.8}
+        if len(sorted_values) >= 3:
+            border_radius["lg"] = {"value": f"{sorted_values[2]}px", "confidence": 0.8}
+        if len(sorted_values) >= 4:
+            border_radius["xl"] = {"value": f"{sorted_values[3]}px", "confidence": 0.8}
+        
+        # Check for circular elements (very large radius values)
+        # Note: 500px threshold chosen because Figma often uses large radius values (e.g., 999px, 9999px)
+        # for fully rounded corners (circles, pills), while typical rounded corners are < 50px
+        for val in sorted_values:
+            if val >= 500:  # Very large radius indicates circular/pill shape
+                border_radius["full"] = {"value": "9999px", "confidence": 0.9}
+                break
+        
+        logger.info(f"Extracted {len(border_radius)} border radius tokens from Figma nodes")
+    
+    # Fill in missing tokens with defaults and appropriate confidence
+    confidence = 0.8 if border_radius_values else 0.3
+    border_radius.setdefault("sm", {"value": "2px", "confidence": confidence})
+    border_radius.setdefault("md", {"value": "6px", "confidence": confidence})
+    border_radius.setdefault("lg", {"value": "8px", "confidence": confidence})
+    border_radius.setdefault("xl", {"value": "12px", "confidence": confidence})
+    border_radius.setdefault("full", {"value": "9999px", "confidence": 0.3})  # Less common, lower confidence
+
+    return border_radius
+
+
 def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract color tokens from Figma styles with confidence scores.
+    Extract color tokens from Figma styles with confidence scores using semantic keyword matching.
 
     Args:
         styles_data: Figma styles data from /files/{key}/styles endpoint
 
     Returns:
-        Dictionary of color name to {value, confidence}
+        Dictionary of semantic color tokens with {value, confidence}
     """
     colors = {}
+    
+    # Keyword mapping for semantic colors
+    keywords = {
+        'primary': ['primary', 'brand', 'main', 'blue'],
+        'secondary': ['secondary', 'accent-2', 'gray', 'grey'],
+        'accent': ['accent', 'highlight', 'focus', 'teal', 'cyan'],
+        'destructive': ['error', 'danger', 'red', 'destructive', 'warning'],
+        'muted': ['muted', 'subtle', 'disabled', 'placeholder'],
+        'background': ['background', 'bg', 'surface', 'canvas', 'white'],
+        'foreground': ['foreground', 'text', 'content', 'black'],
+        'border': ['border', 'divider', 'stroke', 'outline']
+    }
 
     # Figma /files/{key}/styles returns: { "meta": { "styles": [...] } }
     meta = styles_data.get("meta", {})
@@ -309,49 +476,69 @@ def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, An
     for style in styles:
         # style_type can be: FILL, TEXT, EFFECT, GRID
         if style.get("style_type") == "FILL":
-            name = style.get("name", "")
+            name = style.get("name", "").lower()
             if not name:
                 continue
 
-            # Convert style name to token name (e.g., "Primary/Blue" -> "primary-blue")
-            token_name = name.lower().replace("/", "-").replace(" ", "-")
+            # Try to match against semantic keywords
+            for semantic_name, keyword_list in keywords.items():
+                if any(keyword in name for keyword in keyword_list):
+                    if semantic_name not in colors:
+                        # LIMITATION: Currently using default colors based on semantic name matching only.
+                        # TODO: Fetch actual color values from Figma style nodes via /files/{key}/nodes endpoint.
+                        # This would require additional API calls to get the actual fill colors from style references.
+                        # Using lower confidence (0.4) since these are inferred defaults, not extracted values.
+                        default_colors = {
+                            'primary': '#3B82F6',
+                            'secondary': '#64748B',
+                            'accent': '#06B6D4',
+                            'destructive': '#EF4444',
+                            'muted': '#94A3B8',
+                            'background': '#FFFFFF',
+                            'foreground': '#0F172A',
+                            'border': '#E2E8F0'
+                        }
+                        colors[semantic_name] = {
+                            "value": default_colors.get(semantic_name, '#9CA3AF'),
+                            "confidence": 0.4  # Lower confidence since using defaults, not extracted values
+                        }
+                    break
 
-            # Extract color from node if available
-            # Figma styles reference nodes that contain the actual style data
-            # For solid color fills, we need to parse the node's fills array
-            # Note: Full implementation would require fetching style nodes
-            # For now, we'll extract from the style metadata if available
-
-            # Placeholder: Use a default color pattern based on name
-            # This should be replaced with actual node data parsing
-            if "primary" in token_name:
-                colors[token_name] = {"value": "#3B82F6", "confidence": 0.6}  # Medium confidence - inferred
-            elif "secondary" in token_name:
-                colors[token_name] = {"value": "#64748B", "confidence": 0.6}
-            elif "background" in token_name:
-                colors[token_name] = {"value": "#FFFFFF", "confidence": 0.7}
-            elif "foreground" in token_name or "text" in token_name:
-                colors[token_name] = {"value": "#0F172A", "confidence": 0.7}
-            else:
-                # Generic gray for unknown colors - lower confidence
-                colors[token_name] = {"value": "#9CA3AF", "confidence": 0.5}
-
-    # If no styles found, provide fallback defaults with low confidence
+    # If no styles found, provide complete fallback defaults with low confidence
     if not colors:
-        logger.info("No color styles found in Figma file, using defaults")
+        logger.info("No color styles found in Figma file, using semantic defaults")
         colors = {
             "primary": {"value": "#3B82F6", "confidence": 0.5},
             "secondary": {"value": "#64748B", "confidence": 0.5},
+            "accent": {"value": "#06B6D4", "confidence": 0.5},
+            "destructive": {"value": "#EF4444", "confidence": 0.5},
+            "muted": {"value": "#94A3B8", "confidence": 0.5},
             "background": {"value": "#FFFFFF", "confidence": 0.5},
             "foreground": {"value": "#0F172A", "confidence": 0.5},
+            "border": {"value": "#E2E8F0", "confidence": 0.5},
         }
+    else:
+        # Fill in any missing semantic colors with defaults
+        default_colors = {
+            "primary": {"value": "#3B82F6", "confidence": 0.4},
+            "secondary": {"value": "#64748B", "confidence": 0.4},
+            "accent": {"value": "#06B6D4", "confidence": 0.4},
+            "destructive": {"value": "#EF4444", "confidence": 0.4},
+            "muted": {"value": "#94A3B8", "confidence": 0.4},
+            "background": {"value": "#FFFFFF", "confidence": 0.4},
+            "foreground": {"value": "#0F172A", "confidence": 0.4},
+            "border": {"value": "#E2E8F0", "confidence": 0.4},
+        }
+        for key, default_val in default_colors.items():
+            if key not in colors:
+                colors[key] = default_val
 
     return colors
 
 
 def _extract_typography_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract typography tokens from Figma styles with confidence scores.
+    Extract typography tokens from Figma styles with confidence scores using font scale.
 
     Args:
         styles_data: Figma styles data from /files/{key}/styles endpoint
@@ -370,7 +557,7 @@ def _extract_typography_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[st
     for style in styles:
         if style.get("style_type") == "TEXT":
             found_text_styles = True
-            name = style.get("name", "")
+            name = style.get("name", "").lower()
             if not name:
                 continue
 
@@ -378,42 +565,72 @@ def _extract_typography_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[st
             # Note: Full implementation would parse actual node data
             # For now, infer from common naming patterns
 
-            # Common patterns: "Heading 1", "Body", "Caption", etc.
-            if "heading" in name.lower() or "h1" in name.lower() or "title" in name.lower():
-                if not typography.get("fontFamily"):
-                    typography["fontFamily"] = {"value": "Inter", "confidence": 0.5}  # Font name inferred
-                if not typography.get("fontSize"):
-                    typography["fontSize"] = {"value": "24px", "confidence": 0.7}  # Size inferred from pattern
-                if not typography.get("fontWeight"):
-                    typography["fontWeight"] = {"value": "700", "confidence": 0.7}
-            elif "body" in name.lower() or "paragraph" in name.lower():
-                if not typography.get("fontFamily"):
-                    typography["fontFamily"] = {"value": "Inter", "confidence": 0.5}
-                if not typography.get("fontSize"):
-                    typography["fontSize"] = {"value": "16px", "confidence": 0.7}
-                if not typography.get("fontWeight"):
-                    typography["fontWeight"] = {"value": "400", "confidence": 0.7}
+            # Font family inference
+            if not typography.get("fontFamily"):
+                typography["fontFamily"] = {"value": "Inter", "confidence": 0.5}
+            
+            # Map style names to font scale
+            if "caption" in name or "xs" in name or "tiny" in name:
+                typography.setdefault("fontSizeXs", {"value": "12px", "confidence": 0.7})
+            elif "small" in name or "sm" in name or "footnote" in name:
+                typography.setdefault("fontSizeSm", {"value": "14px", "confidence": 0.7})
+            elif "body" in name or "paragraph" in name or "base" in name:
+                typography.setdefault("fontSizeBase", {"value": "16px", "confidence": 0.7})
+            elif "large" in name or "lg" in name:
+                typography.setdefault("fontSizeLg", {"value": "18px", "confidence": 0.7})
+            elif ("h5" in name or "heading 5" in name) or ("xl" in name and "2xl" not in name):
+                typography.setdefault("fontSizeXl", {"value": "20px", "confidence": 0.7})
+            elif "h4" in name or "heading 4" in name or "2xl" in name:
+                typography.setdefault("fontSize2xl", {"value": "24px", "confidence": 0.7})
+            elif "h3" in name or "heading 3" in name or "3xl" in name:
+                typography.setdefault("fontSize3xl", {"value": "30px", "confidence": 0.7})
+            elif "h2" in name or "h1" in name or "heading" in name or "title" in name or "4xl" in name:
+                typography.setdefault("fontSize4xl", {"value": "36px", "confidence": 0.7})
+            
+            # Font weight inference
+            if "bold" in name or "heavy" in name:
+                typography.setdefault("fontWeightBold", {"value": 700, "confidence": 0.7})
+            elif "semibold" in name or "semi" in name or "medium" in name:
+                typography.setdefault("fontWeightSemibold", {"value": 600, "confidence": 0.7})
+            elif "light" in name or "thin" in name:
+                typography.setdefault("fontWeightNormal", {"value": 400, "confidence": 0.7})
 
-    # If no text styles found or incomplete, provide defaults with low confidence
-    if not found_text_styles or not typography:
-        logger.info("No text styles found in Figma file or incomplete, using defaults")
-        typography = {
-            "fontFamily": {"value": "Inter", "confidence": 0.4},
-            "fontSize": {"value": "16px", "confidence": 0.4},
-            "fontWeight": {"value": "400", "confidence": 0.4},
-        }
-    else:
-        # Fill in any missing properties with defaults and low confidence
-        typography.setdefault("fontFamily", {"value": "Inter", "confidence": 0.4})
-        typography.setdefault("fontSize", {"value": "16px", "confidence": 0.4})
-        typography.setdefault("fontWeight", {"value": "400", "confidence": 0.4})
+    # Fill in missing properties with defaults and appropriate confidence
+    if not found_text_styles:
+        logger.info("No text styles found in Figma file, using complete defaults")
+    
+    # Font families
+    typography.setdefault("fontFamily", {"value": "Inter", "confidence": 0.4})
+    typography.setdefault("fontFamilyHeading", {"value": "Inter", "confidence": 0.4})
+    typography.setdefault("fontFamilyMono", {"value": "Fira Code", "confidence": 0.4})
+    
+    # Font scale
+    typography.setdefault("fontSizeXs", {"value": "12px", "confidence": 0.4})
+    typography.setdefault("fontSizeSm", {"value": "14px", "confidence": 0.4})
+    typography.setdefault("fontSizeBase", {"value": "16px", "confidence": 0.4})
+    typography.setdefault("fontSizeLg", {"value": "18px", "confidence": 0.4})
+    typography.setdefault("fontSizeXl", {"value": "20px", "confidence": 0.4})
+    typography.setdefault("fontSize2xl", {"value": "24px", "confidence": 0.4})
+    typography.setdefault("fontSize3xl", {"value": "30px", "confidence": 0.4})
+    typography.setdefault("fontSize4xl", {"value": "36px", "confidence": 0.4})
+    
+    # Font weights
+    typography.setdefault("fontWeightNormal", {"value": 400, "confidence": 0.4})
+    typography.setdefault("fontWeightMedium", {"value": 500, "confidence": 0.4})
+    typography.setdefault("fontWeightSemibold", {"value": 600, "confidence": 0.4})
+    typography.setdefault("fontWeightBold", {"value": 700, "confidence": 0.4})
+    
+    # Line heights
+    typography.setdefault("lineHeightTight", {"value": "1.25", "confidence": 0.4})
+    typography.setdefault("lineHeightNormal", {"value": "1.5", "confidence": 0.4})
+    typography.setdefault("lineHeightRelaxed", {"value": "1.75", "confidence": 0.4})
 
     return typography
 
 
 def _extract_spacing_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract spacing tokens from auto-layout in Figma file with confidence scores.
+    Extract spacing tokens from auto-layout in Figma file with Tailwind-compatible scale.
 
     Args:
         file_data: Figma file data from /files/{key} endpoint
@@ -463,12 +680,13 @@ def _extract_spacing_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[str, An
     document = file_data.get("document", {})
     traverse_nodes(document)
 
-    # Convert spacing values to tokens with confidence
+    # Convert spacing values to Tailwind-compatible semantic tokens with confidence
     if spacing_values:
         # Sort values to create a consistent token system
         sorted_values = sorted(spacing_values)
 
-        # Create semantic tokens from the values found - higher confidence because extracted from actual data
+        # Create Tailwind-compatible semantic tokens from the values found
+        # Higher confidence because extracted from actual data
         if len(sorted_values) >= 1:
             spacing["xs"] = {"value": f"{sorted_values[0]}px", "confidence": 0.8}
         if len(sorted_values) >= 2:
@@ -477,16 +695,23 @@ def _extract_spacing_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[str, An
             spacing["md"] = {"value": f"{sorted_values[2]}px", "confidence": 0.8}
         if len(sorted_values) >= 4:
             spacing["lg"] = {"value": f"{sorted_values[3]}px", "confidence": 0.8}
+        if len(sorted_values) >= 5:
+            spacing["xl"] = {"value": f"{sorted_values[4]}px", "confidence": 0.8}
+        if len(sorted_values) >= 6:
+            spacing["2xl"] = {"value": f"{sorted_values[5]}px", "confidence": 0.8}
+        if len(sorted_values) >= 7:
+            spacing["3xl"] = {"value": f"{sorted_values[6]}px", "confidence": 0.8}
 
         logger.info(f"Extracted {len(spacing)} spacing tokens from Figma auto-layout")
-    else:
-        # No auto-layout spacing found, use defaults with low confidence
-        logger.info("No auto-layout spacing found in Figma file, using defaults")
-        spacing = {
-            "xs": {"value": "4px", "confidence": 0.3},
-            "sm": {"value": "8px", "confidence": 0.3},
-            "md": {"value": "16px", "confidence": 0.3},
-            "lg": {"value": "24px", "confidence": 0.3},
-        }
+    
+    # Fill in missing tokens with Tailwind defaults and appropriate confidence
+    confidence = 0.8 if spacing_values else 0.3
+    spacing.setdefault("xs", {"value": "4px", "confidence": confidence})
+    spacing.setdefault("sm", {"value": "8px", "confidence": confidence})
+    spacing.setdefault("md", {"value": "16px", "confidence": confidence})
+    spacing.setdefault("lg", {"value": "24px", "confidence": confidence})
+    spacing.setdefault("xl", {"value": "32px", "confidence": confidence})
+    spacing.setdefault("2xl", {"value": "48px", "confidence": 0.3})  # Less common, lower confidence
+    spacing.setdefault("3xl", {"value": "64px", "confidence": 0.3})  # Less common, lower confidence
 
     return spacing

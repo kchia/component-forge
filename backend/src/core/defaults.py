@@ -2,34 +2,57 @@
 
 from typing import Dict, Any
 
-# Default design tokens from shadcn/ui
+# Default design tokens from shadcn/ui with semantic naming
 SHADCN_DEFAULTS: Dict[str, Any] = {
     "colors": {
         "primary": "#3B82F6",
-        "background": "#FFFFFF",
-        "foreground": "#09090B",
-        "secondary": "#F1F5F9",
-        "accent": "#F1F5F9",
-        "muted": "#F1F5F9",
+        "secondary": "#64748B",
+        "accent": "#06B6D4",
         "destructive": "#EF4444",
+        "muted": "#94A3B8",
+        "background": "#FFFFFF",
+        "foreground": "#0F172A",
+        "border": "#E2E8F0",
     },
     "typography": {
+        # Font families
         "fontFamily": "Inter",
-        "fontSize": "16px",
-        "fontWeight": 500,
-        "lineHeight": "1.5",
+        "fontFamilyHeading": "Inter",
+        "fontFamilyMono": "Fira Code",
+        # Font scale
+        "fontSizeXs": "12px",
+        "fontSizeSm": "14px",
+        "fontSizeBase": "16px",
+        "fontSizeLg": "18px",
+        "fontSizeXl": "20px",
+        "fontSize2xl": "24px",
+        "fontSize3xl": "30px",
+        "fontSize4xl": "36px",
+        # Font weights
+        "fontWeightNormal": 400,
+        "fontWeightMedium": 500,
+        "fontWeightSemibold": 600,
+        "fontWeightBold": 700,
+        # Line heights
+        "lineHeightTight": "1.25",
+        "lineHeightNormal": "1.5",
+        "lineHeightRelaxed": "1.75",
     },
     "spacing": {
-        "padding": "16px",
-        "gap": "8px",
-        "margin": "16px",
-        "baseUnit": "4px",
+        "xs": "4px",
+        "sm": "8px",
+        "md": "16px",
+        "lg": "24px",
+        "xl": "32px",
+        "2xl": "48px",
+        "3xl": "64px",
     },
     "borderRadius": {
-        "default": "8px",
-        "sm": "4px",
-        "md": "8px",
-        "lg": "12px",
+        "sm": "2px",
+        "md": "6px",
+        "lg": "8px",
+        "xl": "12px",
+        "full": "9999px",
     },
 }
 
