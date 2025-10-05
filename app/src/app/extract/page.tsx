@@ -23,7 +23,6 @@ import { UploadGuidance } from "@/components/extract/UploadGuidance";
 import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
 import { ExampleComparison } from "@/components/extract/ExampleComparison";
 import { ExtractionSuccess } from "@/components/extract/ExtractionSuccess";
-import { ValueProposition } from "@/components/extract/ValueProposition";
 import { ComponentPreview } from "@/components/extract/ComponentPreview";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
@@ -274,9 +273,6 @@ export default function TokenExtractionPage() {
           Upload a screenshot or connect to Figma to extract design tokens
         </p>
       </div>
-
-      {/* NEW: Value Proposition */}
-      <ValueProposition />
 
       {/* Tabs for Screenshot vs Figma */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
