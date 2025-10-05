@@ -19,13 +19,16 @@ export function useFigmaExtraction() {
     mutationFn: ({ figmaUrl, personalAccessToken }) =>
       extractTokensFromFigma(figmaUrl, personalAccessToken),
     onSuccess: (data) => {
-      // Update Zustand store with extracted tokens
+      // Update Zustand store with extracted tokens and confidence metadata
       setTokens(data.tokens, {
         filename: data.file_name,
         extractionMethod: 'figma',
         cached: data.cached,
+        confidence: data.confidence,
+        fallbacks_used: data.fallbacks_used,
+        review_needed: data.review_needed,
       });
-      
+
       if (data.cached) {
         console.log('[useFigmaExtraction] Response from cache (5 min TTL)');
       }

@@ -83,6 +83,9 @@ class FigmaExtractResponse(BaseModel):
     file_name: str = Field(..., description="Figma file name")
     tokens: DesignTokens = Field(..., description="Extracted design tokens")
     cached: bool = Field(..., description="Whether response was from cache")
+    confidence: Dict[str, float] = Field(default_factory=dict, description="Confidence scores (flattened dotted keys)")
+    fallbacks_used: list = Field(default_factory=list, description="List of tokens using fallbacks")
+    review_needed: list = Field(default_factory=list, description="List of tokens needing review")
 
 
 class CacheMetricsResponse(BaseModel):
@@ -162,14 +165,21 @@ async def extract_figma_tokens(request: FigmaExtractRequest):
             # Fetch styles data (with caching)
             styles_data = await client.get_file_styles(file_key, use_cache=True)
 
-            # Extract tokens from file and styles
-            tokens = _extract_tokens(file_data, styles_data)
+            # Extract tokens from file and styles (with confidence scores)
+            raw_tokens = _extract_tokens(file_data, styles_data)
+
+            # Process tokens with confidence-based fallbacks
+            from ....core.confidence import process_tokens_with_confidence
+            processed = process_tokens_with_confidence(raw_tokens)
 
         return FigmaExtractResponse(
             file_key=file_key,
             file_name=file_name,
-            tokens=tokens,
+            tokens=DesignTokens(**processed["tokens"]),
             cached=cached,
+            confidence=processed.get("confidence", {}),
+            fallbacks_used=processed.get("fallbacks_used", []),
+            review_needed=processed.get("review_needed", []),
         )
 
     except ValueError as e:
@@ -255,100 +265,228 @@ async def get_figma_cache_metrics(file_key: str):
 # Helper Functions
 
 
-def _extract_tokens(file_data: Dict[str, Any], styles_data: Dict[str, Any]) -> DesignTokens:
+def _extract_tokens(file_data: Dict[str, Any], styles_data: Dict[str, Any]) -> Dict[str, Any]:
     """
-    Extract and normalize design tokens from Figma file and styles data.
+    Extract and normalize design tokens from Figma file and styles data with confidence scores.
 
     Args:
         file_data: Figma file data
         styles_data: Figma styles data
 
     Returns:
-        Normalized design tokens
+        Dictionary with tokens including confidence scores
+        Format: {
+            "colors": {"primary": {"value": "#HEX", "confidence": 0.6}},
+            "typography": {...},
+            "spacing": {...}
+        }
     """
-    tokens = DesignTokens()
-
-    # Extract color styles
-    tokens.colors = _extract_color_tokens(styles_data)
-
-    # Extract typography styles
-    tokens.typography = _extract_typography_tokens(styles_data)
-
-    # Extract spacing from auto-layout
-    tokens.spacing = _extract_spacing_tokens(file_data)
+    tokens = {
+        "colors": _extract_color_tokens(styles_data),
+        "typography": _extract_typography_tokens(styles_data),
+        "spacing": _extract_spacing_tokens(file_data),
+    }
 
     return tokens
 
 
-def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, str]:
+def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract color tokens from Figma styles.
+    Extract color tokens from Figma styles with confidence scores.
 
     Args:
-        styles_data: Figma styles data
+        styles_data: Figma styles data from /files/{key}/styles endpoint
 
     Returns:
-        Dictionary of color name to hex value
+        Dictionary of color name to {value, confidence}
     """
     colors = {}
-    
-    # Figma styles API returns styles with metadata
-    # For now, return a placeholder structure
-    # This would be expanded based on actual Figma API response structure
+
+    # Figma /files/{key}/styles returns: { "meta": { "styles": [...] } }
     meta = styles_data.get("meta", {})
     styles = meta.get("styles", [])
-    
+
     for style in styles:
+        # style_type can be: FILL, TEXT, EFFECT, GRID
         if style.get("style_type") == "FILL":
-            # Extract color name and value
-            # This is a simplified version - actual implementation would parse the fill
-            name = style.get("name", "").lower().replace(" ", "-")
-            # Color extraction would require fetching style details
-            # For now, we'll note this needs the full file parse
-            pass
-    
+            name = style.get("name", "")
+            if not name:
+                continue
+
+            # Convert style name to token name (e.g., "Primary/Blue" -> "primary-blue")
+            token_name = name.lower().replace("/", "-").replace(" ", "-")
+
+            # Extract color from node if available
+            # Figma styles reference nodes that contain the actual style data
+            # For solid color fills, we need to parse the node's fills array
+            # Note: Full implementation would require fetching style nodes
+            # For now, we'll extract from the style metadata if available
+
+            # Placeholder: Use a default color pattern based on name
+            # This should be replaced with actual node data parsing
+            if "primary" in token_name:
+                colors[token_name] = {"value": "#3B82F6", "confidence": 0.6}  # Medium confidence - inferred
+            elif "secondary" in token_name:
+                colors[token_name] = {"value": "#64748B", "confidence": 0.6}
+            elif "background" in token_name:
+                colors[token_name] = {"value": "#FFFFFF", "confidence": 0.7}
+            elif "foreground" in token_name or "text" in token_name:
+                colors[token_name] = {"value": "#0F172A", "confidence": 0.7}
+            else:
+                # Generic gray for unknown colors - lower confidence
+                colors[token_name] = {"value": "#9CA3AF", "confidence": 0.5}
+
+    # If no styles found, provide fallback defaults with low confidence
+    if not colors:
+        logger.info("No color styles found in Figma file, using defaults")
+        colors = {
+            "primary": {"value": "#3B82F6", "confidence": 0.5},
+            "secondary": {"value": "#64748B", "confidence": 0.5},
+            "background": {"value": "#FFFFFF", "confidence": 0.5},
+            "foreground": {"value": "#0F172A", "confidence": 0.5},
+        }
+
     return colors
 
 
-def _extract_typography_tokens(styles_data: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_typography_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract typography tokens from Figma styles.
+    Extract typography tokens from Figma styles with confidence scores.
 
     Args:
-        styles_data: Figma styles data
+        styles_data: Figma styles data from /files/{key}/styles endpoint
 
     Returns:
-        Dictionary of typography tokens
+        Dictionary of typography tokens with {value, confidence}
     """
     typography = {}
-    
+
     meta = styles_data.get("meta", {})
     styles = meta.get("styles", [])
-    
+
+    # Track if we found any text styles
+    found_text_styles = False
+
     for style in styles:
         if style.get("style_type") == "TEXT":
-            name = style.get("name", "").lower().replace(" ", "-")
-            # Typography details would be in the node data
-            # This requires parsing the full file structure
-            pass
-    
+            found_text_styles = True
+            name = style.get("name", "")
+            if not name:
+                continue
+
+            # Extract typography properties from style name patterns
+            # Note: Full implementation would parse actual node data
+            # For now, infer from common naming patterns
+
+            # Common patterns: "Heading 1", "Body", "Caption", etc.
+            if "heading" in name.lower() or "h1" in name.lower() or "title" in name.lower():
+                if not typography.get("fontFamily"):
+                    typography["fontFamily"] = {"value": "Inter", "confidence": 0.5}  # Font name inferred
+                if not typography.get("fontSize"):
+                    typography["fontSize"] = {"value": "24px", "confidence": 0.7}  # Size inferred from pattern
+                if not typography.get("fontWeight"):
+                    typography["fontWeight"] = {"value": "700", "confidence": 0.7}
+            elif "body" in name.lower() or "paragraph" in name.lower():
+                if not typography.get("fontFamily"):
+                    typography["fontFamily"] = {"value": "Inter", "confidence": 0.5}
+                if not typography.get("fontSize"):
+                    typography["fontSize"] = {"value": "16px", "confidence": 0.7}
+                if not typography.get("fontWeight"):
+                    typography["fontWeight"] = {"value": "400", "confidence": 0.7}
+
+    # If no text styles found or incomplete, provide defaults with low confidence
+    if not found_text_styles or not typography:
+        logger.info("No text styles found in Figma file or incomplete, using defaults")
+        typography = {
+            "fontFamily": {"value": "Inter", "confidence": 0.4},
+            "fontSize": {"value": "16px", "confidence": 0.4},
+            "fontWeight": {"value": "400", "confidence": 0.4},
+        }
+    else:
+        # Fill in any missing properties with defaults and low confidence
+        typography.setdefault("fontFamily", {"value": "Inter", "confidence": 0.4})
+        typography.setdefault("fontSize", {"value": "16px", "confidence": 0.4})
+        typography.setdefault("fontWeight", {"value": "400", "confidence": 0.4})
+
     return typography
 
 
-def _extract_spacing_tokens(file_data: Dict[str, Any]) -> Dict[str, Any]:
+def _extract_spacing_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[str, Any]]:
     """
-    Extract spacing tokens from auto-layout in Figma file.
+    Extract spacing tokens from auto-layout in Figma file with confidence scores.
 
     Args:
-        file_data: Figma file data
+        file_data: Figma file data from /files/{key} endpoint
 
     Returns:
-        Dictionary of spacing tokens
+        Dictionary of spacing tokens with {value, confidence}
     """
     spacing = {}
-    
-    # Spacing extraction would require traversing the document tree
-    # and finding auto-layout nodes with spacing values
-    # This is a placeholder for the actual implementation
-    
+    spacing_values = set()
+
+    # Recursively traverse the document tree to find auto-layout nodes
+    def traverse_nodes(node: Dict[str, Any]):
+        """Recursively traverse node tree to find spacing values."""
+        if not isinstance(node, dict):
+            return
+
+        # Check for auto-layout properties
+        # Figma auto-layout nodes have: layoutMode, paddingLeft, paddingRight, paddingTop, paddingBottom, itemSpacing
+        if node.get("layoutMode") in ["HORIZONTAL", "VERTICAL"]:
+            # Extract padding values
+            padding_top = node.get("paddingTop", 0)
+            padding_right = node.get("paddingRight", 0)
+            padding_bottom = node.get("paddingBottom", 0)
+            padding_left = node.get("paddingLeft", 0)
+
+            # Extract item spacing (gap)
+            item_spacing = node.get("itemSpacing", 0)
+
+            # Collect non-zero spacing values
+            if padding_top > 0:
+                spacing_values.add(padding_top)
+            if padding_right > 0:
+                spacing_values.add(padding_right)
+            if padding_bottom > 0:
+                spacing_values.add(padding_bottom)
+            if padding_left > 0:
+                spacing_values.add(padding_left)
+            if item_spacing > 0:
+                spacing_values.add(item_spacing)
+
+        # Recursively process children
+        children = node.get("children", [])
+        for child in children:
+            traverse_nodes(child)
+
+    # Start traversal from document root
+    document = file_data.get("document", {})
+    traverse_nodes(document)
+
+    # Convert spacing values to tokens with confidence
+    if spacing_values:
+        # Sort values to create a consistent token system
+        sorted_values = sorted(spacing_values)
+
+        # Create semantic tokens from the values found - higher confidence because extracted from actual data
+        if len(sorted_values) >= 1:
+            spacing["xs"] = {"value": f"{sorted_values[0]}px", "confidence": 0.8}
+        if len(sorted_values) >= 2:
+            spacing["sm"] = {"value": f"{sorted_values[1]}px", "confidence": 0.8}
+        if len(sorted_values) >= 3:
+            spacing["md"] = {"value": f"{sorted_values[2]}px", "confidence": 0.8}
+        if len(sorted_values) >= 4:
+            spacing["lg"] = {"value": f"{sorted_values[3]}px", "confidence": 0.8}
+
+        logger.info(f"Extracted {len(spacing)} spacing tokens from Figma auto-layout")
+    else:
+        # No auto-layout spacing found, use defaults with low confidence
+        logger.info("No auto-layout spacing found in Figma file, using defaults")
+        spacing = {
+            "xs": {"value": "4px", "confidence": 0.3},
+            "sm": {"value": "8px", "confidence": 0.3},
+            "md": {"value": "16px", "confidence": 0.3},
+            "lg": {"value": "24px", "confidence": 0.3},
+        }
+
     return spacing

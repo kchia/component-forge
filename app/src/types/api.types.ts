@@ -56,6 +56,9 @@ export interface FigmaExtractResponse {
   file_name: string;
   tokens: DesignTokens;
   cached: boolean;
+  confidence?: Record<string, number>;
+  fallbacks_used?: string[];
+  review_needed?: string[];
 }
 
 // Error response structure from FastAPI
