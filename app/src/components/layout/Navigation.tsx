@@ -6,7 +6,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
-import { Home, Upload, FileCheck, Layers, Eye, Menu, X } from "lucide-react";
+import { useOnboardingStore } from "@/stores/useOnboardingStore";
+import { Home, Upload, FileCheck, Layers, Eye, Menu, X, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 const navItems = [
@@ -21,6 +22,7 @@ export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const progress = useWorkflowStore((state) => state.progress);
+  const { resetOnboarding } = useOnboardingStore();
 
   return (
     <nav className="border-b bg-background">
@@ -55,6 +57,18 @@ export function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* Help Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => resetOnboarding()}
+              className="gap-2"
+              aria-label="Show help and onboarding"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help
+            </Button>
           </div>
 
           {/* Mobile Menu Button */}
@@ -112,6 +126,21 @@ export function Navigation() {
                 </Link>
               );
             })}
+            
+            {/* Help Button in Mobile Menu */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                resetOnboarding();
+                setMobileMenuOpen(false);
+              }}
+              className="w-full justify-start gap-2"
+              aria-label="Show help and onboarding"
+            >
+              <HelpCircle className="h-4 w-4" />
+              Help
+            </Button>
           </div>
         </div>
       )}

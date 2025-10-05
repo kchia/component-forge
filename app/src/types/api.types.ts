@@ -13,10 +13,61 @@ export interface ImageMetadata {
 }
 
 // Design tokens structure matching backend DesignTokens model
+export interface ColorTokens {
+  primary?: string;
+  secondary?: string;
+  accent?: string;
+  destructive?: string;
+  muted?: string;
+  background?: string;
+  foreground?: string;
+  border?: string;
+}
+
+export interface TypographyTokens {
+  fontFamily?: string;
+  fontFamilyHeading?: string;
+  fontFamilyMono?: string;
+  fontSizeXs?: string;
+  fontSizeSm?: string;
+  fontSizeBase?: string;
+  fontSizeLg?: string;
+  fontSizeXl?: string;
+  fontSize2xl?: string;
+  fontSize3xl?: string;
+  fontSize4xl?: string;
+  fontWeightNormal?: number;
+  fontWeightMedium?: number;
+  fontWeightSemibold?: number;
+  fontWeightBold?: number;
+  lineHeightTight?: string;
+  lineHeightNormal?: string;
+  lineHeightRelaxed?: string;
+}
+
+export interface SpacingTokens {
+  xs?: string;
+  sm?: string;
+  md?: string;
+  lg?: string;
+  xl?: string;
+  "2xl"?: string;
+  "3xl"?: string;
+}
+
+export interface BorderRadiusTokens {
+  sm?: string;
+  md?: string;
+  lg?: string;
+  xl?: string;
+  full?: string;
+}
+
 export interface DesignTokens {
-  colors: Record<string, string>;
-  typography: Record<string, any>;
-  spacing: Record<string, any>;
+  colors: ColorTokens;
+  typography: TypographyTokens;
+  spacing: SpacingTokens;
+  borderRadius: BorderRadiusTokens;
 }
 
 // Token extraction response from POST /tokens/extract/screenshot
