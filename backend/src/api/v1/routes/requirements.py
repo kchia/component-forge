@@ -1,18 +1,21 @@
 """API routes for requirement proposal."""
 
-from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
+from datetime import datetime, timezone
 import io
 import time
 import json
 from PIL import Image
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....services.image_processor import (
     validate_and_process_image,
     ImageValidationError
 )
+from ....services.requirement_exporter import RequirementExporter
 from ....agents.requirement_orchestrator import RequirementOrchestrator
 from ....types.requirement_types import (
     RequirementProposal,
@@ -20,6 +23,7 @@ from ....types.requirement_types import (
     RequirementCategory
 )
 from ....core.logging import get_logger
+from ....core.database import get_async_session
 
 logger = get_logger(__name__)
 
@@ -219,6 +223,248 @@ async def propose_requirements(
     finally:
         # Cleanup
         await file.close()
+
+
+class ExportRequirementsRequest(BaseModel):
+    """Request model for exporting requirements."""
+    component_type: ComponentType
+    component_confidence: float
+    proposals: Dict[str, List[RequirementProposal]] = Field(
+        description="All proposals grouped by category"
+    )
+    source_type: str = Field(
+        default="screenshot",
+        description="Source type: figma, screenshot, or design_file"
+    )
+    source_metadata: Optional[Dict[str, Any]] = None
+    tokens: Optional[Dict[str, Any]] = None
+    proposal_latency_ms: Optional[int] = None
+    approval_duration_ms: Optional[int] = None
+    proposed_at: Optional[str] = None
+    approved_at: Optional[str] = None
+
+
+class ExportRequirementsResponse(BaseModel):
+    """Response model for requirement export."""
+    export_id: str
+    export_data: Dict[str, Any]
+    summary: Dict[str, Any]
+    status: str
+
+
+class ExportPreviewResponse(BaseModel):
+    """Response model for export preview."""
+    component_type: str
+    component_confidence: float
+    statistics: Dict[str, Any]
+    preview: Dict[str, List[Dict[str, Any]]]
+
+
+@router.post("/export")
+async def export_requirements(
+    request: ExportRequirementsRequest,
+    db: AsyncSession = Depends(get_async_session)
+) -> ExportRequirementsResponse:
+    """Export approved requirements to JSON and store in database.
+
+    This endpoint:
+    - Exports only approved requirements
+    - Stores in PostgreSQL for audit trail
+    - Generates export JSON for Epic 3/4 integration
+    - Tracks approval workflow metrics
+    - Returns export ID for future reference
+
+    Args:
+        request: Export request with approved requirements
+        db: Database session (injected)
+
+    Returns:
+        Export result with ID, JSON data, and summary
+
+    Raises:
+        HTTPException: For validation or database failures
+    """
+    try:
+        logger.info(
+            f"Starting requirement export for {request.component_type.value}",
+            extra={
+                "extra": {
+                    "component_type": request.component_type.value,
+                    "total_proposals": sum(len(reqs) for reqs in request.proposals.values()),
+                }
+            },
+        )
+
+        # Convert proposals dict to proper format
+        proposals_dict = {}
+        for category, proposals_list in request.proposals.items():
+            proposals_dict[category] = proposals_list
+
+        # Parse timestamps if provided
+        proposed_at = None
+        if request.proposed_at:
+            try:
+                proposed_at = datetime.fromisoformat(request.proposed_at.replace('Z', '+00:00'))
+            except Exception as e:
+                logger.warning(f"Failed to parse proposed_at: {e}")
+
+        approved_at = None
+        if request.approved_at:
+            try:
+                approved_at = datetime.fromisoformat(request.approved_at.replace('Z', '+00:00'))
+            except Exception as e:
+                logger.warning(f"Failed to parse approved_at: {e}")
+
+        # Initialize exporter
+        exporter = RequirementExporter(db_session=db)
+
+        # Export requirements
+        result = await exporter.export_requirements(
+            component_type=request.component_type,
+            component_confidence=request.component_confidence,
+            proposals_by_category=proposals_dict,
+            source_type=request.source_type,
+            source_metadata=request.source_metadata,
+            tokens=request.tokens,
+            proposal_latency_ms=request.proposal_latency_ms,
+            approval_duration_ms=request.approval_duration_ms,
+            proposed_at=proposed_at,
+            approved_at=approved_at,
+        )
+
+        logger.info(
+            f"Requirements exported successfully: {result['export_id']}",
+            extra={
+                "extra": {
+                    "export_id": result["export_id"],
+                    "approved_count": result["database_record"]["approved_count"],
+                }
+            },
+        )
+
+        return ExportRequirementsResponse(
+            export_id=result["export_id"],
+            export_data=result["export_data"],
+            summary=result["database_record"],
+            status=result["status"],
+        )
+
+    except Exception as e:
+        logger.error(
+            f"Requirement export failed: {e}",
+            extra={"extra": {"error_type": type(e).__name__}},
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Requirement export failed: {str(e)}"
+        )
+
+
+@router.post("/export/preview")
+async def preview_export(
+    component_type: ComponentType,
+    component_confidence: float,
+    proposals: Dict[str, List[RequirementProposal]],
+    db: AsyncSession = Depends(get_async_session)
+) -> ExportPreviewResponse:
+    """Generate a preview of what will be exported.
+
+    This allows users to review export statistics and approved
+    requirements before committing to the export.
+
+    Args:
+        component_type: Detected component type
+        component_confidence: Classification confidence
+        proposals: All proposals grouped by category
+        db: Database session (injected)
+
+    Returns:
+        Export preview with statistics and approved requirements
+    """
+    try:
+        exporter = RequirementExporter(db_session=db)
+
+        preview = await exporter.get_export_preview(
+            proposals_by_category=proposals,
+            component_type=component_type,
+            component_confidence=component_confidence,
+        )
+
+        return ExportPreviewResponse(**preview)
+
+    except Exception as e:
+        logger.error(f"Export preview generation failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Export preview failed: {str(e)}"
+        )
+
+
+@router.get("/exports/{export_id}")
+async def get_export(
+    export_id: str,
+    db: AsyncSession = Depends(get_async_session)
+) -> Dict[str, Any]:
+    """Retrieve an exported requirement set by ID.
+
+    Args:
+        export_id: Unique export identifier
+        db: Database session (injected)
+
+    Returns:
+        Export data with requirements and metadata
+
+    Raises:
+        HTTPException: If export not found
+    """
+    try:
+        exporter = RequirementExporter(db_session=db)
+        export_data = await exporter.get_export_by_id(export_id)
+
+        if not export_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Export not found: {export_id}"
+            )
+
+        return export_data
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to retrieve export: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve export: {str(e)}"
+        )
+
+
+@router.get("/exports")
+async def list_recent_exports(
+    limit: int = 10,
+    db: AsyncSession = Depends(get_async_session)
+) -> List[Dict[str, Any]]:
+    """List recent requirement exports.
+
+    Args:
+        limit: Maximum number of exports to return (default: 10)
+        db: Database session (injected)
+
+    Returns:
+        List of recent exports with summaries
+    """
+    try:
+        exporter = RequirementExporter(db_session=db)
+        exports = await exporter.get_recent_exports(limit=limit)
+        return exports
+
+    except Exception as e:
+        logger.error(f"Failed to list exports: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to list exports: {str(e)}"
+        )
 
 
 @router.get("/health")
