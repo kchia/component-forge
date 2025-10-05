@@ -143,8 +143,10 @@ class BaseRequirementProposer(ABC):
         Returns:
             RequirementProposal object
         """
-        # Generate unique ID (simplified - in production use UUID)
-        proposal_id = f"{self.category.value}-{name}-{hash(rationale) % 10000}"
+        import uuid
+        
+        # Generate unique ID using UUID4
+        proposal_id = f"{self.category.value}-{name}-{uuid.uuid4().hex[:8]}"
         
         return RequirementProposal(
             id=proposal_id,

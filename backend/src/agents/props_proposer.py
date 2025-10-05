@@ -17,6 +17,7 @@ from ..types.requirement_types import (
     ComponentClassification,
 )
 from ..services.image_processor import prepare_image_for_vision_api
+from ..prompts.props_proposer import create_props_prompt
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -44,6 +45,7 @@ class PropsProposer(BaseRequirementProposer):
             raise ValueError("OpenAI API key is required")
         
         self.client = AsyncOpenAI(api_key=self.api_key)
+        # gpt-4o has vision capabilities and is the recommended model
         self.model = "gpt-4o"
     
     @traced(run_name="propose_props")
@@ -52,6 +54,7 @@ class PropsProposer(BaseRequirementProposer):
         image: Image.Image,
         classification: ComponentClassification,
         tokens: Optional[Dict[str, Any]] = None,
+        retry_count: int = 0,
     ) -> List[RequirementProposal]:
         """Propose prop requirements for the component.
         
@@ -59,6 +62,7 @@ class PropsProposer(BaseRequirementProposer):
             image: Component screenshot
             classification: Component type classification
             tokens: Optional design tokens
+            retry_count: Current retry attempt (for internal use)
             
         Returns:
             List of proposed prop requirements
@@ -69,6 +73,7 @@ class PropsProposer(BaseRequirementProposer):
                 "extra": {
                     "component_type": classification.component_type.value,
                     "has_tokens": tokens is not None,
+                    "retry_count": retry_count,
                 }
             }
         )
@@ -77,8 +82,12 @@ class PropsProposer(BaseRequirementProposer):
             # Prepare image
             image_data = prepare_image_for_vision_api(image)
             
-            # Build props analysis prompt (will be moved to prompts module in next commit)
-            prompt = self._build_props_prompt(classification, tokens)
+            # Build props analysis prompt using the prompts module
+            prompt = create_props_prompt(
+                classification.component_type.value,
+                figma_data=None,  # Will be passed from orchestrator in future
+                tokens=tokens
+            )
             
             # Call GPT-4V for props analysis
             response = await self.client.chat.completions.create(
@@ -120,74 +129,26 @@ class PropsProposer(BaseRequirementProposer):
             return proposals
             
         except Exception as e:
-            logger.error(f"Props proposal failed: {e}")
-            return []
-    
-    def _build_props_prompt(
-        self,
-        classification: ComponentClassification,
-        tokens: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Build props analysis prompt.
-        
-        This is a minimal prompt. Full prompt will be added in next commit.
-        
-        Args:
-            classification: Component classification
-            tokens: Optional design tokens
-            
-        Returns:
-            Prompt text
-        """
-        component_type = classification.component_type.value
-        
-        prompt = f"""Analyze this {component_type} component and propose prop requirements.
-
-Component Type: {component_type}
-
-Analyze for these prop types:
-
-1. **Variant Props**: Different visual styles
-   - Examples: variant="primary|secondary|ghost|outline"
-   - Look for: Different background colors, border styles, text colors
-
-2. **Size Props**: Different size options
-   - Examples: size="sm|md|lg|xl"
-   - Look for: Different dimensions, padding, font sizes
-
-3. **Boolean Props**: On/off features
-   - Examples: disabled, loading, fullWidth, icon, rounded
-   - Look for: Visual states, width variations, shape variations
-
-"""
-        
-        if tokens:
-            prompt += f"\nDesign Tokens Available:\n{json.dumps(tokens, indent=2)}\n"
-        
-        prompt += """
-Return JSON with this structure:
-{
-  "props": [
-    {
-      "name": "variant",
-      "type": "enum",
-      "values": ["primary", "secondary"],
-      "visual_cues": ["solid blue background", "outlined border"],
-      "confidence": 0.95
-    },
-    {
-      "name": "disabled",
-      "type": "boolean",
-      "visual_cues": ["opacity-50 state visible"],
-      "confidence": 0.80
-    }
-  ]
-}
-
-Focus on props that have clear visual evidence.
-"""
-        
-        return prompt
+            if retry_count < self.max_retries:
+                logger.warning(
+                    f"Props proposal failed (attempt {retry_count + 1}), retrying: {e}",
+                    extra={"extra": {"retry_count": retry_count, "error": str(e)}}
+                )
+                return await self.propose(
+                    image, classification, tokens, retry_count + 1
+                )
+            else:
+                logger.error(
+                    f"Props proposal failed after {self.max_retries} retries",
+                    extra={
+                        "extra": {
+                            "max_retries": self.max_retries,
+                            "error": str(e),
+                        }
+                    }
+                )
+                # Return empty list instead of raising to allow workflow to continue
+                return []
     
     def _parse_props_result(self, result: Dict[str, Any]) -> List[RequirementProposal]:
         """Parse props analysis result into proposals.

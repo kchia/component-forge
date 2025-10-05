@@ -47,7 +47,8 @@ class ComponentClassifier:
         
         self.client = AsyncOpenAI(api_key=self.api_key)
         self.max_retries = 3
-        self.model = "gpt-4o"  # GPT-4V model
+        # gpt-4o has vision capabilities and is the recommended model for GPT-4V tasks
+        self.model = "gpt-4o"
     
     @traced(run_name="classify_component")
     async def classify_component(

@@ -11,6 +11,7 @@ from PIL import Image
 
 from ..types.requirement_types import RequirementState, ComponentClassification
 from ..agents.component_classifier import ComponentClassifier
+from ..agents.props_proposer import PropsProposer
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -32,8 +33,9 @@ class RequirementOrchestrator:
             openai_api_key: OpenAI API key for AI agents
         """
         self.classifier = ComponentClassifier(api_key=openai_api_key)
-        # Proposers will be added in subsequent commits
-        self.props_proposer = None
+        # Initialize props proposer (wired up in this commit)
+        self.props_proposer = PropsProposer(api_key=openai_api_key)
+        # Other proposers will be added in subsequent commits
         self.events_proposer = None
         self.states_proposer = None
         self.a11y_proposer = None
@@ -89,14 +91,18 @@ class RequirementOrchestrator:
                 }
             )
             
-            # Steps 2-5 will be implemented in subsequent commits
-            # For now, we return after classification
+            # Step 2: Propose props requirements (now implemented)
+            logger.info("Step 2: Proposing props requirements")
+            if self.props_proposer:
+                state.props_proposals = await self.props_proposer.propose(
+                    image, state.classification, tokens
+                )
+                logger.info(
+                    f"Props proposals complete: {len(state.props_proposals)} proposals",
+                    extra={"extra": {"count": len(state.props_proposals)}}
+                )
             
-            # TODO (Commit 7): Add props requirement proposer
-            # if self.props_proposer:
-            #     state.props_proposals = await self.props_proposer.propose(
-            #         image, state.classification, tokens
-            #     )
+            # Steps 3-5 will be implemented in subsequent commits
             
             # TODO (Commit 9): Add events requirement proposer
             # if self.events_proposer:
