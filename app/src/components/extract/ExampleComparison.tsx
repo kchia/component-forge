@@ -136,7 +136,7 @@ export function ExampleComparison() {
         <div className="flex items-center gap-2 mb-4">
           <XCircle className="h-6 w-6 text-destructive" />
           <h3 className="text-xl font-semibold">Avoid These</h3>
-          <Badge variant="destructive">Poor Extraction Quality</Badge>
+          <Badge variant="error">Poor Extraction Quality</Badge>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {badExamples.map((example, idx) => (
