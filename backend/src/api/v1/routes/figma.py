@@ -324,6 +324,12 @@ async def get_figma_cache_metrics(file_key: str):
 
 
 # Helper Functions
+#
+# Confidence Score Guidelines:
+# - 0.9-1.0: Extracted from actual Figma data with high certainty
+# - 0.7-0.9: Extracted with some inference or pattern matching
+# - 0.4-0.6: Partial match, keyword-based inference, or semantic defaults
+# - 0.0-0.3: Fallback defaults with no extracted data
 
 
 def _extract_tokens(file_data: Dict[str, Any], styles_data: Dict[str, Any]) -> Dict[str, Any]:
@@ -419,6 +425,8 @@ def _extract_border_radius_tokens(file_data: Dict[str, Any]) -> Dict[str, Dict[s
             border_radius["xl"] = {"value": f"{sorted_values[3]}px", "confidence": 0.8}
         
         # Check for circular elements (very large radius values)
+        # Note: 500px threshold chosen because Figma often uses large radius values (e.g., 999px, 9999px)
+        # for fully rounded corners (circles, pills), while typical rounded corners are < 50px
         for val in sorted_values:
             if val >= 500:  # Very large radius indicates circular/pill shape
                 border_radius["full"] = {"value": "9999px", "confidence": 0.9}
@@ -476,8 +484,10 @@ def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, An
             for semantic_name, keyword_list in keywords.items():
                 if any(keyword in name for keyword in keyword_list):
                     if semantic_name not in colors:
-                        # Placeholder: Use semantic defaults with medium confidence
-                        # Full implementation would require fetching style nodes
+                        # LIMITATION: Currently using default colors based on semantic name matching only.
+                        # TODO: Fetch actual color values from Figma style nodes via /files/{key}/nodes endpoint.
+                        # This would require additional API calls to get the actual fill colors from style references.
+                        # Using lower confidence (0.4) since these are inferred defaults, not extracted values.
                         default_colors = {
                             'primary': '#3B82F6',
                             'secondary': '#64748B',
@@ -490,7 +500,7 @@ def _extract_color_tokens(styles_data: Dict[str, Any]) -> Dict[str, Dict[str, An
                         }
                         colors[semantic_name] = {
                             "value": default_colors.get(semantic_name, '#9CA3AF'),
-                            "confidence": 0.6
+                            "confidence": 0.4  # Lower confidence since using defaults, not extracted values
                         }
                     break
 

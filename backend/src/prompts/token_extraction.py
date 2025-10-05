@@ -136,7 +136,11 @@ IMPORTANT NOTES:
 - Return ONLY the JSON object, no additional text
 - All color values must be in uppercase hex format (e.g., "#3B82F6")
 - All size values must include "px" unit
-- Font weight must be a number (400, 500, 600, 700)
+- Font weight must be a NUMBER not a string:
+  * Use 400 (not "Regular" or "Normal")
+  * Use 500 (not "Medium")
+  * Use 600 (not "Semibold" or "Semi Bold")
+  * Use 700 (not "Bold")
 """
 
 
