@@ -1,24 +1,42 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useRequirementProposal } from "@/lib/query/hooks/useRequirementProposal";
 import { ApprovalPanelContainer } from "@/components/requirements/ApprovalPanelContainer";
+import { ExportPreview } from "@/components/requirements/ExportPreview";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
+import { 
+  exportRequirements, 
+  getExportPreview,
+  type ExportPreviewResponse 
+} from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
   const router = useRouter();
   const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
   const tokens = useTokenStore((state) => state.tokens);
   const componentType = useWorkflowStore((state) => state.componentType);
+  const componentConfidence = useWorkflowStore((state) => state.componentConfidence);
+  const proposals = useWorkflowStore((state) => state.proposals);
+  const exportId = useWorkflowStore((state) => state.exportId);
+  const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
 
   const { mutate: proposeRequirements, isPending, error } = useRequirementProposal();
+  
+  // Export preview state
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportPreview, setExportPreview] = useState<ExportPreviewResponse | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
 
   // Auto-trigger requirement proposal on mount if file exists
   useEffect(() => {
@@ -29,6 +47,53 @@ export default function RequirementsPage() {
       });
     }
   }, [uploadedFile, componentType, tokens, proposeRequirements]);
+
+  // Handle export preview
+  const handleShowExportPreview = async () => {
+    if (!componentType || componentConfidence === undefined) return;
+    
+    setIsLoadingPreview(true);
+    setExportError(null);
+    
+    try {
+      const preview = await getExportPreview(
+        componentType,
+        componentConfidence,
+        proposals
+      );
+      setExportPreview(preview);
+      setShowExportPreview(true);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Failed to generate export preview');
+    } finally {
+      setIsLoadingPreview(false);
+    }
+  };
+
+  // Handle export confirmation
+  const handleExport = async () => {
+    if (!componentType || componentConfidence === undefined) return;
+    
+    setIsExporting(true);
+    setExportError(null);
+    
+    try {
+      const result = await exportRequirements({
+        componentType,
+        componentConfidence,
+        proposals,
+        tokens: tokens || undefined,
+      });
+
+      // Store export info in workflow store
+      setExportInfo(result.exportId, result.summary.exportedAt);
+      setShowExportPreview(false);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Failed to export requirements');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // If no file, redirect to extract
   if (!uploadedFile) {
@@ -95,17 +160,48 @@ export default function RequirementsPage() {
         <>
           <ApprovalPanelContainer />
 
+          {/* Export Error */}
+          {exportError && (
+            <Alert variant="error">
+              <p className="font-medium">Export Failed</p>
+              <p className="text-sm mt-1">{exportError}</p>
+            </Alert>
+          )}
+
+          {/* Export Preview Modal */}
+          {showExportPreview && exportPreview && (
+            <Card className="p-6">
+              <ExportPreview
+                preview={exportPreview}
+                onExport={handleExport}
+                onCancel={() => setShowExportPreview(false)}
+                isExporting={isExporting}
+              />
+            </Card>
+          )}
+
           {/* Navigation */}
           <div className="flex justify-between">
             <Button asChild variant="outline">
               <Link href="/extract">← Back to Extraction</Link>
             </Button>
-            <Button asChild size="lg">
-              <Link href="/patterns">
-                Continue to Patterns
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Link>
-            </Button>
+
+            {!exportId ? (
+              <Button 
+                onClick={handleShowExportPreview} 
+                size="lg"
+                disabled={isLoadingPreview}
+              >
+                {isLoadingPreview ? 'Loading Preview...' : 'Export Requirements'}
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link href={`/patterns?exportId=${exportId}`}>
+                  Continue to Patterns
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
           </div>
         </>
       )}
