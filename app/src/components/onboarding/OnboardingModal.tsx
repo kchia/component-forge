@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useOnboardingStore } from "@/stores/useOnboardingStore";
 import { Palette, FileImage, Figma } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export function OnboardingModal() {
   const router = useRouter();
@@ -28,24 +29,47 @@ export function OnboardingModal() {
     {
       id: "design-system" as const,
       title: "Design System Screenshot",
-      description: "Upload a screenshot of your design palette or style guide",
+      description: "Upload your color palette, typography scale, or style guide",
       icon: Palette,
-      example: "Perfect for: Color palettes, typography scales, spacing systems"
+      workflow: [
+        "1. Upload design system screenshot",
+        "2. AI extracts semantic tokens with confidence scores",
+        "3. Review & edit tokens with visual previews",
+        "4. Export Tailwind config + CSS variables",
+        "5. (Coming soon) Generate styled components"
+      ],
+      bestFor: "Teams with documented design systems",
+      outcome: "Production-ready design tokens + configuration files"
     },
     {
       id: "components" as const,
       title: "Component Mockups",
-      description:
-        "Upload screenshots of UI components to extract their design tokens",
+      description: "Extract tokens from UI component screenshots",
       icon: FileImage,
-      example: "Perfect for: Buttons, cards, forms, navigation elements"
+      workflow: [
+        "1. Upload component screenshots (buttons, cards, etc.)",
+        "2. AI identifies colors, spacing, typography, border radius",
+        "3. Review extracted tokens",
+        "4. Export to Tailwind or CSS",
+        "5. (Coming soon) Auto-generate React components"
+      ],
+      bestFor: "Converting designs to code",
+      outcome: "Component-specific design tokens"
     },
     {
       id: "figma" as const,
       title: "Figma File",
-      description: "Connect your Figma file to automatically extract styles",
+      description: "Connect directly to your Figma design system",
       icon: Figma,
-      example: "Perfect for: Complete design systems with defined styles"
+      workflow: [
+        "1. Connect Figma file with access token",
+        "2. We extract all published styles",
+        "3. Automatic semantic mapping (keyword-based)",
+        "4. Export tokens & configuration",
+        "5. (Coming soon) Sync updates from Figma"
+      ],
+      bestFor: "Complete design systems in Figma",
+      outcome: "Always up-to-date design tokens"
     }
   ];
 
@@ -88,7 +112,27 @@ export function OnboardingModal() {
                 <p className="text-sm text-muted-foreground mb-4">
                   {workflow.description}
                 </p>
-                <p className="text-xs text-muted italic">{workflow.example}</p>
+
+                {/* NEW: Workflow Steps */}
+                <div className="mb-4">
+                  <p className="text-xs font-medium mb-2">How it works:</p>
+                  <ol className="text-xs space-y-1 text-muted-foreground">
+                    {workflow.workflow.map((step, i) => (
+                      <li key={i}>{step}</li>
+                    ))}
+                  </ol>
+                </div>
+
+                {/* NEW: Outcome */}
+                <div className="pt-3 border-t">
+                  <p className="text-xs font-medium">You&apos;ll get:</p>
+                  <p className="text-xs text-primary">{workflow.outcome}</p>
+                </div>
+
+                {/* NEW: Best For Badge */}
+                <Badge variant="secondary" className="mt-3 text-xs">
+                  {workflow.bestFor}
+                </Badge>
               </Card>
             );
           })}

@@ -8,13 +8,22 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
-import { Upload, FileImage, CheckCircle2, ArrowRight } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Upload, FileImage, CheckCircle2, ArrowRight, AlertTriangle } from "lucide-react";
 import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
 import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
 import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useUIStore } from "@/stores/useUIStore";
 import type { TokenData } from "@/components/tokens/TokenEditor";
+
+// New components for EPIC 12
+import { UploadGuidance } from "@/components/extract/UploadGuidance";
+import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
+import { ExampleComparison } from "@/components/extract/ExampleComparison";
+import { ExtractionSuccess } from "@/components/extract/ExtractionSuccess";
+import { ValueProposition } from "@/components/extract/ValueProposition";
+import { ComponentPreview } from "@/components/extract/ComponentPreview";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
 const TokenEditor = dynamic(
@@ -36,6 +45,8 @@ export default function TokenExtractionPage() {
   const [activeTab, setActiveTab] = useState("screenshot");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
+  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
+  const [showSuccess, setShowSuccess] = useState(false);
   
   // Figma state
   const [figmaPat, setFigmaPat] = useState("");
@@ -66,6 +77,73 @@ export default function TokenExtractionPage() {
     return (metadata as { confidence?: Record<string, number> })?.confidence || {};
   };
 
+  // Image validation with dimension and quality checks
+  interface ImageValidation {
+    valid: boolean;
+    errors: string[];
+    warnings: string[];
+  }
+
+  const validateImageUpload = async (file: File): Promise<ImageValidation> => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      errors.push("File size exceeds 10MB. Please compress your image.");
+    }
+
+    // Check file type
+    const validTypes = ["image/png", "image/jpeg", "image/webp", "image/jpg"];
+    if (!validTypes.includes(file.type)) {
+      errors.push("Invalid file format. Please upload PNG, JPG, or WebP.");
+    }
+
+    // Check image dimensions
+    return new Promise<ImageValidation>((resolve) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        URL.revokeObjectURL(objectUrl);
+
+        // Check minimum width
+        if (img.width < 1024) {
+          warnings.push(
+            `Image width is ${img.width}px. For best results, use images at least 1024px wide.`
+          );
+        }
+
+        // Check if image is too small
+        if (img.width < 512 || img.height < 512) {
+          errors.push("Image is too small. Please upload a larger screenshot.");
+        }
+
+        // Check aspect ratio (very tall/wide images might be full app screenshots)
+        const aspectRatio = img.width / img.height;
+        if (aspectRatio > 3 || aspectRatio < 0.33) {
+          warnings.push(
+            "Unusual aspect ratio detected. Make sure your screenshot focuses on design tokens, not a full app layout."
+          );
+        }
+
+        resolve({
+          valid: errors.length === 0,
+          errors,
+          warnings
+        });
+      };
+
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        errors.push("Failed to load image. Please try a different file.");
+        resolve({ valid: false, errors, warnings });
+      };
+
+      img.src = objectUrl;
+    });
+  };
+
   // File validation
   const validateFile = (file: File): string | null => {
     const maxSize = 10 * 1024 * 1024; // 10MB
@@ -82,16 +160,27 @@ export default function TokenExtractionPage() {
     return null;
   };
 
-  // Handle file selection
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+  // Handle file selection with validation
+  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      const validationError = validateFile(file);
-      if (!validationError) {
-        setSelectedFile(file);
-      } else {
-        showAlert('error', validationError);
+      setValidationWarnings([]);
+      
+      // Validate image
+      const validation = await validateImageUpload(file);
+      
+      // Show errors
+      if (!validation.valid) {
+        showAlert('error', validation.errors.join(" "));
+        return;
       }
+      
+      // Show warnings (but allow upload)
+      if (validation.warnings.length > 0) {
+        setValidationWarnings(validation.warnings);
+      }
+      
+      setSelectedFile(file);
     }
   };
 
@@ -106,26 +195,41 @@ export default function TokenExtractionPage() {
     }
   }, []);
 
-  const handleDrop = useCallback((e: React.DragEvent) => {
+  const handleDrop = useCallback(async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
 
     const file = e.dataTransfer.files?.[0];
     if (file) {
-      const validationError = validateFile(file);
-      if (!validationError) {
-        setSelectedFile(file);
-      } else {
-        showAlert('error', validationError);
+      setValidationWarnings([]);
+      
+      // Validate image
+      const validation = await validateImageUpload(file);
+      
+      // Show errors
+      if (!validation.valid) {
+        showAlert('error', validation.errors.join(" "));
+        return;
       }
+      
+      // Show warnings (but allow upload)
+      if (validation.warnings.length > 0) {
+        setValidationWarnings(validation.warnings);
+      }
+      
+      setSelectedFile(file);
     }
   }, [showAlert]);
 
-  // Handle upload
+  // Handle upload with success tracking
   const handleUpload = () => {
     if (selectedFile) {
-      extractTokens(selectedFile);
+      extractTokens(selectedFile, {
+        onSuccess: () => {
+          setShowSuccess(true);
+        }
+      });
     }
   };
 
@@ -166,6 +270,9 @@ export default function TokenExtractionPage() {
         </p>
       </div>
 
+      {/* NEW: Value Proposition */}
+      <ValueProposition />
+
       {/* Tabs for Screenshot vs Figma */}
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
@@ -175,6 +282,9 @@ export default function TokenExtractionPage() {
 
         {/* Screenshot Tab */}
         <TabsContent value="screenshot" className="space-y-4">
+          {/* NEW: Upload Guidance */}
+          <UploadGuidance mode="screenshot" />
+          
           <Card>
             <CardHeader>
               <CardTitle>Upload Screenshot</CardTitle>
@@ -237,6 +347,21 @@ export default function TokenExtractionPage() {
                 </div>
               )}
 
+              {/* NEW: Validation Warnings */}
+              {validationWarnings.length > 0 && (
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <div className="ml-2">
+                    <p className="font-medium text-sm">Quality Warnings</p>
+                    <ul className="text-xs mt-1 space-y-1">
+                      {validationWarnings.map((warning, i) => (
+                        <li key={i}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </Alert>
+              )}
+
               {/* Progress */}
               {isPending && (
                 <div className="space-y-2">
@@ -269,9 +394,34 @@ export default function TokenExtractionPage() {
             </CardContent>
           </Card>
 
+          {/* NEW: Examples Accordion */}
+          <Accordion type="single" collapsible>
+            <AccordionItem value="examples">
+              <AccordionTrigger>📸 View Good vs. Bad Examples</AccordionTrigger>
+              <AccordionContent>
+                <ExampleComparison />
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+
+          {/* NEW: Extraction Success Banner */}
+          {showSuccess && tokens && (
+            <ExtractionSuccess
+              tokens={tokens}
+              onContinue={() => {
+                setShowSuccess(false);
+                // Smooth scroll to TokenEditor
+                document.getElementById("token-editor")?.scrollIntoView({
+                  behavior: "smooth",
+                  block: "start"
+                });
+              }}
+            />
+          )}
+
           {/* Token Editor */}
           {tokens && getEditorTokens() && (
-            <Card>
+            <Card id="token-editor">
               <CardHeader>
                 <CardTitle>Edit Tokens</CardTitle>
               </CardHeader>
@@ -302,6 +452,9 @@ export default function TokenExtractionPage() {
             </Card>
           )}
 
+          {/* NEW: Component Preview */}
+          {tokens && <ComponentPreview tokens={tokens} />}
+
           {/* Navigation */}
           {tokens && (
             <div className="flex justify-end">
@@ -317,6 +470,9 @@ export default function TokenExtractionPage() {
 
         {/* Figma Tab */}
         <TabsContent value="figma" className="space-y-4">
+          {/* NEW: Figma Guidance */}
+          <FigmaGuidance />
+          
           <Card>
             <CardHeader>
               <CardTitle>Figma Integration</CardTitle>
