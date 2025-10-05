@@ -17,6 +17,7 @@ from ..types.requirement_types import (
     ComponentClassification,
 )
 from ..services.image_processor import prepare_image_for_vision_api
+from ..prompts.events_proposer import create_events_prompt
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -81,8 +82,11 @@ class EventsProposer(BaseRequirementProposer):
             # Prepare image
             image_data = prepare_image_for_vision_api(image)
             
-            # Build events analysis prompt (will use prompts module in next commit)
-            prompt = self._build_events_prompt(classification, tokens)
+            # Build events analysis prompt using the prompts module
+            prompt = create_events_prompt(
+                classification.component_type.value,
+                figma_data=None,  # Will be passed from orchestrator in future
+            )
             
             # Call GPT-4V for events analysis
             response = await self.client.chat.completions.create(
@@ -144,73 +148,6 @@ class EventsProposer(BaseRequirementProposer):
                 )
                 # Return empty list instead of raising to allow workflow to continue
                 return []
-    
-    def _build_events_prompt(
-        self,
-        classification: ComponentClassification,
-        tokens: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Build events analysis prompt.
-        
-        This is a minimal prompt. Full prompt will be added in next commit.
-        
-        Args:
-            classification: Component classification
-            tokens: Optional design tokens
-            
-        Returns:
-            Prompt text
-        """
-        component_type = classification.component_type.value
-        
-        prompt = f"""Analyze this {component_type} component and propose event handler requirements.
-
-Component Type: {component_type}
-
-Analyze for these event types:
-
-1. **onClick**: User clicks/taps the element
-   - Visual cues: cursor:pointer, button-like appearance, call-to-action styling
-   - Component types: Button, Card (if clickable), Badge (if interactive)
-   - Required: Usually required for Buttons, optional for Cards
-
-2. **onChange**: Input value changes
-   - Visual cues: text cursor, editable area, input field borders
-   - Component types: Input, Select
-   - Required: Usually required for form inputs
-
-3. **onHover**: Mouse hovers over element
-   - Visual cues: hover state visible, color/shadow changes
-   - Component types: Button, Card, Badge
-   - Required: Optional (for enhanced UX)
-
-4. **onFocus**: Element receives keyboard focus
-   - Visual cues: focus ring/outline, keyboard navigation support
-   - Component types: Input, Select, Button
-   - Required: Important for accessibility
-
-Return JSON with this structure:
-{{
-  "events": [
-    {{
-      "name": "onClick",
-      "required": true,
-      "visual_cues": ["cursor pointer visible", "button styling"],
-      "confidence": 0.95
-    }},
-    {{
-      "name": "onChange",
-      "required": true,
-      "visual_cues": ["text input field", "editable"],
-      "confidence": 0.90
-    }}
-  ]
-}}
-
-Focus on events that have clear visual indicators.
-"""
-        
-        return prompt
     
     def _parse_events_result(
         self,
