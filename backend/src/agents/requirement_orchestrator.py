@@ -12,6 +12,9 @@ from PIL import Image
 from ..types.requirement_types import RequirementState, ComponentClassification
 from ..agents.component_classifier import ComponentClassifier
 from ..agents.props_proposer import PropsProposer
+from ..agents.events_proposer import EventsProposer
+from ..agents.states_proposer import StatesProposer
+from ..agents.accessibility_proposer import AccessibilityProposer
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -22,8 +25,8 @@ class RequirementOrchestrator:
     """Orchestrate the requirement proposal workflow.
     
     This orchestrator manages the multi-step workflow for analyzing
-    components and proposing requirements. Future commits will add
-    specialized requirement proposers for props, events, states, and a11y.
+    components and proposing requirements across all categories:
+    props, events, states, and accessibility.
     """
     
     def __init__(self, openai_api_key: Optional[str] = None):
@@ -33,12 +36,11 @@ class RequirementOrchestrator:
             openai_api_key: OpenAI API key for AI agents
         """
         self.classifier = ComponentClassifier(api_key=openai_api_key)
-        # Initialize props proposer (wired up in this commit)
+        # Initialize all requirement proposers
         self.props_proposer = PropsProposer(api_key=openai_api_key)
-        # Other proposers will be added in subsequent commits
-        self.events_proposer = None
-        self.states_proposer = None
-        self.a11y_proposer = None
+        self.events_proposer = EventsProposer(api_key=openai_api_key)
+        self.states_proposer = StatesProposer(api_key=openai_api_key)
+        self.a11y_proposer = AccessibilityProposer(api_key=openai_api_key)
     
     @traced(run_name="propose_requirements")
     async def propose_requirements(
@@ -51,10 +53,10 @@ class RequirementOrchestrator:
         
         This method coordinates the multi-agent workflow:
         1. Classify component type
-        2. Propose props requirements (future commit)
-        3. Propose events requirements (future commit)
-        4. Propose states requirements (future commit)
-        5. Propose accessibility requirements (future commit)
+        2. Propose props requirements
+        3. Propose events requirements
+        4. Propose states requirements
+        5. Propose accessibility requirements
         
         Args:
             image: Component screenshot as PIL Image
@@ -91,7 +93,7 @@ class RequirementOrchestrator:
                 }
             )
             
-            # Step 2: Propose props requirements (now implemented)
+            # Step 2: Propose props requirements
             logger.info("Step 2: Proposing props requirements")
             if self.props_proposer:
                 state.props_proposals = await self.props_proposer.propose(
@@ -102,25 +104,38 @@ class RequirementOrchestrator:
                     extra={"extra": {"count": len(state.props_proposals)}}
                 )
             
-            # Steps 3-5 will be implemented in subsequent commits
+            # Step 3: Propose events requirements
+            logger.info("Step 3: Proposing events requirements")
+            if self.events_proposer:
+                state.events_proposals = await self.events_proposer.propose(
+                    image, state.classification, tokens
+                )
+                logger.info(
+                    f"Events proposals complete: {len(state.events_proposals)} proposals",
+                    extra={"extra": {"count": len(state.events_proposals)}}
+                )
             
-            # TODO (Commit 9): Add events requirement proposer
-            # if self.events_proposer:
-            #     state.events_proposals = await self.events_proposer.propose(
-            #         image, state.classification, tokens
-            #     )
+            # Step 4: Propose states requirements
+            logger.info("Step 4: Proposing states requirements")
+            if self.states_proposer:
+                state.states_proposals = await self.states_proposer.propose(
+                    image, state.classification, tokens
+                )
+                logger.info(
+                    f"States proposals complete: {len(state.states_proposals)} proposals",
+                    extra={"extra": {"count": len(state.states_proposals)}}
+                )
             
-            # TODO (Commit 11): Add states requirement proposer
-            # if self.states_proposer:
-            #     state.states_proposals = await self.states_proposer.propose(
-            #         image, state.classification, tokens
-            #     )
-            
-            # TODO (Commit 13): Add accessibility requirement proposer
-            # if self.a11y_proposer:
-            #     state.accessibility_proposals = await self.a11y_proposer.propose(
-            #         image, state.classification, tokens
-            #     )
+            # Step 5: Propose accessibility requirements
+            logger.info("Step 5: Proposing accessibility requirements")
+            if self.a11y_proposer:
+                state.accessibility_proposals = await self.a11y_proposer.propose(
+                    image, state.classification, tokens
+                )
+                logger.info(
+                    f"Accessibility proposals complete: {len(state.accessibility_proposals)} proposals",
+                    extra={"extra": {"count": len(state.accessibility_proposals)}}
+                )
             
             # Mark completion
             state.completed_at = datetime.now(timezone.utc).isoformat()
@@ -157,9 +172,9 @@ class RequirementOrchestrator:
     ) -> RequirementState:
         """Run requirement proposal with parallel execution.
         
-        This variant runs the requirement proposers in parallel after
-        classification to minimize latency. Will be fully implemented
-        after all proposers are added.
+        This variant runs all requirement proposers in parallel after
+        classification to minimize latency. This is the recommended
+        approach for production deployments targeting p50 latency ≤15s.
         
         Args:
             image: Component screenshot as PIL Image
@@ -183,21 +198,30 @@ class RequirementOrchestrator:
             )
             state.classification = classification
             
-            # Steps 2-5: Run proposers in parallel (future implementation)
-            # When all proposers are implemented, we'll use asyncio.gather
-            # to run them concurrently for better performance
+            # Steps 2-5: Run proposers in parallel for better performance
+            results = await asyncio.gather(
+                self.props_proposer.propose(image, classification, tokens),
+                self.events_proposer.propose(image, classification, tokens),
+                self.states_proposer.propose(image, classification, tokens),
+                self.a11y_proposer.propose(image, classification, tokens),
+            )
+            state.props_proposals = results[0]
+            state.events_proposals = results[1]
+            state.states_proposals = results[2]
+            state.accessibility_proposals = results[3]
             
-            # Example parallel execution (to be uncommented in future commits):
-            # results = await asyncio.gather(
-            #     self.props_proposer.propose(image, classification, tokens),
-            #     self.events_proposer.propose(image, classification, tokens),
-            #     self.states_proposer.propose(image, classification, tokens),
-            #     self.a11y_proposer.propose(image, classification, tokens),
-            # )
-            # state.props_proposals = results[0]
-            # state.events_proposals = results[1]
-            # state.states_proposals = results[2]
-            # state.accessibility_proposals = results[3]
+            logger.info(
+                f"Parallel requirement proposal complete",
+                extra={
+                    "extra": {
+                        "props_count": len(state.props_proposals),
+                        "events_count": len(state.events_proposals),
+                        "states_count": len(state.states_proposals),
+                        "accessibility_count": len(state.accessibility_proposals),
+                        "total_proposals": len(state.get_all_proposals()),
+                    }
+                }
+            )
             
             state.completed_at = datetime.now(timezone.utc).isoformat()
             return state
