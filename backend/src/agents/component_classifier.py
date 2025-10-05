@@ -17,6 +17,7 @@ from ..types.requirement_types import (
 )
 from ..services.image_processor import prepare_image_for_vision_api
 from ..prompts.component_classifier import create_classification_prompt
+from ..core.tracing import traced
 from ..core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -48,6 +49,7 @@ class ComponentClassifier:
         self.max_retries = 3
         self.model = "gpt-4o"  # GPT-4V model
     
+    @traced(run_name="classify_component")
     async def classify_component(
         self,
         image: Image.Image,
@@ -55,6 +57,8 @@ class ComponentClassifier:
         retry_count: int = 0
     ) -> ComponentClassification:
         """Classify component type from an image.
+        
+        This method is traced with LangSmith for observability.
         
         Args:
             image: PIL Image object
@@ -68,6 +72,17 @@ class ComponentClassifier:
             ComponentClassifierError: If classification fails after retries
         """
         try:
+            # Log input metadata
+            logger.info(
+                "Starting component classification",
+                extra={
+                    "extra": {
+                        "has_figma_data": figma_data is not None,
+                        "retry_count": retry_count,
+                    }
+                }
+            )
+            
             # Prepare image for vision API
             image_data = prepare_image_for_vision_api(image)
             
@@ -102,9 +117,17 @@ class ComponentClassifier:
             # Validate and convert to ComponentClassification
             classification = self._parse_classification_result(result)
             
+            # Log successful classification
             logger.info(
-                f"Component classified as {classification.component_type} "
-                f"(confidence: {classification.confidence:.2f})"
+                f"Component classified as {classification.component_type}",
+                extra={
+                    "extra": {
+                        "component_type": classification.component_type.value,
+                        "confidence": classification.confidence,
+                        "confidence_level": get_confidence_level(classification.confidence).value,
+                        "num_candidates": len(classification.candidates),
+                    }
+                }
             )
             
             return classification
@@ -112,13 +135,22 @@ class ComponentClassifier:
         except Exception as e:
             if retry_count < self.max_retries:
                 logger.warning(
-                    f"Classification failed (attempt {retry_count + 1}), retrying: {e}"
+                    f"Classification failed (attempt {retry_count + 1}), retrying: {e}",
+                    extra={"extra": {"retry_count": retry_count, "error": str(e)}}
                 )
                 return await self.classify_component(
                     image, figma_data, retry_count + 1
                 )
             else:
-                logger.error(f"Component classification failed after {self.max_retries} retries: {e}")
+                logger.error(
+                    f"Component classification failed after {self.max_retries} retries",
+                    extra={
+                        "extra": {
+                            "max_retries": self.max_retries,
+                            "error": str(e),
+                        }
+                    }
+                )
                 raise ComponentClassifierError(
                     f"Failed to classify component: {e}"
                 ) from e
