@@ -313,3 +313,209 @@ class EvaluationRun(Base, TimestampMixin):
         Index("idx_evaluation_status_created", "status", "created_at"),
         Index("idx_evaluation_model_type", "model_name", "evaluation_type"),
     )
+
+
+class RequirementExport(Base, TimestampMixin):
+    """Store approved requirements with complete audit trail.
+
+    This model tracks the complete lifecycle of requirement proposals
+    from initial generation through approval and export, enabling
+    audit compliance and workflow analytics.
+    """
+
+    __tablename__ = "requirement_exports"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+
+    # Export metadata
+    export_id: Mapped[str] = mapped_column(
+        String(100),
+        unique=True,
+        nullable=False,
+        index=True,
+    )
+
+    # Component classification
+    component_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    component_confidence: Mapped[float] = mapped_column(
+        Float,
+        nullable=False,
+    )
+
+    # Requirements data
+    requirements: Mapped[dict] = mapped_column(
+        JSON,
+        nullable=False,
+    )
+
+    # Source data references
+    source_type: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        index=True,
+    )
+    source_metadata: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    # Design tokens context
+    tokens: Mapped[Optional[dict]] = mapped_column(
+        JSON,
+        nullable=True,
+    )
+
+    # Approval workflow tracking
+    total_requirements: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    approved_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+    )
+    edited_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+    custom_added_count: Mapped[int] = mapped_column(
+        Integer,
+        nullable=False,
+        default=0,
+    )
+
+    # Performance metrics
+    proposal_latency_ms: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+    approval_duration_ms: Mapped[Optional[int]] = mapped_column(
+        Integer,
+        nullable=True,
+    )
+
+    # Timestamps
+    proposed_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+    approved_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    exported_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now(),
+    )
+
+    # Integration tracking
+    used_in_pattern_retrieval: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    used_in_code_generation: Mapped[bool] = mapped_column(
+        Boolean,
+        nullable=False,
+        default=False,
+    )
+    pattern_retrieval_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+    code_generation_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True),
+        nullable=True,
+    )
+
+    # Quality metrics (for evaluation)
+    precision_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+    )
+    recall_score: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+    )
+    user_edit_rate: Mapped[Optional[float]] = mapped_column(
+        Float,
+        nullable=True,
+    )
+
+    # Status tracking
+    status: Mapped[str] = mapped_column(
+        String(50),
+        nullable=False,
+        default="exported",
+        index=True,
+    )
+
+    # Optional notes
+    notes: Mapped[Optional[str]] = mapped_column(
+        Text,
+        nullable=True,
+    )
+
+    # Indexes for common queries
+    __table_args__ = (
+        Index("idx_export_component_type", "component_type"),
+        Index("idx_export_source_type", "source_type"),
+        Index("idx_export_status_created", "status", "created_at"),
+        Index("idx_export_proposed_at", "proposed_at"),
+        Index("idx_export_exported_at", "exported_at"),
+    )
+
+    def calculate_user_edit_rate(self) -> float:
+        """Calculate the percentage of requirements edited by the user.
+
+        Returns:
+            float: Edit rate as percentage (0.0-1.0)
+        """
+        if self.total_requirements == 0:
+            return 0.0
+        return self.edited_count / self.total_requirements
+
+    def meets_latency_target(self, target_ms: int = 15000) -> bool:
+        """Check if proposal latency meets target (default 15s).
+
+        Args:
+            target_ms: Target latency in milliseconds
+
+        Returns:
+            bool: True if latency meets target
+        """
+        if self.proposal_latency_ms is None:
+            return False
+        return self.proposal_latency_ms <= target_ms
+
+    def get_approval_summary(self) -> dict:
+        """Get summary statistics for this export.
+
+        Returns:
+            dict: Summary with approval rates and metrics
+        """
+        approval_rate = self.approved_count / self.total_requirements if self.total_requirements > 0 else 0.0
+        edit_rate = self.calculate_user_edit_rate()
+
+        return {
+            "export_id": self.export_id,
+            "component_type": self.component_type,
+            "total_requirements": self.total_requirements,
+            "approved_count": self.approved_count,
+            "approval_rate": approval_rate,
+            "edited_count": self.edited_count,
+            "edit_rate": edit_rate,
+            "custom_added_count": self.custom_added_count,
+            "proposal_latency_ms": self.proposal_latency_ms,
+            "meets_latency_target": self.meets_latency_target(),
+            "proposed_at": self.proposed_at.isoformat() if self.proposed_at else None,
+            "approved_at": self.approved_at.isoformat() if self.approved_at else None,
+            "exported_at": self.exported_at.isoformat() if self.exported_at else None,
+        }
