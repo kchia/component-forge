@@ -4,8 +4,8 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CodeBlock } from "@/components/ui/code-block";
 import { MetricCard } from "@/components/composite/MetricCard";
+import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 // Placeholder code (will be replaced with Epic 4 backend)
@@ -135,7 +135,7 @@ export default function PreviewPage() {
               <CardTitle>Generated Code</CardTitle>
             </CardHeader>
             <CardContent>
-              <CodeBlock language="tsx" code={placeholderCode} />
+              <DynamicCodeBlock language="tsx" code={placeholderCode} />
             </CardContent>
           </Card>
         </TabsContent>
@@ -147,7 +147,7 @@ export default function PreviewPage() {
               <CardTitle>Storybook Stories</CardTitle>
             </CardHeader>
             <CardContent>
-              <CodeBlock language="tsx" code={placeholderStorybook} />
+              <DynamicCodeBlock language="tsx" code={placeholderStorybook} />
             </CardContent>
           </Card>
         </TabsContent>
