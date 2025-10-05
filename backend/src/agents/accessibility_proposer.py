@@ -17,6 +17,7 @@ from ..types.requirement_types import (
     ComponentClassification,
 )
 from ..services.image_processor import prepare_image_for_vision_api
+from ..prompts.accessibility_proposer import create_accessibility_prompt
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -82,8 +83,11 @@ class AccessibilityProposer(BaseRequirementProposer):
             # Prepare image
             image_data = prepare_image_for_vision_api(image)
             
-            # Build accessibility analysis prompt (will use prompts module in next commit)
-            prompt = self._build_accessibility_prompt(classification, tokens)
+            # Build accessibility analysis prompt using the prompts module
+            prompt = create_accessibility_prompt(
+                classification.component_type.value,
+                figma_data=None,  # Will be passed from orchestrator in future
+            )
             
             # Call GPT-4V for accessibility analysis
             response = await self.client.chat.completions.create(
@@ -145,78 +149,6 @@ class AccessibilityProposer(BaseRequirementProposer):
                 )
                 # Return empty list instead of raising to allow workflow to continue
                 return []
-    
-    def _build_accessibility_prompt(
-        self,
-        classification: ComponentClassification,
-        tokens: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Build accessibility analysis prompt.
-        
-        This is a minimal prompt. Full prompt will be added in next commit.
-        
-        Args:
-            classification: Component classification
-            tokens: Optional design tokens
-            
-        Returns:
-            Prompt text
-        """
-        component_type = classification.component_type.value
-        
-        prompt = f"""Analyze this {component_type} component and propose accessibility requirements.
-
-Component Type: {component_type}
-
-Analyze for these accessibility features:
-
-1. **aria-label**: Screen reader text
-   - Required when: Visual-only information, icon buttons, complex controls
-   - Example: "Close dialog", "Submit form", "User profile menu"
-
-2. **role**: ARIA role for semantic meaning
-   - Required when: Non-semantic elements used
-   - Examples: role="button", role="navigation", role="alert"
-
-3. **Semantic HTML**: Proper HTML elements
-   - Button component → <button> not <div>
-   - Input component → <input> with proper type
-   - Alert component → <div role="alert">
-
-4. **Keyboard Navigation**: Keyboard accessible
-   - Tab navigation support
-   - Enter/Space for activation
-   - Arrow keys for selection
-   - Required: Almost always for interactive elements
-
-5. **Color Contrast**: WCAG AA compliance (4.5:1 for normal text)
-   - Check text on background
-   - Important for readability
-
-Return JSON with this structure:
-{{
-  "accessibility": [
-    {{
-      "name": "aria-label",
-      "required": true,
-      "description": "Descriptive label for screen readers",
-      "visual_cues": ["icon-only button", "no visible text"],
-      "confidence": 0.90
-    }},
-    {{
-      "name": "keyboard-navigation",
-      "required": true,
-      "description": "Support Tab, Enter, Space keys",
-      "visual_cues": ["interactive button", "clickable element"],
-      "confidence": 0.95
-    }}
-  ]
-}}
-
-Focus on WCAG 2.1 Level AA compliance.
-"""
-        
-        return prompt
     
     def _parse_accessibility_result(
         self,
