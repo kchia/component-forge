@@ -1,11 +1,12 @@
 """API routes for requirement proposal."""
 
-from fastapi import APIRouter, UploadFile, File, HTTPException, status
+from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status
 from fastapi.responses import JSONResponse
 from typing import Dict, Any, Optional, List
 from pydantic import BaseModel, Field
 import io
 import time
+import json
 from PIL import Image
 
 from ....services.image_processor import (
@@ -51,8 +52,9 @@ class RequirementProposalResponse(BaseModel):
 
 @router.post("/propose")
 async def propose_requirements(
-    file: UploadFile = File(...),
-    request: Optional[RequirementProposalRequest] = None
+    file: UploadFile = File(..., description="Screenshot or Figma image (PNG, JPG, JPEG up to 10MB)"),
+    tokens: Optional[str] = Form(None, description="Optional design tokens as JSON string"),
+    figma_data: Optional[str] = Form(None, description="Optional Figma frame data as JSON string")
 ) -> RequirementProposalResponse:
     """Propose functional requirements from screenshot/Figma frame.
     
@@ -67,7 +69,8 @@ async def propose_requirements(
     
     Args:
         file: Uploaded image file (PNG, JPG, JPEG up to 10MB)
-        request: Optional tokens and Figma data for enhanced accuracy
+        tokens: Optional JSON string of design tokens from Epic 1
+        figma_data: Optional JSON string of Figma frame metadata
         
     Returns:
         JSON response with component type, proposals by category, metadata
@@ -103,15 +106,35 @@ async def propose_requirements(
                 detail=str(e)
             )
         
-        # Extract request data
-        tokens = request.tokens if request else None
-        figma_data = request.figma_data if request else None
+        # Parse optional JSON fields from form data
+        tokens_dict = None
+        figma_data_dict = None
+        
+        if tokens:
+            try:
+                tokens_dict = json.loads(tokens)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid tokens JSON: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid tokens JSON: {str(e)}"
+                )
+        
+        if figma_data:
+            try:
+                figma_data_dict = json.loads(figma_data)
+            except json.JSONDecodeError as e:
+                logger.error(f"Invalid figma_data JSON: {e}")
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail=f"Invalid figma_data JSON: {str(e)}"
+                )
         
         logger.info(
             "Starting requirement proposal",
             extra={"extra": {
-                "has_tokens": tokens is not None,
-                "has_figma": figma_data is not None
+                "has_tokens": tokens_dict is not None,
+                "has_figma": figma_data_dict is not None
             }}
         )
         
@@ -129,8 +152,8 @@ async def propose_requirements(
         # Run requirement proposal (use parallel for production)
         state = await orchestrator.propose_requirements_parallel(
             image=image,
-            tokens=tokens,
-            figma_data=figma_data
+            tokens=tokens_dict,
+            figma_data=figma_data_dict
         )
         
         # Calculate latency
@@ -164,7 +187,7 @@ async def propose_requirements(
             metadata={
                 "latency_seconds": round(latency, 2),
                 "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                "source": "screenshot" if not figma_data else "figma",
+                "source": "screenshot" if not figma_data_dict else "figma",
                 "total_proposals": (
                     len(state.props_proposals) +
                     len(state.events_proposals) +
