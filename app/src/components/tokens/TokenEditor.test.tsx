@@ -6,39 +6,54 @@ import { TokenEditor, type TokenData } from './TokenEditor'
 describe('TokenEditor', () => {
   const mockTokens: TokenData = {
     colors: {
-      primary: { value: '#3B82F6', confidence: 0.92 },
-      secondary: { value: '#10B981', confidence: 0.88 },
+      primary: '#3B82F6',
+      secondary: '#10B981',
     },
     typography: {
-      fontFamily: { value: 'Inter', confidence: 0.75 },
-      fontSize: { value: '16px', confidence: 0.90 },
-      fontWeight: { value: '500', confidence: 0.85 },
+      fontFamily: 'Inter',
+      fontSizeBase: '16px',
+      fontWeightNormal: 500,
     },
     spacing: {
-      padding: { value: '16px', confidence: 0.85 },
-      margin: { value: '24px', confidence: 0.80 },
+      md: '16px',
+      lg: '24px',
     },
+    borderRadius: {
+      md: '6px',
+    },
+  }
+
+  const mockConfidence = {
+    'colors.primary': 0.92,
+    'colors.secondary': 0.88,
+    'typography.fontFamily': 0.75,
+    'typography.fontSizeBase': 0.90,
+    'typography.fontWeightNormal': 0.85,
+    'spacing.md': 0.85,
+    'spacing.lg': 0.80,
+    'borderRadius.md': 0.88,
   }
 
   describe('Rendering', () => {
     it('renders all token sections', () => {
-      render(<TokenEditor tokens={mockTokens} />)
+      render(<TokenEditor tokens={mockTokens} confidence={mockConfidence} />)
       
       expect(screen.getByTestId('token-editor')).toBeInTheDocument()
       expect(screen.getByText(/Colors \(2\)/)).toBeInTheDocument()
       expect(screen.getByText('Typography')).toBeInTheDocument()
       expect(screen.getByText(/Spacing \(2\)/)).toBeInTheDocument()
+      expect(screen.getByText('Border Radius')).toBeInTheDocument()
     })
 
     it('renders save and reset buttons', () => {
-      render(<TokenEditor tokens={mockTokens} />)
+      render(<TokenEditor tokens={mockTokens} confidence={mockConfidence} />)
       
       expect(screen.getByRole('button', { name: /reset/i })).toBeInTheDocument()
       expect(screen.getByRole('button', { name: /save changes/i })).toBeInTheDocument()
     })
 
     it('disables buttons initially (no changes)', () => {
-      render(<TokenEditor tokens={mockTokens} />)
+      render(<TokenEditor tokens={mockTokens} confidence={mockConfidence} />)
       
       const saveButton = screen.getByRole('button', { name: /save changes/i })
       const resetButton = screen.getByRole('button', { name: /reset/i })
@@ -79,7 +94,7 @@ describe('TokenEditor', () => {
       const user = userEvent.setup()
       const onSave = vi.fn()
       
-      render(<TokenEditor tokens={mockTokens} onSave={onSave} />)
+      render(<TokenEditor tokens={mockTokens} confidence={mockConfidence} onSave={onSave} />)
       
       // Change a color
       const colorInputs = screen.getAllByRole('textbox')
@@ -97,7 +112,7 @@ describe('TokenEditor', () => {
         
         expect(onSave).toHaveBeenCalled()
         const savedTokens = onSave.mock.calls[0][0]
-        expect(savedTokens.colors?.primary.value).toBe('#FF5733')
+        expect(savedTokens.colors?.primary).toBe('#FF5733')
       }
     })
 
@@ -178,6 +193,7 @@ describe('TokenEditor', () => {
         colors: {},
         typography: {},
         spacing: {},
+        borderRadius: {},
       }
       
       render(<TokenEditor tokens={emptyTokens} />)
@@ -189,7 +205,7 @@ describe('TokenEditor', () => {
     it('renders typography section even when empty', () => {
       const tokensWithTypo: TokenData = {
         typography: {
-          fontFamily: { value: 'Inter', confidence: 0.75 },
+          fontFamily: 'Inter',
         },
       }
       
@@ -207,7 +223,7 @@ describe('TokenEditor', () => {
       
       const newTokens: TokenData = {
         colors: {
-          primary: { value: '#FF5733', confidence: 0.92 },
+          primary: '#FF5733',
         },
       }
       

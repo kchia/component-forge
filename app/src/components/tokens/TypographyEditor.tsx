@@ -11,6 +11,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { ConfidenceBadge } from "@/components/ui/badge";
+import { TypographyTokens } from "@/types/api.types";
 import { cn } from "@/lib/utils";
 
 // Standard font families (web-safe + popular)
@@ -30,56 +31,26 @@ const FONT_FAMILIES = [
 ] as const;
 
 // Standard font sizes
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 32, 40, 48, 56, 64] as const;
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 30, 36, 40, 48, 56, 64] as const;
 
 // Standard font weights
 const FONT_WEIGHTS = [100, 200, 300, 400, 500, 600, 700, 800, 900] as const;
 
 export interface TypographyEditorProps {
   /**
-   * Current font family value
+   * Typography tokens
    */
-  fontFamily?: string;
+  tokens?: TypographyTokens;
 
   /**
-   * Font family confidence score
+   * Confidence scores (flattened keys like "typography.fontFamily")
    */
-  fontFamilyConfidence?: number;
+  confidence?: Record<string, number>;
 
   /**
-   * Current font size value (with unit, e.g., "16px")
+   * Callback when typography tokens change
    */
-  fontSize?: string;
-
-  /**
-   * Font size confidence score
-   */
-  fontSizeConfidence?: number;
-
-  /**
-   * Current font weight value
-   */
-  fontWeight?: string;
-
-  /**
-   * Font weight confidence score
-   */
-  fontWeightConfidence?: number;
-
-  /**
-   * Callback when font family changes
-   */
-  onFontFamilyChange?: (value: string) => void;
-
-  /**
-   * Callback when font size changes
-   */
-  onFontSizeChange?: (value: string) => void;
-
-  /**
-   * Callback when font weight changes
-   */
-  onFontWeightChange?: (value: string) => void;
+  onChange?: (tokens: TypographyTokens) => void;
 
   /**
    * Optional className
@@ -93,33 +64,36 @@ export interface TypographyEditorProps {
  * @example
  * ```tsx
  * <TypographyEditor
- *   fontFamily="Inter"
- *   fontFamilyConfidence={0.75}
- *   fontSize="16px"
- *   fontSizeConfidence={0.90}
- *   fontWeight="500"
- *   fontWeightConfidence={0.85}
+ *   tokens={{ fontFamily: "Inter", fontSize: "16px", fontWeight: 500 }}
+ *   confidence={{ "typography.fontFamily": 0.75 }}
+ *   onChange={(tokens) => console.log(tokens)}
  * />
  * ```
  */
 export function TypographyEditor({
-  fontFamily = "Inter",
-  fontFamilyConfidence = 1,
-  fontSize = "16px",
-  fontSizeConfidence = 1,
-  fontWeight = "400",
-  fontWeightConfidence = 1,
-  onFontFamilyChange,
-  onFontSizeChange,
-  onFontWeightChange,
+  tokens = {},
+  confidence = {},
+  onChange,
   className
 }: TypographyEditorProps) {
-  // Parse font size value (remove "px" if present)
-  const parsedFontSize = parseInt(fontSize.replace("px", ""));
+  const [localTokens, setLocalTokens] = React.useState<TypographyTokens>(tokens);
   const [customFontFamily, setCustomFontFamily] = React.useState("");
   const [showCustomFont, setShowCustomFont] = React.useState(
-    !FONT_FAMILIES.includes(fontFamily as string)
+    tokens.fontFamily ? !FONT_FAMILIES.includes(tokens.fontFamily as any) : false
   );
+
+  // Sync with external token changes
+  React.useEffect(() => {
+    setLocalTokens(tokens);
+  }, [tokens]);
+
+  const handleChange = (field: keyof TypographyTokens, value: string | number) => {
+    const newTokens = { ...localTokens, [field]: value };
+    setLocalTokens(newTokens);
+    if (onChange) {
+      onChange(newTokens);
+    }
+  };
 
   return (
     <div className={cn("space-y-4", className)} data-testid="typography-editor">
@@ -129,7 +103,7 @@ export function TypographyEditor({
           <Label htmlFor="font-family" className="text-sm font-medium">
             Font Family
           </Label>
-          <ConfidenceBadge score={fontFamilyConfidence} />
+          <ConfidenceBadge score={confidence["typography.fontFamily"] || 0} />
         </div>
 
         {showCustomFont ? (
@@ -137,12 +111,10 @@ export function TypographyEditor({
             <Input
               id="font-family"
               type="text"
-              value={customFontFamily || fontFamily}
+              value={customFontFamily || localTokens.fontFamily || ""}
               onChange={(e) => {
                 setCustomFontFamily(e.target.value);
-                if (onFontFamilyChange) {
-                  onFontFamilyChange(e.target.value);
-                }
+                handleChange("fontFamily", e.target.value);
               }}
               placeholder="Enter custom font family"
             />
@@ -158,12 +130,12 @@ export function TypographyEditor({
         ) : (
           <div className="space-y-2">
             <Select
-              value={fontFamily}
+              value={localTokens.fontFamily || "Inter"}
               onValueChange={(value) => {
                 if (value === "custom") {
                   setShowCustomFont(true);
-                } else if (onFontFamilyChange) {
-                  onFontFamilyChange(value);
+                } else {
+                  handleChange("fontFamily", value);
                 }
               }}
             >
@@ -183,24 +155,22 @@ export function TypographyEditor({
         )}
       </div>
 
-      {/* Font Size */}
+      {/* Font Size Base */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="font-size" className="text-sm font-medium">
-            Font Size
+          <Label htmlFor="font-size-base" className="text-sm font-medium">
+            Font Size (Base)
           </Label>
-          <ConfidenceBadge score={fontSizeConfidence} />
+          <ConfidenceBadge score={confidence["typography.fontSizeBase"] || 0} />
         </div>
 
         <Select
-          value={parsedFontSize.toString()}
+          value={localTokens.fontSizeBase?.replace("px", "") || "16"}
           onValueChange={(value) => {
-            if (onFontSizeChange) {
-              onFontSizeChange(`${value}px`);
-            }
+            handleChange("fontSizeBase", `${value}px`);
           }}
         >
-          <SelectTrigger id="font-size">
+          <SelectTrigger id="font-size-base">
             <SelectValue placeholder="Select font size" />
           </SelectTrigger>
           <SelectContent>
@@ -213,24 +183,22 @@ export function TypographyEditor({
         </Select>
       </div>
 
-      {/* Font Weight */}
+      {/* Font Weight Normal */}
       <div className="space-y-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="font-weight" className="text-sm font-medium">
-            Font Weight
+          <Label htmlFor="font-weight-normal" className="text-sm font-medium">
+            Font Weight (Normal)
           </Label>
-          <ConfidenceBadge score={fontWeightConfidence} />
+          <ConfidenceBadge score={confidence["typography.fontWeightNormal"] || 0} />
         </div>
 
         <Select
-          value={fontWeight}
+          value={localTokens.fontWeightNormal?.toString() || "400"}
           onValueChange={(value) => {
-            if (onFontWeightChange) {
-              onFontWeightChange(value);
-            }
+            handleChange("fontWeightNormal", parseInt(value));
           }}
         >
-          <SelectTrigger id="font-weight">
+          <SelectTrigger id="font-weight-normal">
             <SelectValue placeholder="Select font weight" />
           </SelectTrigger>
           <SelectContent>

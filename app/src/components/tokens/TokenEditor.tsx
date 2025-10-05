@@ -6,20 +6,15 @@ import { Button } from "@/components/ui/button"
 import { ColorPicker } from "./ColorPicker"
 import { TypographyEditor } from "./TypographyEditor"
 import { SpacingEditor } from "./SpacingEditor"
+import { BorderRadiusEditor } from "./BorderRadiusEditor"
+import { ColorTokens, TypographyTokens, SpacingTokens, BorderRadiusTokens } from "@/types/api.types"
 import { cn } from "@/lib/utils"
 
 export interface TokenData {
-  colors?: {
-    [key: string]: { value: string; confidence: number }
-  }
-  typography?: {
-    fontFamily?: { value: string; confidence: number }
-    fontSize?: { value: string; confidence: number }
-    fontWeight?: { value: string; confidence: number }
-  }
-  spacing?: {
-    [key: string]: { value: string; confidence: number }
-  }
+  colors?: ColorTokens
+  typography?: TypographyTokens
+  spacing?: SpacingTokens
+  borderRadius?: BorderRadiusTokens
 }
 
 export interface TokenEditorProps {
@@ -27,6 +22,11 @@ export interface TokenEditorProps {
    * Token data to edit
    */
   tokens: TokenData
+  
+  /**
+   * Confidence scores (flattened keys like "colors.primary", "borderRadius.md")
+   */
+  confidence?: Record<string, number>
   
   /**
    * Callback when tokens are saved
@@ -52,23 +52,20 @@ export interface TokenEditorProps {
 /**
  * TokenEditor - Main container for editing all design tokens
  * 
- * Composes ColorPicker, TypographyEditor, and SpacingEditor components.
+ * Composes ColorPicker, TypographyEditor, SpacingEditor, and BorderRadiusEditor components.
  * 
  * @example
  * ```tsx
  * <TokenEditor
  *   tokens={{
- *     colors: {
- *       primary: { value: "#3B82F6", confidence: 0.92 },
- *       background: { value: "#FFFFFF", confidence: 0.88 }
- *     },
- *     typography: {
- *       fontFamily: { value: "Inter", confidence: 0.75 },
- *       fontSize: { value: "16px", confidence: 0.90 }
- *     },
- *     spacing: {
- *       padding: { value: "16px", confidence: 0.85 }
- *     }
+ *     colors: { primary: "#3B82F6", background: "#FFFFFF" },
+ *     typography: { fontFamily: "Inter", fontSize: "16px" },
+ *     spacing: { md: "16px" },
+ *     borderRadius: { md: "6px" }
+ *   }}
+ *   confidence={{
+ *     "colors.primary": 0.92,
+ *     "typography.fontSize": 0.90
  *   }}
  *   onSave={(tokens) => console.log('Saved:', tokens)}
  *   onReset={() => console.log('Reset clicked')}
@@ -77,6 +74,7 @@ export interface TokenEditorProps {
  */
 export function TokenEditor({
   tokens,
+  confidence = {},
   onSave,
   onReset,
   loading = false,
@@ -96,25 +94,16 @@ export function TokenEditor({
       ...prev,
       colors: {
         ...prev.colors,
-        [key]: {
-          value,
-          confidence: prev.colors?.[key]?.confidence || 0,
-        },
+        [key]: value,
       },
     }))
     setHasChanges(true)
   }
 
-  const handleTypographyChange = (field: 'fontFamily' | 'fontSize' | 'fontWeight', value: string) => {
+  const handleTypographyChange = (updatedTypography: TypographyTokens) => {
     setEditedTokens((prev) => ({
       ...prev,
-      typography: {
-        ...prev.typography,
-        [field]: {
-          value,
-          confidence: prev.typography?.[field]?.confidence || 0,
-        },
-      },
+      typography: updatedTypography,
     }))
     setHasChanges(true)
   }
@@ -124,11 +113,16 @@ export function TokenEditor({
       ...prev,
       spacing: {
         ...prev.spacing,
-        [key]: {
-          value,
-          confidence: prev.spacing?.[key]?.confidence || 0,
-        },
+        [key]: value,
       },
+    }))
+    setHasChanges(true)
+  }
+
+  const handleBorderRadiusChange = (updatedBorderRadius: BorderRadiusTokens) => {
+    setEditedTokens((prev) => ({
+      ...prev,
+      borderRadius: updatedBorderRadius,
     }))
     setHasChanges(true)
   }
@@ -159,15 +153,18 @@ export function TokenEditor({
             </h3>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(editedTokens.colors).map(([key, data]) => (
-              <ColorPicker
-                key={key}
-                label={key.charAt(0).toUpperCase() + key.slice(1)}
-                value={data.value}
-                confidence={data.confidence}
-                onChange={(value) => handleColorChange(key, value)}
-              />
-            ))}
+            {Object.entries(editedTokens.colors).map(([key, value]) => {
+              if (!value) return null
+              return (
+                <ColorPicker
+                  key={key}
+                  label={key.charAt(0).toUpperCase() + key.slice(1)}
+                  value={value}
+                  confidence={confidence[`colors.${key}`] || 0}
+                  onChange={(newValue) => handleColorChange(key, newValue)}
+                />
+              )
+            })}
           </CardContent>
         </Card>
       )}
@@ -180,15 +177,9 @@ export function TokenEditor({
           </CardHeader>
           <CardContent>
             <TypographyEditor
-              fontFamily={editedTokens.typography.fontFamily?.value}
-              fontFamilyConfidence={editedTokens.typography.fontFamily?.confidence}
-              fontSize={editedTokens.typography.fontSize?.value}
-              fontSizeConfidence={editedTokens.typography.fontSize?.confidence}
-              fontWeight={editedTokens.typography.fontWeight?.value}
-              fontWeightConfidence={editedTokens.typography.fontWeight?.confidence}
-              onFontFamilyChange={(value) => handleTypographyChange('fontFamily', value)}
-              onFontSizeChange={(value) => handleTypographyChange('fontSize', value)}
-              onFontWeightChange={(value) => handleTypographyChange('fontWeight', value)}
+              tokens={editedTokens.typography}
+              confidence={confidence}
+              onChange={handleTypographyChange}
             />
           </CardContent>
         </Card>
@@ -203,15 +194,34 @@ export function TokenEditor({
             </h3>
           </CardHeader>
           <CardContent className="space-y-4">
-            {Object.entries(editedTokens.spacing).map(([key, data]) => (
-              <SpacingEditor
-                key={key}
-                label={key.charAt(0).toUpperCase() + key.slice(1)}
-                value={data.value}
-                confidence={data.confidence}
-                onChange={(value) => handleSpacingChange(key, value)}
-              />
-            ))}
+            {Object.entries(editedTokens.spacing).map(([key, value]) => {
+              if (!value) return null
+              return (
+                <SpacingEditor
+                  key={key}
+                  label={key.charAt(0).toUpperCase() + key.slice(1)}
+                  value={value}
+                  confidence={confidence[`spacing.${key}`] || 0}
+                  onChange={(newValue) => handleSpacingChange(key, newValue)}
+                />
+              )
+            })}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Border Radius Section */}
+      {editedTokens.borderRadius && (
+        <Card variant="outlined">
+          <CardHeader>
+            <h3 className="text-lg font-semibold">Border Radius</h3>
+          </CardHeader>
+          <CardContent>
+            <BorderRadiusEditor
+              tokens={editedTokens.borderRadius}
+              confidence={confidence}
+              onChange={handleBorderRadiusChange}
+            />
           </CardContent>
         </Card>
       )}

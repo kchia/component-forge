@@ -5,6 +5,7 @@ import { Providers } from "./providers";
 import { Navigation } from "@/components/layout/Navigation";
 import { Footer } from "@/components/layout/Footer";
 import { AlertContainer } from "@/components/layout/AlertContainer";
+import { OnboardingModal } from "@/components/onboarding/OnboardingModal";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -38,6 +39,7 @@ export default function RootLayout({
             {children}
           </div>
           <Footer />
+          <OnboardingModal />
         </Providers>
       </body>
     </html>
