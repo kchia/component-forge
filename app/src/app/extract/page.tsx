@@ -19,7 +19,7 @@ import { useUIStore } from "@/stores/useUIStore";
 import type { TokenData } from "@/components/tokens/TokenEditor";
 
 // New components for EPIC 12
-import { UploadGuidance } from "@/components/extract/UploadGuidance";
+import { CompactTips } from "@/components/extract/CompactTips";
 import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
 import { ExampleComparison } from "@/components/extract/ExampleComparison";
 import { ExtractionSuccess } from "@/components/extract/ExtractionSuccess";
@@ -283,9 +283,9 @@ export default function TokenExtractionPage() {
 
         {/* Screenshot Tab */}
         <TabsContent value="screenshot" className="space-y-4">
-          {/* NEW: Upload Guidance */}
-          <UploadGuidance mode="screenshot" />
-          
+          {/* Compact Tips */}
+          <CompactTips mode="screenshot" />
+
           <Card>
             <CardHeader>
               <CardTitle>Upload Screenshot</CardTitle>
