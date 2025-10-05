@@ -17,6 +17,7 @@ from ..types.requirement_types import (
     ComponentClassification,
 )
 from ..services.image_processor import prepare_image_for_vision_api
+from ..prompts.states_proposer import create_states_prompt
 from ..core.tracing import traced
 from ..core.logging import get_logger
 
@@ -82,8 +83,11 @@ class StatesProposer(BaseRequirementProposer):
             # Prepare image
             image_data = prepare_image_for_vision_api(image)
             
-            # Build states analysis prompt (will use prompts module in next commit)
-            prompt = self._build_states_prompt(classification, tokens)
+            # Build states analysis prompt using the prompts module
+            prompt = create_states_prompt(
+                classification.component_type.value,
+                figma_data=None,  # Will be passed from orchestrator in future
+            )
             
             # Call GPT-4V for states analysis
             response = await self.client.chat.completions.create(
@@ -145,74 +149,6 @@ class StatesProposer(BaseRequirementProposer):
                 )
                 # Return empty list instead of raising to allow workflow to continue
                 return []
-    
-    def _build_states_prompt(
-        self,
-        classification: ComponentClassification,
-        tokens: Optional[Dict[str, Any]] = None
-    ) -> str:
-        """Build states analysis prompt.
-        
-        This is a minimal prompt. Full prompt will be added in next commit.
-        
-        Args:
-            classification: Component classification
-            tokens: Optional design tokens
-            
-        Returns:
-            Prompt text
-        """
-        component_type = classification.component_type.value
-        
-        prompt = f"""Analyze this {component_type} component and propose state/variant requirements.
-
-Component Type: {component_type}
-
-Analyze for these state types:
-
-1. **Hover State**: Visual changes on mouse hover
-   - Visual cues: darker/lighter colors, shadow elevation, opacity changes
-   - Common in: Button, Card, Badge
-
-2. **Focus State**: Visual changes when element has keyboard focus
-   - Visual cues: focus ring/outline, border highlight, glow effect
-   - Common in: Button, Input, Select
-   - Important for accessibility
-
-3. **Disabled State**: Visual appearance when component is disabled
-   - Visual cues: reduced opacity (50-60%), grayed out, cursor:not-allowed
-   - Common in: Button, Input, Select
-
-4. **Loading State**: Visual appearance during async operations
-   - Visual cues: spinner icon, skeleton placeholder, animated dots
-   - Common in: Button (after click), Card (while loading)
-
-5. **Active/Pressed State**: Visual feedback when element is clicked
-   - Visual cues: darker background, inner shadow, scale reduction
-   - Common in: Button
-
-Return JSON with this structure:
-{{
-  "states": [
-    {{
-      "name": "hover",
-      "description": "Darker background on mouse hover",
-      "visual_cues": ["color darkens by 10%", "shadow increases"],
-      "confidence": 0.85
-    }},
-    {{
-      "name": "disabled",
-      "description": "Grayed out appearance when disabled",
-      "visual_cues": ["opacity 50%", "cursor not-allowed"],
-      "confidence": 0.80
-    }}
-  ]
-}}
-
-Focus on states with clear visual evidence.
-"""
-        
-        return prompt
     
     def _parse_states_result(
         self,
