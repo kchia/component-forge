@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -39,6 +39,7 @@ const TokenExport = dynamic(
 );
 
 export default function TokenExtractionPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam === "figma" ? "figma" : "screenshot");
@@ -267,6 +268,12 @@ export default function TokenExtractionPage() {
     }
   };
 
+  // Handle tab change and update URL
+  const handleTabChange = (value: string) => {
+    setActiveTab(value);
+    router.push(`/extract?tab=${value}`);
+  };
+
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
       {/* Page Header */}
@@ -280,7 +287,7 @@ export default function TokenExtractionPage() {
       </div>
 
       {/* Tabs for Screenshot vs Figma */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
+      <Tabs value={activeTab} onValueChange={handleTabChange}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="screenshot">Screenshot</TabsTrigger>
           <TabsTrigger value="figma">Figma</TabsTrigger>
