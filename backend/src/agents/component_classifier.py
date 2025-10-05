@@ -16,6 +16,7 @@ from ..types.requirement_types import (
     get_confidence_level,
 )
 from ..services.image_processor import prepare_image_for_vision_api
+from ..prompts.component_classifier import create_classification_prompt
 from ..core.logging import get_logger
 
 logger = get_logger(__name__)
@@ -125,55 +126,15 @@ class ComponentClassifier:
     def _build_classification_prompt(
         self, figma_data: Optional[Dict[str, Any]] = None
     ) -> str:
-        """Build classification prompt.
-        
-        This is a minimal prompt. The full prompt with examples will be
-        added in the next commit.
+        """Build classification prompt with few-shot examples.
         
         Args:
             figma_data: Optional Figma metadata
             
         Returns:
-            Classification prompt text
+            Classification prompt text with examples
         """
-        prompt = """Analyze this component and identify its type.
-
-Supported component types:
-- Button: Interactive clickable element (primary, secondary, ghost variants)
-- Card: Container with grouped content (title, description, image)
-- Input: Text input field (with label, placeholder, validation)
-- Select: Dropdown selection control
-- Badge: Small status/label indicator
-- Alert: Notification/message banner
-
-Analyze visual cues:
-- Shape and layout
-- Interactive elements (cursor styles)
-- Text content and labels
-- Color and styling patterns
-
-"""
-        
-        if figma_data:
-            figma_layer = figma_data.get("name", "")
-            if figma_layer:
-                prompt += f"\nFigma layer name: {figma_layer}\n"
-        
-        prompt += """
-Return a JSON object with this structure:
-{
-  "component_type": "Button|Card|Input|Select|Badge|Alert",
-  "confidence": 0.0-1.0,
-  "candidates": [
-    {"type": "ComponentType", "confidence": 0.0-1.0}
-  ],
-  "rationale": "explanation of classification decision"
-}
-
-Provide the top 3 candidates if the classification is ambiguous (confidence < 0.8).
-"""
-        
-        return prompt
+        return create_classification_prompt(figma_data)
     
     def _parse_classification_result(
         self, result: Dict[str, Any]
