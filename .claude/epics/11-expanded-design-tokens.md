@@ -210,33 +210,118 @@
 
 ### TASK 11: Integrate Onboarding into App (3 tasks)
 
-**Goal**: Add modal to application layout
+Goal: Add modal to application layout
+
+Tasks:
+
+TASK 11.1: Import and add OnboardingModal to app/layout.tsx
+TASK 11.2: Test modal shows on first visit only (localStorage check)
+TASK 11.3: Add Help button to Navigation component to re-trigger modal
+Files Affected:
+
+app/src/app/layout.tsx
+app/src/components/layout/Navigation.tsx
+
+### TASK 12: Frontend-Backend Integration (11 tasks)
+
+**Goal**: Ensure complete data flow between frontend and backend for expanded token system, including onboarding integration
 
 **Tasks**:
 
-1. **TASK 11.1**: Import and add OnboardingModal to app/layout.tsx
-2. **TASK 11.2**: Test modal shows on first visit only (localStorage check)
-3. **TASK 11.3**: Add Help button to Navigation component to re-trigger modal
+#### 12.1: API & Data Flow Integration (8 tasks)
+
+1. **TASK 12.1**: Verify API endpoints accept/return new DesignTokens structure
+
+   - Test POST `/tokens/extract/screenshot` with expanded schema (4 categories)
+   - Test POST `/tokens/extract/figma` returns semantic tokens
+   - Validate confidence scores in API responses
+   - Verify error responses for invalid token structures
+
+2. **TASK 12.2**: Test screenshot extraction end-to-end
+
+   - Upload screenshot → verify 4 categories returned (colors, typography, spacing, borderRadius)
+   - Check semantic color names mapped correctly (primary, secondary, accent, etc.)
+   - Verify borderRadius tokens extracted and displayed
+   - Confirm confidence scores flow to UI and badges render
+
+3. **TASK 12.3**: Test Figma extraction end-to-end
+
+   - Connect Figma → verify keyword matching works (primary, brand, main → colors.primary)
+   - Check style names mapped to semantic tokens correctly
+   - Verify all 4 categories extracted from Figma styles
+   - Test with various Figma naming conventions (Primary/Blue, Brand/Main, etc.)
+
+4. **TASK 12.4**: Test token editing flow
+
+   - Edit colors → verify updates persist in state
+   - Edit borderRadius → verify visual preview updates in real-time
+   - Edit typography → verify font scale changes reflect immediately
+   - Test confidence badges remain visible during editing
+
+5. **TASK 12.5**: Test export functionality with new schema
+
+   - Export tokens → verify all 4 categories included in JSON
+   - Check Tailwind config includes borderRadius scale
+   - Verify CSS variables include all semantic colors
+   - Test JSON export matches backend DesignTokens structure
+
+6. **TASK 12.6**: Implement comprehensive error handling
+
+   - Display backend validation errors in UI (e.g., "Missing borderRadius category")
+   - Handle missing token categories gracefully with user feedback
+   - Show user-friendly messages for API failures
+   - Implement retry logic for network errors
+
+7. **TASK 12.7**: Test confidence score integration
+
+   - Verify badges show correct colors: 🟢 High (>0.9), 🟡 Medium (>0.7), 🔴 Low (<0.7)
+   - Test threshold logic with various confidence values
+   - Confirm confidence data flows from backend to all token editors
+   - Test edge cases (null confidence, missing scores)
+
+8. **TASK 12.8**: Integration smoke tests (use Playwright for E2E testing)
+   - Complete flow: Upload → Extract → Edit → Export (screenshot)
+   - Complete flow: Connect → Extract → Edit → Export (Figma)
+   - Test with real design system screenshots (Material, Tailwind palette)
+   - Verify with actual Figma files with published styles
+   - Performance test with large token sets (50+ tokens)
+   - **Testing Framework**: Use Playwright for all E2E integration tests
 
 **Files Affected**:
 
-- `app/src/app/layout.tsx`
-- `app/src/components/layout/Navigation.tsx`
+- `app/src/app/layout.tsx` - Onboarding modal
+- `app/src/components/layout/Navigation.tsx` - Help button
+- `app/src/app/extract/page.tsx` - API integration and data flow
+- `app/src/lib/api.ts` - API client functions (if exists)
+- `app/src/components/tokens/TokenEditor.tsx` - Data display and editing
+- `app/src/components/tokens/BorderRadiusEditor.tsx` - New component integration
+- Backend endpoints - Verification only (no changes)
+
+**Integration Checklist**:
+
+- [ ] All 4 token categories flow from backend to frontend
+- [ ] Semantic naming works (primary, secondary, accent, etc.)
+- [ ] Confidence scores display correctly in all editors
+- [ ] BorderRadius visual previews work
+- [ ] Figma keyword matching functions correctly
+- [ ] Export includes all new token fields
+- [ ] Error messages are user-friendly
+- [ ] Onboarding modal appears on first visit only
 
 ---
 
-### TASK 12: Testing & Validation (6 tasks)
+### TASK 13: Testing & Validation (6 tasks)
 
 **Goal**: End-to-end testing of new features
 
 **Tasks**:
 
-1. **TASK 12.1**: Test screenshot extraction returns all 4 token categories with confidence scores
-2. **TASK 12.2**: Test Figma extraction returns semantic tokens and borderRadius
-3. **TASK 12.3**: Test TokenEditor displays all categories correctly with visual previews
-4. **TASK 12.4**: Test onboarding modal shows on first visit and doesn't re-appear
-5. **TASK 12.5**: Test workflow selection saves preference and navigates correctly
-6. **TASK 12.6**: Verify confidence badges show correct colors (green >0.9, yellow >0.7, red <0.7)
+1. **TASK 13.1**: Test screenshot extraction returns all 4 token categories with confidence scores
+2. **TASK 13.2**: Test Figma extraction returns semantic tokens and borderRadius
+3. **TASK 13.3**: Test TokenEditor displays all categories correctly with visual previews
+4. **TASK 13.4**: Test onboarding modal shows on first visit and doesn't re-appear
+5. **TASK 13.5**: Test workflow selection saves preference and navigates correctly
+6. **TASK 13.6**: Verify confidence badges show correct colors (green >0.9, yellow >0.7, red <0.7)
 
 ## 🏗️ Technical Architecture
 
