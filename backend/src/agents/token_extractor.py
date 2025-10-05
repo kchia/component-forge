@@ -145,7 +145,7 @@ class TokenExtractor:
         Raises:
             TokenExtractionError: If structure is invalid
         """
-        required_categories = ["colors", "typography", "spacing"]
+        required_categories = ["colors", "typography", "spacing", "borderRadius"]
         
         for category in required_categories:
             if category not in tokens:
