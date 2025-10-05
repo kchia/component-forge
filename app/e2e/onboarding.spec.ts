@@ -46,16 +46,16 @@ test.describe('Onboarding Modal - TASK 13.4 & 13.5', () => {
     // Refresh the page
     await page.reload();
 
-    // Modal should not appear
-    await page.waitForTimeout(2000); // Wait to ensure modal doesn't appear
-    await expect(modal).not.toBeVisible();
+    // Modal should not appear - wait with condition instead of arbitrary timeout
+    await page.waitForLoadState('networkidle');
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
   });
 
   test('TASK 13.5: should save workflow preference and navigate on selection - Design System', async ({ page }) => {
     await page.goto('/');
 
-    // Click on Design System workflow card
-    const designSystemCard = page.locator('text=Design System Screenshot').locator('..');
+    // Click on Design System workflow card - using getByRole for better stability
+    const designSystemCard = page.getByRole('heading', { name: 'Design System Screenshot' }).locator('..');
     await designSystemCard.click();
 
     // Should navigate to /extract page
@@ -67,15 +67,15 @@ test.describe('Onboarding Modal - TASK 13.4 & 13.5', () => {
 
     // Check that preference is saved by reloading and verifying modal doesn't show
     await page.reload();
-    await page.waitForTimeout(1000);
-    await expect(modal).not.toBeVisible();
+    await page.waitForLoadState('networkidle');
+    await expect(modal).not.toBeVisible({ timeout: 2000 });
   });
 
   test('TASK 13.5: should save workflow preference and navigate on selection - Components', async ({ page }) => {
     await page.goto('/');
 
-    // Click on Component Mockups workflow card
-    const componentsCard = page.locator('text=Component Mockups').locator('..');
+    // Click on Component Mockups workflow card - using getByRole for better stability
+    const componentsCard = page.getByRole('heading', { name: 'Component Mockups' }).locator('..');
     await componentsCard.click();
 
     // Should navigate to /extract page
@@ -89,8 +89,8 @@ test.describe('Onboarding Modal - TASK 13.4 & 13.5', () => {
   test('TASK 13.5: should save workflow preference and navigate on selection - Figma', async ({ page }) => {
     await page.goto('/');
 
-    // Click on Figma workflow card
-    const figmaCard = page.locator('text=Figma File').locator('..');
+    // Click on Figma workflow card - using getByRole for better stability
+    const figmaCard = page.getByRole('heading', { name: 'Figma File' }).locator('..');
     await figmaCard.click();
 
     // Should navigate to /extract page
