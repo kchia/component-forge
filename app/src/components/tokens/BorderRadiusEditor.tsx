@@ -106,8 +106,6 @@ export function BorderRadiusEditor({
 
   return (
     <div className={cn("space-y-4", className)} data-testid="border-radius-editor">
-      <h3 className="text-lg font-semibold">Border Radius</h3>
-
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {radiusKeys.map((key) => {
           const conf = confidence[`borderRadius.${key}`] || 0

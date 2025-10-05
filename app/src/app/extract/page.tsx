@@ -17,8 +17,20 @@ import { useUIStore } from "@/stores/useUIStore";
 import type { TokenData } from "@/components/tokens/TokenEditor";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
-const TokenEditor = dynamic(() => import("@/components/tokens/TokenEditor").then(mod => ({ default: mod.TokenEditor })), { ssr: false });
-const TokenExport = dynamic(() => import("@/components/tokens/TokenExport").then(mod => ({ default: mod.TokenExport })), { ssr: false });
+const TokenEditor = dynamic(
+  () => import("@/components/tokens/TokenEditor").then(mod => ({ default: mod.TokenEditor })), 
+  { 
+    ssr: false,
+    loading: () => <div className="p-4 text-sm text-muted-foreground">Loading editor...</div>
+  }
+);
+const TokenExport = dynamic(
+  () => import("@/components/tokens/TokenExport").then(mod => ({ default: mod.TokenExport })), 
+  { 
+    ssr: false,
+    loading: () => <div className="p-4 text-sm text-muted-foreground">Loading export...</div>
+  }
+);
 
 export default function TokenExtractionPage() {
   const [activeTab, setActiveTab] = useState("screenshot");

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Dialog,
@@ -17,7 +17,12 @@ export function OnboardingModal() {
   const router = useRouter();
   const { hasSeenOnboarding, completeOnboarding, skipOnboarding } =
     useOnboardingStore();
-  const [open, setOpen] = useState(!hasSeenOnboarding);
+  const [open, setOpen] = useState(false);
+
+  // Sync with store state
+  useEffect(() => {
+    setOpen(!hasSeenOnboarding);
+  }, [hasSeenOnboarding]);
 
   const workflows = [
     {
