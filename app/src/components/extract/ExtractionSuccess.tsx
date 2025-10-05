@@ -4,13 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CheckCircle2, Download, Eye, Sparkles, ArrowDown } from "lucide-react";
-
-interface DesignTokens {
-  colors?: Record<string, string>;
-  typography?: Record<string, string>;
-  spacing?: Record<string, string>;
-  borderRadius?: Record<string, string>;
-}
+import type { DesignTokens } from "@/types/api.types";
 
 interface ExtractionSuccessProps {
   tokens: DesignTokens;
@@ -22,14 +16,10 @@ export function ExtractionSuccess({
   onContinue
 }: ExtractionSuccessProps) {
   // Count extracted tokens
-  const colorCount = Object.values(tokens.colors || {}).filter(Boolean).length;
-  const typographyCount = Object.values(tokens.typography || {}).filter(
-    Boolean
-  ).length;
-  const spacingCount = Object.values(tokens.spacing || {}).filter(Boolean).length;
-  const borderRadiusCount = Object.values(tokens.borderRadius || {}).filter(
-    Boolean
-  ).length;
+  const colorCount = tokens.colors ? Object.values(tokens.colors).filter(Boolean).length : 0;
+  const typographyCount = tokens.typography ? Object.values(tokens.typography).filter(Boolean).length : 0;
+  const spacingCount = tokens.spacing ? Object.values(tokens.spacing).filter(Boolean).length : 0;
+  const borderRadiusCount = tokens.borderRadius ? Object.values(tokens.borderRadius).filter(Boolean).length : 0;
   const totalCount =
     colorCount + typographyCount + spacingCount + borderRadiusCount;
 

@@ -4,13 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Alert } from "@/components/ui/alert";
 import { Lock } from "lucide-react";
-
-interface DesignTokens {
-  colors?: Record<string, string>;
-  typography?: Record<string, string>;
-  spacing?: Record<string, string>;
-  borderRadius?: Record<string, string>;
-}
+import type { DesignTokens } from "@/types/api.types";
 
 interface ComponentPreviewProps {
   tokens: DesignTokens;
