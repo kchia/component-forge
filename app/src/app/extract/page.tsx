@@ -41,35 +41,17 @@ export default function TokenExtractionPage() {
   const getEditorTokens = (): TokenData | null => {
     if (!tokens) return null;
     
-    // Get confidence scores from extraction response metadata if available
-    const confidenceScores = (metadata as { confidence?: Record<string, number> })?.confidence || {};
-    
     return {
-      colors: tokens.colors
-        ? Object.entries(tokens.colors).reduce((acc, [key, value]) => ({
-            ...acc,
-            [key]: { value, confidence: confidenceScores[`colors.${key}`] || 0.85 },
-          }), {})
-        : {},
-      typography: tokens.typography
-        ? Object.entries(tokens.typography).reduce((acc, [key, value]) => ({
-            ...acc,
-            [key]: { 
-              value: typeof value === 'string' ? value : JSON.stringify(value), 
-              confidence: confidenceScores[`typography.${key}`] || 0.85 
-            },
-          }), {})
-        : {},
-      spacing: tokens.spacing
-        ? Object.entries(tokens.spacing).reduce((acc, [key, value]) => ({
-            ...acc,
-            [key]: { 
-              value: typeof value === 'string' ? value : JSON.stringify(value), 
-              confidence: confidenceScores[`spacing.${key}`] || 0.85 
-            },
-          }), {})
-        : {},
+      colors: tokens.colors || {},
+      typography: tokens.typography || {},
+      spacing: tokens.spacing || {},
+      borderRadius: tokens.borderRadius || {},
     };
+  };
+
+  // Get confidence scores from metadata
+  const getConfidenceScores = (): Record<string, number> => {
+    return (metadata as { confidence?: Record<string, number> })?.confidence || {};
   };
 
   // File validation
@@ -282,7 +264,10 @@ export default function TokenExtractionPage() {
                 <CardTitle>Edit Tokens</CardTitle>
               </CardHeader>
               <CardContent>
-                <TokenEditor tokens={getEditorTokens()!} />
+                <TokenEditor 
+                  tokens={getEditorTokens()!} 
+                  confidence={getConfidenceScores()}
+                />
               </CardContent>
             </Card>
           )}
@@ -438,7 +423,10 @@ export default function TokenExtractionPage() {
                 <CardTitle>Edit Tokens</CardTitle>
               </CardHeader>
               <CardContent>
-                <TokenEditor tokens={getEditorTokens()!} />
+                <TokenEditor 
+                  tokens={getEditorTokens()!} 
+                  confidence={getConfidenceScores()}
+                />
               </CardContent>
             </Card>
           )}

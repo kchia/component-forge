@@ -7,19 +7,36 @@ import { TokenExport } from '@/components/tokens/TokenExport'
 
 const sampleTokens: TokenData = {
   colors: {
-    primary: { value: '#3B82F6', confidence: 0.92 },
-    secondary: { value: '#10B981', confidence: 0.88 },
-    background: { value: '#FFFFFF', confidence: 0.95 },
+    primary: '#3B82F6',
+    secondary: '#10B981',
+    background: '#FFFFFF',
   },
   typography: {
-    fontFamily: { value: 'Inter', confidence: 0.75 },
-    fontSize: { value: '16px', confidence: 0.90 },
-    fontWeight: { value: '500', confidence: 0.85 },
+    fontFamily: 'Inter',
+    fontSizeBase: '16px',
+    fontWeightNormal: 500,
   },
   spacing: {
-    padding: { value: '16px', confidence: 0.85 },
-    margin: { value: '24px', confidence: 0.80 },
+    md: '16px',
+    lg: '24px',
   },
+  borderRadius: {
+    md: '6px',
+    lg: '8px',
+  },
+}
+
+const confidenceScores = {
+  'colors.primary': 0.92,
+  'colors.secondary': 0.88,
+  'colors.background': 0.95,
+  'typography.fontFamily': 0.75,
+  'typography.fontSizeBase': 0.90,
+  'typography.fontWeightNormal': 0.85,
+  'spacing.md': 0.85,
+  'spacing.lg': 0.80,
+  'borderRadius.md': 0.88,
+  'borderRadius.lg': 0.90,
 }
 
 const metadata = {
@@ -57,12 +74,16 @@ export default function TokenComponentsDemo() {
           <h3 className="text-lg font-medium">TypographyEditor</h3>
           <div className="max-w-md">
             <TypographyEditor
-              fontFamily="Inter"
-              fontFamilyConfidence={0.75}
-              fontSize="16px"
-              fontSizeConfidence={0.90}
-              fontWeight="500"
-              fontWeightConfidence={0.85}
+              tokens={{
+                fontFamily: 'Inter',
+                fontSizeBase: '16px',
+                fontWeightNormal: 500,
+              }}
+              confidence={{
+                'typography.fontFamily': 0.75,
+                'typography.fontSizeBase': 0.90,
+                'typography.fontWeightNormal': 0.85,
+              }}
             />
           </div>
         </div>
@@ -82,7 +103,7 @@ export default function TokenComponentsDemo() {
       {/* Token Editor */}
       <section className="space-y-6">
         <h2 className="text-2xl font-semibold">TokenEditor (Complete)</h2>
-        <TokenEditor tokens={sampleTokens} />
+        <TokenEditor tokens={sampleTokens} confidence={confidenceScores} />
       </section>
 
       {/* Token Export */}
