@@ -78,7 +78,9 @@ export function OnboardingModal() {
   ) => {
     completeOnboarding(workflowId);
     setOpen(false);
-    router.push("/extract");
+    // Navigate to extract page with the workflow type as a query param
+    const tab = workflowId === "figma" ? "figma" : "screenshot";
+    router.push(`/extract?tab=${tab}`);
   };
 
   const handleSkip = () => {

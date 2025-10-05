@@ -50,30 +50,32 @@ function generateJSON(tokens: TokenData, metadata?: TokenExportProps['metadata']
     spacing: {},
   }
 
-  // Add colors
+  // Add colors - handle both flat structure and nested .value structure
   if (tokens.colors) {
     Object.entries(tokens.colors).forEach(([key, data]) => {
-      output.colors[key] = data.value
+      output.colors[key] = typeof data === 'string' ? data : (data as any)?.value
     })
   }
 
-  // Add typography
+  // Add typography - handle both flat and nested structures
   if (tokens.typography) {
-    if (tokens.typography.fontFamily) {
-      output.typography.fontFamily = tokens.typography.fontFamily.value
-    }
-    if (tokens.typography.fontSize) {
-      output.typography.fontSize = tokens.typography.fontSize.value
-    }
-    if (tokens.typography.fontWeight) {
-      output.typography.fontWeight = tokens.typography.fontWeight.value
-    }
+    Object.entries(tokens.typography).forEach(([key, data]) => {
+      output.typography[key] = typeof data === 'string' || typeof data === 'number' ? data : (data as any)?.value
+    })
   }
 
-  // Add spacing
+  // Add spacing - handle both flat structure and nested .value structure
   if (tokens.spacing) {
     Object.entries(tokens.spacing).forEach(([key, data]) => {
-      output.spacing[key] = data.value
+      output.spacing[key] = typeof data === 'string' ? data : (data as any)?.value
+    })
+  }
+
+  // Add borderRadius if present
+  if (tokens.borderRadius) {
+    (output as any).borderRadius = {}
+    Object.entries(tokens.borderRadius).forEach(([key, data]) => {
+      (output as any).borderRadius[key] = typeof data === 'string' ? data : (data as any)?.value
     })
   }
 
@@ -109,35 +111,50 @@ function generateCSS(tokens: TokenData, metadata?: TokenExportProps['metadata'])
   lines.push("")
   lines.push(":root {")
 
-  // Add colors
+  // Add colors - handle both flat and nested structures
   if (tokens.colors) {
     lines.push("  /* Colors */")
     Object.entries(tokens.colors).forEach(([key, data]) => {
-      lines.push(`  --color-${key}: ${data.value};`)
+      const value = typeof data === 'string' ? data : (data as any)?.value
+      if (value) {
+        lines.push(`  --color-${key}: ${value};`)
+      }
     })
     lines.push("")
   }
 
-  // Add typography
+  // Add typography - handle both flat and nested structures
   if (tokens.typography) {
     lines.push("  /* Typography */")
-    if (tokens.typography.fontFamily) {
-      lines.push(`  --font-family: ${tokens.typography.fontFamily.value};`)
-    }
-    if (tokens.typography.fontSize) {
-      lines.push(`  --font-size-base: ${tokens.typography.fontSize.value};`)
-    }
-    if (tokens.typography.fontWeight) {
-      lines.push(`  --font-weight-base: ${tokens.typography.fontWeight.value};`)
-    }
+    Object.entries(tokens.typography).forEach(([key, data]) => {
+      const value = typeof data === 'string' || typeof data === 'number' ? data : (data as any)?.value
+      if (value !== undefined) {
+        lines.push(`  --${key.replace(/([A-Z])/g, '-$1').toLowerCase()}: ${value};`)
+      }
+    })
     lines.push("")
   }
 
-  // Add spacing
+  // Add spacing - handle both flat and nested structures
   if (tokens.spacing) {
     lines.push("  /* Spacing */")
     Object.entries(tokens.spacing).forEach(([key, data]) => {
-      lines.push(`  --spacing-${key}: ${data.value};`)
+      const value = typeof data === 'string' ? data : (data as any)?.value
+      if (value) {
+        lines.push(`  --spacing-${key}: ${value};`)
+      }
+    })
+    lines.push("")
+  }
+
+  // Add borderRadius if present
+  if (tokens.borderRadius) {
+    lines.push("  /* Border Radius */")
+    Object.entries(tokens.borderRadius).forEach(([key, data]) => {
+      const value = typeof data === 'string' ? data : (data as any)?.value
+      if (value) {
+        lines.push(`  --border-radius-${key}: ${value};`)
+      }
     })
   }
 

@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -42,11 +43,20 @@ const TokenExport = dynamic(
 );
 
 export default function TokenExtractionPage() {
-  const [activeTab, setActiveTab] = useState("screenshot");
+  const searchParams = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState(tabParam === "figma" ? "figma" : "screenshot");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
   const [showSuccess, setShowSuccess] = useState(false);
+
+  // Update active tab when URL param changes
+  useEffect(() => {
+    if (tabParam === "figma" || tabParam === "screenshot") {
+      setActiveTab(tabParam);
+    }
+  }, [tabParam]);
   
   // Figma state
   const [figmaPat, setFigmaPat] = useState("");
@@ -63,13 +73,24 @@ export default function TokenExtractionPage() {
   // Convert tokens to TokenEditor format with actual confidence scores from backend
   const getEditorTokens = (): TokenData | null => {
     if (!tokens) return null;
-    
+
     return {
       colors: tokens.colors || {},
       typography: tokens.typography || {},
       spacing: tokens.spacing || {},
       borderRadius: tokens.borderRadius || {},
     };
+  };
+
+  // Check if tokens are actually empty (all categories are empty objects)
+  const hasTokens = (): boolean => {
+    if (!tokens) return false;
+    const tokenCount =
+      Object.keys(tokens.colors || {}).length +
+      Object.keys(tokens.typography || {}).length +
+      Object.keys(tokens.spacing || {}).length +
+      Object.keys(tokens.borderRadius || {}).length;
+    return tokenCount > 0;
   };
 
   // Get confidence scores from metadata
@@ -365,7 +386,7 @@ export default function TokenExtractionPage() {
               )}
 
               {/* Extracted Tokens Preview */}
-              {tokens && metadata && (
+              {tokens && metadata && hasTokens() && (
                 <div className="space-y-4">
                   <Alert variant="success">
                     <p className="font-medium">Tokens Extracted Successfully!</p>
@@ -374,6 +395,19 @@ export default function TokenExtractionPage() {
                     </p>
                   </Alert>
                 </div>
+              )}
+
+              {/* No tokens extracted warning */}
+              {tokens && metadata && !hasTokens() && (
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <div className="ml-2">
+                    <p className="font-medium">No Design Tokens Extracted</p>
+                    <p className="text-sm">
+                      We couldn't identify any design tokens in this image. Try uploading a screenshot that clearly shows colors, typography, or spacing information.
+                    </p>
+                  </div>
+                </Alert>
               )}
             </CardContent>
           </Card>
@@ -404,14 +438,14 @@ export default function TokenExtractionPage() {
           )}
 
           {/* Token Editor */}
-          {tokens && getEditorTokens() && (
+          {tokens && getEditorTokens() && hasTokens() && (
             <Card id="token-editor">
               <CardHeader>
                 <CardTitle>Edit Tokens</CardTitle>
               </CardHeader>
               <CardContent>
-                <TokenEditor 
-                  tokens={getEditorTokens()!} 
+                <TokenEditor
+                  tokens={getEditorTokens()!}
                   confidence={getConfidenceScores()}
                 />
               </CardContent>
@@ -419,7 +453,7 @@ export default function TokenExtractionPage() {
           )}
 
           {/* Token Export */}
-          {tokens && getEditorTokens() && (
+          {tokens && getEditorTokens() && hasTokens() && (
             <Card>
               <CardHeader>
                 <CardTitle>Export Tokens</CardTitle>
@@ -437,10 +471,10 @@ export default function TokenExtractionPage() {
           )}
 
           {/* NEW: Component Preview */}
-          {tokens && <ComponentPreview tokens={tokens} />}
+          {tokens && hasTokens() && <ComponentPreview tokens={tokens} />}
 
           {/* Navigation */}
-          {tokens && (
+          {tokens && hasTokens() && (
             <div className="flex justify-end">
               <Button asChild size="lg">
                 <Link href="/requirements">
@@ -555,7 +589,7 @@ export default function TokenExtractionPage() {
               )}
 
               {/* Extracted Tokens Preview */}
-              {tokens && metadata?.extractionMethod === 'figma' && (
+              {tokens && metadata?.extractionMethod === 'figma' && hasTokens() && (
                 <div className="space-y-4">
                   <Alert variant="success">
                     <p className="font-medium">Tokens Extracted Successfully!</p>
@@ -565,18 +599,31 @@ export default function TokenExtractionPage() {
                   </Alert>
                 </div>
               )}
+
+              {/* No tokens extracted warning for Figma */}
+              {tokens && metadata?.extractionMethod === 'figma' && !hasTokens() && (
+                <Alert variant="warning">
+                  <AlertTriangle className="h-4 w-4" />
+                  <div className="ml-2">
+                    <p className="font-medium">No Design Tokens Extracted</p>
+                    <p className="text-sm">
+                      No published styles found in this Figma file. Make sure your design system has published color and text styles.
+                    </p>
+                  </div>
+                </Alert>
+              )}
             </CardContent>
           </Card>
 
           {/* Token Editor (shared for Figma) */}
-          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && (
+          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && hasTokens() && (
             <Card>
               <CardHeader>
                 <CardTitle>Edit Tokens</CardTitle>
               </CardHeader>
               <CardContent>
-                <TokenEditor 
-                  tokens={getEditorTokens()!} 
+                <TokenEditor
+                  tokens={getEditorTokens()!}
                   confidence={getConfidenceScores()}
                 />
               </CardContent>
@@ -584,7 +631,7 @@ export default function TokenExtractionPage() {
           )}
 
           {/* Token Export (shared for Figma) */}
-          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && (
+          {tokens && metadata?.extractionMethod === 'figma' && getEditorTokens() && hasTokens() && (
             <Card>
               <CardHeader>
                 <CardTitle>Export Tokens</CardTitle>
@@ -602,7 +649,7 @@ export default function TokenExtractionPage() {
           )}
 
           {/* Navigation (shared for Figma) */}
-          {tokens && metadata?.extractionMethod === 'figma' && (
+          {tokens && metadata?.extractionMethod === 'figma' && hasTokens() && (
             <div className="flex justify-end">
               <Button asChild size="lg">
                 <Link href="/requirements">

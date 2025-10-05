@@ -2,8 +2,7 @@
 
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle } from "lucide-react";
-import Image from "next/image";
+import { CheckCircle2, XCircle, Image as ImageIcon } from "lucide-react";
 
 interface Example {
   type: "good" | "bad";
@@ -104,13 +103,8 @@ export function ExampleComparison() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {goodExamples.map((example, idx) => (
             <Card key={idx} className="overflow-hidden">
-              <div className="aspect-video relative bg-muted">
-                <Image
-                  src={example.image}
-                  alt={example.title}
-                  fill
-                  className="object-cover"
-                />
+              <div className="aspect-video relative bg-muted flex items-center justify-center">
+                <ImageIcon className="h-16 w-16 text-muted-foreground/30" />
               </div>
               <div className="p-4">
                 <h4 className="font-semibold mb-1">{example.title}</h4>
@@ -141,13 +135,8 @@ export function ExampleComparison() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {badExamples.map((example, idx) => (
             <Card key={idx} className="overflow-hidden border-destructive/50">
-              <div className="aspect-video relative bg-muted">
-                <Image
-                  src={example.image}
-                  alt={example.title}
-                  fill
-                  className="object-cover opacity-60"
-                />
+              <div className="aspect-video relative bg-muted flex items-center justify-center">
+                <ImageIcon className="h-16 w-16 text-muted-foreground/20" />
               </div>
               <div className="p-4">
                 <h4 className="font-semibold mb-1">{example.title}</h4>

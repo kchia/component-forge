@@ -12,25 +12,59 @@ const TEST_SCREENSHOT = path.join(__dirname, 'fixtures', 'design-system-sample.p
 test.describe('Screenshot Token Extraction - TASK 12.2 & 13.1', () => {
   test.beforeEach(async ({ page }) => {
     await page.goto('/extract');
+
+    // Handle onboarding modal if it appears
+    const skipButton = page.getByRole('button', { name: /skip/i });
+    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      await skipButton.click();
+    }
   });
 
   test('TASK 12.2 & 13.1: complete screenshot extraction flow returns all 4 token categories', async ({ page }) => {
+    // Wait for page to load
+    await page.waitForLoadState('networkidle');
+
     // Ensure we're on the screenshot tab
     await page.getByRole('tab', { name: /screenshot/i }).click();
 
-    // Check if file input exists
+    // Upload the test screenshot
     const fileInput = page.locator('input[type="file"]');
     await expect(fileInput).toBeAttached();
+    await fileInput.setInputFiles(TEST_SCREENSHOT);
 
-    // Note: This test requires a test image file in fixtures/
-    // For now, we'll test the UI elements are present
-    
-    // Verify upload area is visible
-    await expect(page.locator('text=/upload.*screenshot/i')).toBeVisible();
-    
-    // Verify file validation messages are shown
-    const uploadArea = page.locator('[class*="upload"]').first();
-    await expect(uploadArea).toBeVisible();
+    // Click extract button
+    await page.getByRole('button', { name: /extract tokens/i }).click();
+
+    // Wait for extraction to complete (up to 60s for GPT-4V processing)
+    // Look for the success alert or the Edit Tokens heading
+    await Promise.race([
+      expect(page.getByText(/tokens extracted successfully/i)).toBeVisible({ timeout: 60000 }),
+      expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible({ timeout: 60000 }),
+    ]);
+
+    // Verify Token Editor section appears with all 4 categories
+    await expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible();
+
+    // Verify all token categories are present
+    await expect(page.getByText(/colors/i)).toBeVisible();
+    await expect(page.getByText(/typography/i)).toBeVisible();
+    await expect(page.getByText(/spacing/i)).toBeVisible();
+    await expect(page.getByText(/border.*radius/i)).toBeVisible();
+
+    // Verify Export section appears
+    await expect(page.getByRole('heading', { name: /export tokens/i })).toBeVisible();
+
+    // Verify JSON export shows non-empty tokens
+    await page.getByRole('button', { name: /json/i }).click();
+    const codeBlock = page.locator('pre, code').first();
+    const codeText = await codeBlock.textContent();
+
+    // Verify exported JSON contains actual token data (not empty objects)
+    expect(codeText).toContain('primary');
+    expect(codeText).toContain('#');
+    expect(codeText).not.toMatch(/"colors":\s*\{\}/);
+    expect(codeText).not.toMatch(/"typography":\s*\{\}/);
+    expect(codeText).not.toMatch(/"spacing":\s*\{\}/);
   });
 
   test('TASK 12.2: should validate file type and size', async ({ page }) => {
