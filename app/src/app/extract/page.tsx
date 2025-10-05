@@ -21,9 +21,6 @@ import type { TokenData } from "@/components/tokens/TokenEditor";
 // New components for EPIC 12
 import { CompactTips } from "@/components/extract/CompactTips";
 import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
-import { ExampleComparison } from "@/components/extract/ExampleComparison";
-import { ExtractionSuccess } from "@/components/extract/ExtractionSuccess";
-import { ComponentPreview } from "@/components/extract/ComponentPreview";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
 const TokenEditor = dynamic(
@@ -48,7 +45,6 @@ export default function TokenExtractionPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
-  const [showSuccess, setShowSuccess] = useState(false);
 
   // Update active tab when URL param changes
   useEffect(() => {
@@ -231,7 +227,16 @@ export default function TokenExtractionPage() {
     if (selectedFile) {
       extractTokens(selectedFile, {
         onSuccess: () => {
-          setShowSuccess(true);
+          // Show success toast
+          showAlert('success', '✓ Tokens extracted successfully! Scroll down to review and edit.');
+
+          // Auto-scroll to TokenEditor after short delay
+          setTimeout(() => {
+            document.getElementById("token-editor")?.scrollIntoView({
+              behavior: "smooth",
+              block: "start"
+            });
+          }, 500);
         }
       });
     }
@@ -408,31 +413,6 @@ export default function TokenExtractionPage() {
             </CardContent>
           </Card>
 
-          {/* NEW: Examples Accordion */}
-          <Accordion type="single" collapsible>
-            <AccordionItem value="examples">
-              <AccordionTrigger>📸 View Good vs. Bad Examples</AccordionTrigger>
-              <AccordionContent>
-                <ExampleComparison />
-              </AccordionContent>
-            </AccordionItem>
-          </Accordion>
-
-          {/* NEW: Extraction Success Banner */}
-          {showSuccess && tokens && (
-            <ExtractionSuccess
-              tokens={tokens}
-              onContinue={() => {
-                setShowSuccess(false);
-                // Smooth scroll to TokenEditor
-                document.getElementById("token-editor")?.scrollIntoView({
-                  behavior: "smooth",
-                  block: "start"
-                });
-              }}
-            />
-          )}
-
           {/* Token Editor */}
           {tokens && getEditorTokens() && hasTokens() && (
             <Card id="token-editor">
@@ -466,9 +446,6 @@ export default function TokenExtractionPage() {
             </Card>
           )}
 
-          {/* NEW: Component Preview */}
-          {tokens && hasTokens() && <ComponentPreview tokens={tokens} />}
-
           {/* Navigation */}
           {tokens && hasTokens() && (
             <div className="flex justify-end">
@@ -484,9 +461,9 @@ export default function TokenExtractionPage() {
 
         {/* Figma Tab */}
         <TabsContent value="figma" className="space-y-4">
-          {/* NEW: Figma Guidance */}
-          <FigmaGuidance />
-          
+          {/* Compact Tips */}
+          <CompactTips mode="figma" />
+
           <Card>
             <CardHeader>
               <CardTitle>Figma Integration</CardTitle>
@@ -608,6 +585,18 @@ export default function TokenExtractionPage() {
                   </div>
                 </Alert>
               )}
+
+              {/* Optional Detailed Guidance */}
+              <Accordion type="single" collapsible className="mt-4">
+                <AccordionItem value="figma-help">
+                  <AccordionTrigger className="text-sm">
+                    📚 Naming Conventions & Best Practices
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <FigmaGuidance />
+                  </AccordionContent>
+                </AccordionItem>
+              </Accordion>
             </CardContent>
           </Card>
 
