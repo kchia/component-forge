@@ -5,6 +5,7 @@
 
 import { create } from 'zustand';
 import { WorkflowStep } from '@/types';
+import type { RequirementProposal, ComponentType } from '@/types/requirement.types';
 
 interface WorkflowStore {
   // State
@@ -12,10 +13,31 @@ interface WorkflowStore {
   completedSteps: WorkflowStep[];
   progress: number; // 0-100
   
+  // Requirements state
+  componentType?: ComponentType;
+  componentConfidence?: number;
+  proposals: {
+    props: RequirementProposal[];
+    events: RequirementProposal[];
+    states: RequirementProposal[];
+    accessibility: RequirementProposal[];
+  };
+  
   // Actions
   setStep: (step: WorkflowStep) => void;
   completeStep: (step: WorkflowStep) => void;
   updateProgress: (progress: number) => void;
+  setRequirements: (
+    componentType: ComponentType,
+    componentConfidence: number,
+    proposals: {
+      props: RequirementProposal[];
+      events: RequirementProposal[];
+      states: RequirementProposal[];
+      accessibility: RequirementProposal[];
+    }
+  ) => void;
+  updateProposal: (id: string, updates: Partial<RequirementProposal>) => void;
   resetWorkflow: () => void;
 }
 
@@ -31,6 +53,12 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   currentStep: WorkflowStep.DASHBOARD,
   completedSteps: [],
   progress: 0,
+  proposals: {
+    props: [],
+    events: [],
+    states: [],
+    accessibility: [],
+  },
   
   // Actions
   setStep: (step) =>
@@ -55,10 +83,41 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       progress: Math.min(Math.max(progress, 0), 100), // Clamp 0-100
     }),
   
+  setRequirements: (componentType, componentConfidence, proposals) =>
+    set({
+      componentType,
+      componentConfidence,
+      proposals,
+    }),
+  
+  updateProposal: (id, updates) =>
+    set((state) => {
+      // Find and update the proposal in the correct category
+      const updateCategory = (proposals: RequirementProposal[]) =>
+        proposals.map((p) => (p.id === id ? { ...p, ...updates } : p));
+      
+      return {
+        proposals: {
+          props: updateCategory(state.proposals.props),
+          events: updateCategory(state.proposals.events),
+          states: updateCategory(state.proposals.states),
+          accessibility: updateCategory(state.proposals.accessibility),
+        },
+      };
+    }),
+  
   resetWorkflow: () =>
     set({
       currentStep: WorkflowStep.DASHBOARD,
       completedSteps: [],
       progress: 0,
+      componentType: undefined,
+      componentConfidence: undefined,
+      proposals: {
+        props: [],
+        events: [],
+        states: [],
+        accessibility: [],
+      },
     }),
 }));
