@@ -1,16 +1,21 @@
 "use client";
 
+import { useState } from "react";
 import { Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ExamplesModal } from "./ExamplesModal";
 
 interface CompactTipsProps {
   mode: "screenshot" | "figma";
 }
 
 export function CompactTips({ mode }: CompactTipsProps) {
+  const [showExamples, setShowExamples] = useState(false);
+
   if (mode === "screenshot") {
     return (
-      <div className="mb-4 p-4 bg-muted/30 rounded-lg border border-muted">
+      <>
+        <div className="mb-4 p-4 bg-muted/30 rounded-lg border border-muted">
         <div className="flex items-start gap-3">
           <Info className="h-5 w-5 text-primary mt-0.5 flex-shrink-0" />
           <div className="flex-1 space-y-2">
@@ -25,20 +30,17 @@ export function CompactTips({ mode }: CompactTipsProps) {
                 variant="link"
                 size="sm"
                 className="h-auto p-0 text-xs"
-                onClick={() => {
-                  // Scroll to examples or open modal in future
-                  const accordion = document.querySelector('[data-state]');
-                  if (accordion) {
-                    (accordion as HTMLElement).click();
-                  }
-                }}
+                onClick={() => setShowExamples(true)}
               >
                 View Examples →
               </Button>
             </div>
           </div>
         </div>
-      </div>
+        </div>
+
+        <ExamplesModal open={showExamples} onOpenChange={setShowExamples} />
+      </>
     );
   }
 

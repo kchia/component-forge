@@ -1,161 +1,150 @@
 "use client";
 
+import Image from "next/image";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CheckCircle2, XCircle, Image as ImageIcon } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 
 interface Example {
-  type: "good" | "bad";
   image: string;
   title: string;
   description: string;
-  annotations: string[];
+  highlights: string[];
 }
 
 const examples: Example[] = [
   {
-    type: "good",
     image: "/examples/good-color-palette.png",
-    title: "Color Palette with Semantic Labels",
-    description: "Clear color swatches with descriptive names",
-    annotations: [
-      "Colors are labeled with semantic names (Primary, Secondary, etc.)",
-      "Hex values are visible",
-      "High contrast, easy to read",
-      "Organized in a grid layout"
+    title: "Design System Tokens",
+    description: "Color palette, typography scale, and spacing documented in a style guide",
+    highlights: [
+      "Colors labeled with semantic names (Primary, Secondary, etc.)",
+      "Font sizes, weights, and line heights clearly shown",
+      "Spacing scale with visual examples",
+      "High contrast, easy to read"
     ]
   },
   {
-    type: "good",
-    image: "/examples/good-typography-scale.png",
-    title: "Typography Scale",
-    description: "Font sizes displayed with examples",
-    annotations: [
-      "Font sizes clearly labeled (XL, Large, Base, Small)",
-      "Actual text examples shown at each size",
-      "Font weights indicated",
-      "Line heights visible"
+    image: "/examples/good-button-variants.png",
+    title: "Button Component Variants",
+    description: "Different button states and styles (primary, secondary, outlined, ghost)",
+    highlights: [
+      "Multiple variants shown side by side",
+      "Different states (default, hover, disabled)",
+      "Sizing options clearly labeled",
+      "Spacing and padding visible"
     ]
   },
   {
-    type: "good",
-    image: "/examples/good-design-system.png",
-    title: "Complete Design System Page",
-    description: "Comprehensive design tokens in one view",
-    annotations: [
-      "All token categories visible (colors, typography, spacing)",
-      "Well-organized sections",
-      "Consistent labeling",
-      "High resolution export"
+    image: "/examples/good-card-components.png",
+    title: "Card Components",
+    description: "Card layouts showing borders, shadows, padding, and content structure",
+    highlights: [
+      "Border radius and shadow styles visible",
+      "Internal spacing and padding clear",
+      "Typography hierarchy demonstrated",
+      "Component structure well-organized"
     ]
   },
   {
-    type: "bad",
-    image: "/examples/bad-full-app.png",
-    title: "Full Application Screenshot",
-    description: "Too much visual complexity",
-    annotations: [
-      "Too many UI elements create visual noise",
-      "Design tokens not clearly isolated",
-      "Hard to distinguish semantic roles",
-      "Low extraction confidence expected"
-    ]
-  },
-  {
-    type: "bad",
-    image: "/examples/bad-low-res.png",
-    title: "Low Resolution Image",
-    description: "Blurry or pixelated screenshot",
-    annotations: [
-      "Text is hard to read",
-      "Colors may not be accurate",
-      "Details are lost",
-      "May cause extraction errors"
-    ]
-  },
-  {
-    type: "bad",
-    image: "/examples/bad-no-labels.png",
-    title: "No Semantic Labels",
-    description: "Colors without context",
-    annotations: [
-      "No indication of token purpose",
-      "AI must guess semantic roles",
-      "Lower confidence scores",
-      "May require manual editing"
+    image: "/examples/good-form-inputs.png",
+    title: "Form Input Components",
+    description: "Input fields, labels, validation states, and spacing patterns",
+    highlights: [
+      "Input states (default, focus, error, disabled)",
+      "Label positioning and typography",
+      "Validation message styling",
+      "Consistent spacing between elements"
     ]
   }
 ];
 
 export function ExampleComparison() {
-  const goodExamples = examples.filter((ex) => ex.type === "good");
-  const badExamples = examples.filter((ex) => ex.type === "bad");
-
   return (
-    <div className="space-y-8">
-      {/* Good Examples */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <CheckCircle2 className="h-6 w-6 text-success" />
-          <h3 className="text-xl font-semibold">Good Examples</h3>
-          <Badge variant="success">High Confidence Extraction</Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {goodExamples.map((example, idx) => (
-            <Card key={idx} className="overflow-hidden">
-              <div className="aspect-video relative bg-muted flex items-center justify-center">
-                <ImageIcon className="h-16 w-16 text-muted-foreground/30" />
-              </div>
-              <div className="p-4">
-                <h4 className="font-semibold mb-1">{example.title}</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {example.description}
-                </p>
-                <ul className="space-y-1">
-                  {example.annotations.map((annotation, i) => (
-                    <li key={i} className="text-xs flex items-start gap-2">
-                      <CheckCircle2 className="h-3 w-3 text-success mt-0.5 flex-shrink-0" />
-                      <span>{annotation}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </Card>
-          ))}
-        </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center gap-2 mb-2">
+        <CheckCircle2 className="h-6 w-6 text-success" />
+        <h3 className="text-xl font-semibold">What Makes a Good Screenshot?</h3>
+        <Badge variant="success">High Confidence Extraction</Badge>
       </div>
 
-      {/* Bad Examples */}
-      <div>
-        <div className="flex items-center gap-2 mb-4">
-          <XCircle className="h-6 w-6 text-destructive" />
-          <h3 className="text-xl font-semibold">Avoid These</h3>
-          <Badge variant="error">Poor Extraction Quality</Badge>
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {badExamples.map((example, idx) => (
-            <Card key={idx} className="overflow-hidden border-destructive/50">
-              <div className="aspect-video relative bg-muted flex items-center justify-center">
-                <ImageIcon className="h-16 w-16 text-muted-foreground/20" />
-              </div>
-              <div className="p-4">
-                <h4 className="font-semibold mb-1">{example.title}</h4>
-                <p className="text-sm text-muted-foreground mb-3">
-                  {example.description}
+      <p className="text-sm text-muted-foreground mb-6">
+        Upload screenshots of <strong>design tokens</strong> (colors, typography, spacing) OR <strong>component mockups</strong> (buttons, cards, forms).
+        Both help extract the styles needed to build your UI library.
+      </p>
+
+      {/* Examples Grid - 2 columns for better visibility */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {examples.map((example, idx) => (
+          <Card key={idx} className="overflow-hidden">
+            {/* Larger image area - 4:3 aspect ratio */}
+            <div className="aspect-[4/3] relative bg-muted border-b">
+              <Image
+                src={example.image}
+                alt={example.title}
+                fill
+                className="object-contain p-2"
+                sizes="(max-width: 1024px) 100vw, 50vw"
+              />
+            </div>
+
+            {/* Content */}
+            <div className="p-5">
+              <h4 className="font-semibold text-base mb-2">{example.title}</h4>
+              <p className="text-sm text-muted-foreground mb-4">
+                {example.description}
+              </p>
+
+              {/* Highlights */}
+              <div className="space-y-2">
+                <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                  Why this works:
                 </p>
-                <ul className="space-y-1">
-                  {example.annotations.map((annotation, i) => (
-                    <li key={i} className="text-xs flex items-start gap-2">
-                      <XCircle className="h-3 w-3 text-destructive mt-0.5 flex-shrink-0" />
-                      <span>{annotation}</span>
+                <ul className="space-y-2">
+                  {example.highlights.map((highlight, i) => (
+                    <li key={i} className="text-sm flex items-start gap-2">
+                      <CheckCircle2 className="h-4 w-4 text-success mt-0.5 flex-shrink-0" />
+                      <span>{highlight}</span>
                     </li>
                   ))}
                 </ul>
               </div>
-            </Card>
-          ))}
-        </div>
+            </div>
+          </Card>
+        ))}
       </div>
+
+      {/* Tips callout */}
+      <Card className="p-4 bg-primary/5 border-primary/20">
+        <div className="flex gap-3">
+          <CheckCircle2 className="h-5 w-5 text-success mt-0.5 flex-shrink-0" />
+          <div>
+            <p className="font-medium text-sm mb-2">Two Workflows for Best Results:</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-3">
+              <div>
+                <p className="text-sm font-medium mb-2">1️⃣ Design Tokens First</p>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Upload style guide or design system page</li>
+                  <li>• Extract colors, typography, spacing scales</li>
+                  <li>• Use these as foundation for components</li>
+                </ul>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-2">2️⃣ Component Mockups</p>
+                <ul className="text-sm space-y-1 text-muted-foreground">
+                  <li>• Upload button, card, or form screenshots</li>
+                  <li>• Extract component-specific patterns</li>
+                  <li>• Generate code based on visual structure</li>
+                </ul>
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground mt-3 pt-3 border-t">
+              💡 <strong>Tip:</strong> Export Figma frames at 2x-3x scale for best OCR accuracy. Include labels like "Primary Button" or "Card Elevated".
+            </p>
+          </div>
+        </div>
+      </Card>
     </div>
   );
 }
