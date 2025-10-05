@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
@@ -20,7 +19,6 @@ import {
 } from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
-  const router = useRouter();
   const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
   const tokens = useTokenStore((state) => state.tokens);
   const componentType = useWorkflowStore((state) => state.componentType);
