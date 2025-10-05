@@ -12,7 +12,7 @@ interface WorkflowStore {
   currentStep: WorkflowStep;
   completedSteps: WorkflowStep[];
   progress: number; // 0-100
-  
+
   // Requirements state
   componentType?: ComponentType;
   componentConfidence?: number;
@@ -22,7 +22,11 @@ interface WorkflowStore {
     states: RequirementProposal[];
     accessibility: RequirementProposal[];
   };
-  
+
+  // Export state
+  exportId?: string;
+  exportedAt?: string;
+
   // Actions
   setStep: (step: WorkflowStep) => void;
   completeStep: (step: WorkflowStep) => void;
@@ -41,6 +45,13 @@ interface WorkflowStore {
   removeProposal: (id: string) => void;
   addProposal: (proposal: RequirementProposal) => void;
   acceptAllProposals: () => void;
+  setExportInfo: (exportId: string, exportedAt: string) => void;
+  getApprovedProposals: () => {
+    props: RequirementProposal[];
+    events: RequirementProposal[];
+    states: RequirementProposal[];
+    accessibility: RequirementProposal[];
+  };
   resetWorkflow: () => void;
 }
 
@@ -153,6 +164,25 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       };
     }),
 
+  setExportInfo: (exportId, exportedAt) =>
+    set({
+      exportId,
+      exportedAt,
+    }),
+
+  getApprovedProposals: () => {
+    const state = useWorkflowStore.getState();
+    const filterApproved = (proposals: RequirementProposal[]) =>
+      proposals.filter((p) => p.approved);
+
+    return {
+      props: filterApproved(state.proposals.props),
+      events: filterApproved(state.proposals.events),
+      states: filterApproved(state.proposals.states),
+      accessibility: filterApproved(state.proposals.accessibility),
+    };
+  },
+
   resetWorkflow: () =>
     set({
       currentStep: WorkflowStep.DASHBOARD,
@@ -166,5 +196,7 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
         states: [],
         accessibility: [],
       },
+      exportId: undefined,
+      exportedAt: undefined,
     }),
 }));
