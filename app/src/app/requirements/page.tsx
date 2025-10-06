@@ -1,54 +1,113 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { useTokenStore } from "@/stores/useTokenStore";
+import { useRequirementProposal } from "@/lib/query/hooks/useRequirementProposal";
+import { ApprovalPanelContainer } from "@/components/requirements/ApprovalPanelContainer";
+import { ExportPreview } from "@/components/requirements/ExportPreview";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { RequirementCard } from "@/components/composite/RequirementCard";
-import { ArrowRight, CheckCircle2, AlertCircle } from "lucide-react";
-import { useState } from "react";
-
-// Placeholder requirements (will be replaced with Epic 2 backend)
-const placeholderRequirements = [
-  {
-    id: "1",
-    category: "Accessibility",
-    requirement: "Button must have keyboard navigation support",
-    status: "accepted" as const,
-    confidence: 0.95,
-  },
-  {
-    id: "2",
-    category: "Accessibility",
-    requirement: "Color contrast ratio must meet WCAG AA standards",
-    status: "review" as const,
-    confidence: 0.75,
-  },
-  {
-    id: "3",
-    category: "Responsiveness",
-    requirement: "Component must adapt to mobile, tablet, and desktop viewports",
-    status: "accepted" as const,
-    confidence: 0.92,
-  },
-  {
-    id: "4",
-    category: "Styling",
-    requirement: "Use extracted color tokens for consistent theming",
-    status: "review" as const,
-    confidence: 0.68,
-  },
-];
+import { Progress } from "@/components/ui/progress";
+import { Card } from "@/components/ui/card";
+import { ArrowRight } from "lucide-react";
+import { 
+  exportRequirements, 
+  getExportPreview,
+  type ExportPreviewResponse 
+} from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [editingRequirement, setEditingRequirement] = useState<typeof placeholderRequirements[0] | null>(null);
+  const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
+  const tokens = useTokenStore((state) => state.tokens);
+  const componentType = useWorkflowStore((state) => state.componentType);
+  const componentConfidence = useWorkflowStore((state) => state.componentConfidence);
+  const proposals = useWorkflowStore((state) => state.proposals);
+  const exportId = useWorkflowStore((state) => state.exportId);
+  const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
 
-  const handleEdit = (req: typeof placeholderRequirements[0]) => {
-    // For now, just console log since EditModal expects different structure
-    console.log("Edit requirement:", req);
-    // In Epic 2, this would open an edit modal with the actual requirement
+  const { mutate: proposeRequirements, isPending, error } = useRequirementProposal();
+  
+  // Export preview state
+  const [showExportPreview, setShowExportPreview] = useState(false);
+  const [exportPreview, setExportPreview] = useState<ExportPreviewResponse | null>(null);
+  const [isLoadingPreview, setIsLoadingPreview] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+
+  // Auto-trigger requirement proposal on mount if file exists
+  useEffect(() => {
+    if (uploadedFile && !componentType) {
+      proposeRequirements({
+        file: uploadedFile,
+        tokens: tokens || undefined,
+      });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedFile, componentType, tokens]);
+
+  // Handle export preview
+  const handleShowExportPreview = async () => {
+    if (!componentType || componentConfidence === undefined) return;
+    
+    setIsLoadingPreview(true);
+    setExportError(null);
+    
+    try {
+      const preview = await getExportPreview(
+        componentType,
+        componentConfidence,
+        proposals
+      );
+      setExportPreview(preview);
+      setShowExportPreview(true);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Failed to generate export preview');
+    } finally {
+      setIsLoadingPreview(false);
+    }
   };
+
+  // Handle export confirmation
+  const handleExport = async () => {
+    if (!componentType || componentConfidence === undefined) return;
+    
+    setIsExporting(true);
+    setExportError(null);
+    
+    try {
+      const result = await exportRequirements({
+        componentType,
+        componentConfidence,
+        proposals,
+        tokens: tokens || undefined,
+      });
+
+      // Store export info in workflow store
+      setExportInfo(result.exportId, result.summary.exportedAt);
+      setShowExportPreview(false);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : 'Failed to export requirements');
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  // If no file, redirect to extract
+  if (!uploadedFile) {
+    return (
+      <main className="container mx-auto p-8">
+        <Alert variant="warning">
+          <p className="font-medium mb-2">No screenshot found</p>
+          <p className="text-sm mb-4">Please upload a screenshot first to generate requirements.</p>
+          <Button asChild variant="outline" className="mt-2">
+            <Link href="/extract">← Back to Extraction</Link>
+          </Button>
+        </Alert>
+      </main>
+    );
+  }
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -58,79 +117,93 @@ export default function RequirementsPage() {
           Review Requirements
         </h1>
         <p className="text-muted-foreground">
-          Review and approve AI-generated component requirements
+          AI-generated component requirements based on your screenshot
         </p>
       </div>
 
-      {/* Bulk Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Bulk Actions</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-4">
-          <Button variant="outline">
-            <CheckCircle2 className="mr-2 h-4 w-4" />
-            Accept All
+      {/* Loading State */}
+      {isPending && (
+        <div className="space-y-4">
+          <Alert variant="info">
+            <p className="font-medium">🤖 Analyzing your component...</p>
+            <p className="text-sm mt-1">This typically takes 10-15 seconds.</p>
+          </Alert>
+          <Progress value={66} className="h-2" />
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <Alert variant="error">
+          <p className="font-medium">Analysis Failed</p>
+          <p className="text-sm mt-1">{error.message}</p>
+          <Button 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => {
+              if (uploadedFile) {
+                proposeRequirements({
+                  file: uploadedFile,
+                  tokens: tokens || undefined,
+                });
+              }
+            }}
+          >
+            Try Again
           </Button>
-          <Button variant="outline">
-            <AlertCircle className="mr-2 h-4 w-4" />
-            Review Low Confidence
-          </Button>
-        </CardContent>
-      </Card>
+        </Alert>
+      )}
 
-      {/* Requirements by Category */}
-      <Accordion type="multiple" className="space-y-4">
-        {["Accessibility", "Responsiveness", "Styling"].map((category) => (
-          <AccordionItem key={category} value={category} className="border rounded-lg px-4">
-            <AccordionTrigger className="hover:no-underline">
-              <div className="flex items-center gap-2">
-                <span className="font-semibold">{category}</span>
-                <span className="text-sm text-muted-foreground">
-                  ({placeholderRequirements.filter((r) => r.category === category).length})
-                </span>
-              </div>
-            </AccordionTrigger>
-            <AccordionContent className="space-y-3 pt-4">
-              {placeholderRequirements
-                .filter((r) => r.category === category)
-                .map((req) => (
-                  <RequirementCard
-                    key={req.id}
-                    requirement={req.requirement}
-                    status={req.status}
-                    confidence={req.confidence}
-                    onAccept={() => console.log("Accept", req.id)}
-                    onReject={() => console.log("Reject", req.id)}
-                    onEdit={() => handleEdit(req)}
-                  />
-                ))}
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      {/* Approval Panel (shown after analysis completes) */}
+      {componentType && !isPending && (
+        <>
+          <ApprovalPanelContainer />
 
-      {/* Placeholder Note */}
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-sm text-muted-foreground text-center">
-            <strong>Note:</strong> These are placeholder requirements. Real requirements will be generated by Epic 2 backend.
-          </p>
-        </CardContent>
-      </Card>
+          {/* Export Error */}
+          {exportError && (
+            <Alert variant="error">
+              <p className="font-medium">Export Failed</p>
+              <p className="text-sm mt-1">{exportError}</p>
+            </Alert>
+          )}
 
-      {/* Navigation */}
-      <div className="flex justify-between">
-        <Button asChild variant="outline">
-          <Link href="/extract">← Back to Extraction</Link>
-        </Button>
-        <Button asChild size="lg">
-          <Link href="/patterns">
-            Continue to Patterns
-            <ArrowRight className="ml-2 h-4 w-4" />
-          </Link>
-        </Button>
-      </div>
+          {/* Export Preview Modal */}
+          {showExportPreview && exportPreview && (
+            <Card className="p-6">
+              <ExportPreview
+                preview={exportPreview}
+                onExport={handleExport}
+                onCancel={() => setShowExportPreview(false)}
+                isExporting={isExporting}
+              />
+            </Card>
+          )}
+
+          {/* Navigation */}
+          <div className="flex justify-between">
+            <Button asChild variant="outline">
+              <Link href="/extract">← Back to Extraction</Link>
+            </Button>
+
+            {!exportId ? (
+              <Button 
+                onClick={handleShowExportPreview} 
+                size="lg"
+                disabled={isLoadingPreview}
+              >
+                {isLoadingPreview ? 'Loading Preview...' : 'Export Requirements'}
+              </Button>
+            ) : (
+              <Button asChild size="lg">
+                <Link href={`/patterns?exportId=${exportId}`}>
+                  Continue to Patterns
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Link>
+              </Button>
+            )}
+          </div>
+        </>
+      )}
     </main>
   );
 }

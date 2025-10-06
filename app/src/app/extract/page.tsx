@@ -16,6 +16,7 @@ import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
 import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useUIStore } from "@/stores/useUIStore";
+import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import type { TokenData } from "@/components/tokens/TokenEditor";
 
 // New components for EPIC 12
@@ -65,6 +66,7 @@ export default function TokenExtractionPage() {
   const tokens = useTokenStore((state) => state.tokens);
   const metadata = useTokenStore((state) => state.metadata);
   const showAlert = useUIStore((state) => state.showAlert);
+  const setUploadedFile = useWorkflowStore((state) => state.setUploadedFile);
 
   // Convert tokens to TokenEditor format with actual confidence scores from backend
   const getEditorTokens = (): TokenData | null => {
@@ -226,6 +228,9 @@ export default function TokenExtractionPage() {
   // Handle upload with success tracking
   const handleUpload = () => {
     if (selectedFile) {
+      // Store file in workflow store for requirements page
+      setUploadedFile(selectedFile);
+      
       extractTokens(selectedFile, {
         onSuccess: () => {
           // Show success toast

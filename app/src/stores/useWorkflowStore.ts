@@ -13,6 +13,9 @@ interface WorkflowStore {
   completedSteps: WorkflowStep[];
   progress: number; // 0-100
 
+  // Screenshot file state
+  uploadedFile: File | null;
+
   // Requirements state
   componentType?: ComponentType;
   componentConfidence?: number;
@@ -31,6 +34,7 @@ interface WorkflowStore {
   setStep: (step: WorkflowStep) => void;
   completeStep: (step: WorkflowStep) => void;
   updateProgress: (progress: number) => void;
+  setUploadedFile: (file: File) => void;
   setRequirements: (
     componentType: ComponentType,
     componentConfidence: number,
@@ -67,6 +71,7 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   currentStep: WorkflowStep.DASHBOARD,
   completedSteps: [],
   progress: 0,
+  uploadedFile: null,
   proposals: {
     props: [],
     events: [],
@@ -78,6 +83,11 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   setStep: (step) =>
     set({
       currentStep: step,
+    }),
+  
+  setUploadedFile: (file) =>
+    set({
+      uploadedFile: file,
     }),
   
   completeStep: (step) =>
@@ -188,6 +198,7 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       currentStep: WorkflowStep.DASHBOARD,
       completedSteps: [],
       progress: 0,
+      uploadedFile: null,
       componentType: undefined,
       componentConfidence: undefined,
       proposals: {
