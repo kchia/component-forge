@@ -66,6 +66,10 @@ interface WorkflowStore {
     accessibility: RequirementProposal[];
   };
   resetWorkflow: () => void;
+  
+  // Navigation helpers
+  canAccessStep: (step: WorkflowStep) => boolean;
+  getAvailableSteps: () => WorkflowStep[];
 }
 
 // Calculate progress percentage based on completed steps
@@ -219,4 +223,38 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       exportId: undefined,
       exportedAt: undefined,
     }),
+
+  // Check if a step is accessible based on completed steps
+  canAccessStep: (step) => {
+    const state = useWorkflowStore.getState();
+
+    // Dashboard and Extract always accessible
+    if (step === WorkflowStep.DASHBOARD || step === WorkflowStep.EXTRACT) {
+      return true;
+    }
+
+    // Check prerequisite completion
+    const prerequisites: Record<WorkflowStep, WorkflowStep> = {
+      [WorkflowStep.REQUIREMENTS]: WorkflowStep.EXTRACT,
+      [WorkflowStep.PATTERNS]: WorkflowStep.REQUIREMENTS,
+      [WorkflowStep.PREVIEW]: WorkflowStep.PATTERNS,
+    };
+
+    const prereq = prerequisites[step];
+    return prereq ? state.completedSteps.includes(prereq) : true;
+  },
+
+  // Get array of steps user can currently access
+  getAvailableSteps: () => {
+    const state = useWorkflowStore.getState();
+    const allSteps = [
+      WorkflowStep.DASHBOARD,
+      WorkflowStep.EXTRACT,
+      WorkflowStep.REQUIREMENTS,
+      WorkflowStep.PATTERNS,
+      WorkflowStep.PREVIEW,
+    ];
+
+    return allSteps.filter(step => state.canAccessStep(step));
+  },
 }));

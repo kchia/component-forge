@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
+import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
+import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { WorkflowStep } from "@/types";
 import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 // Placeholder code (will be replaced with Epic 4 backend)
@@ -67,8 +72,27 @@ export const Secondary: Story = {
 }`;
 
 export default function PreviewPage() {
+  const router = useRouter();
+  const completedSteps = useWorkflowStore((state) => state.completedSteps);
+  const completeStep = useWorkflowStore((state) => state.completeStep);
+
+  // Route guard: redirect if patterns not completed
+  useEffect(() => {
+    if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
+      router.push('/patterns');
+    }
+  }, [completedSteps, router]);
+
+  // Mark preview step as completed when page loads
+  useEffect(() => {
+    completeStep(WorkflowStep.PREVIEW);
+  }, [completeStep]);
+
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
+      {/* Workflow Breadcrumb */}
+      <WorkflowBreadcrumb />
+
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">

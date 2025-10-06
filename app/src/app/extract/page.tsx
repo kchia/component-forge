@@ -17,11 +17,13 @@ import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useUIStore } from "@/stores/useUIStore";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { WorkflowStep } from "@/types";
 import type { TokenData } from "@/components/tokens/TokenEditor";
 
 // New components for EPIC 12
 import { CompactTips } from "@/components/extract/CompactTips";
 import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
+import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
 const TokenEditor = dynamic(
@@ -68,6 +70,7 @@ export default function TokenExtractionPage() {
   const metadata = useTokenStore((state) => state.metadata);
   const showAlert = useUIStore((state) => state.showAlert);
   const setUploadedFile = useWorkflowStore((state) => state.setUploadedFile);
+  const completeStep = useWorkflowStore((state) => state.completeStep);
 
   // Convert tokens to TokenEditor format with actual confidence scores from backend
   const getEditorTokens = (): TokenData | null => {
@@ -251,6 +254,9 @@ export default function TokenExtractionPage() {
       
       extractTokens(selectedFile, {
         onSuccess: () => {
+          // Mark extract step as completed
+          completeStep(WorkflowStep.EXTRACT);
+
           // Show success toast
           showAlert('success', '✓ Tokens extracted successfully! Scroll down to review and edit.');
 
@@ -287,6 +293,14 @@ export default function TokenExtractionPage() {
       extractFromFigma({
         figmaUrl,
         personalAccessToken: figmaPat,
+      }, {
+        onSuccess: () => {
+          // Mark extract step as completed
+          completeStep(WorkflowStep.EXTRACT);
+          
+          // Show success toast
+          showAlert('success', '✓ Tokens extracted from Figma successfully!');
+        }
       });
     }
   };
@@ -299,6 +313,9 @@ export default function TokenExtractionPage() {
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
+      {/* Workflow Breadcrumb */}
+      <WorkflowBreadcrumb />
+
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">

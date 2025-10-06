@@ -1,12 +1,15 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
+import { WorkflowStep } from "@/types";
 import { useRequirementProposal } from "@/lib/query/hooks/useRequirementProposal";
 import { ApprovalPanelContainer } from "@/components/requirements/ApprovalPanelContainer";
 import { ExportPreview } from "@/components/requirements/ExportPreview";
+import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
@@ -19,6 +22,7 @@ import {
 } from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
+  const router = useRouter();
   const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
   const tokens = useTokenStore((state) => state.tokens);
   const componentType = useWorkflowStore((state) => state.componentType);
@@ -26,9 +30,18 @@ export default function RequirementsPage() {
   const proposals = useWorkflowStore((state) => state.proposals);
   const exportId = useWorkflowStore((state) => state.exportId);
   const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
+  const completeStep = useWorkflowStore((state) => state.completeStep);
+  const completedSteps = useWorkflowStore((state) => state.completedSteps);
 
   const { mutate: proposeRequirements, isPending, error, progress, progressMessage } = useRequirementProposal();
   const hasTriggeredProposal = useRef(false);
+
+  // Route guard: redirect if extract not completed
+  useEffect(() => {
+    if (!completedSteps.includes(WorkflowStep.EXTRACT)) {
+      router.push('/extract');
+    }
+  }, [completedSteps, router]);
 
   
   // Export preview state
@@ -94,7 +107,14 @@ export default function RequirementsPage() {
 
       // Store export info in workflow store
       setExportInfo(result.exportId, result.summary.exportedAt);
+      
+      // Mark requirements step as completed
+      completeStep(WorkflowStep.REQUIREMENTS);
+      
       setShowExportPreview(false);
+      
+      // Navigate to patterns page
+      router.push(`/patterns?exportId=${result.exportId}`);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Failed to export requirements');
     } finally {
@@ -119,6 +139,9 @@ export default function RequirementsPage() {
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
+      {/* Workflow Breadcrumb */}
+      <WorkflowBreadcrumb />
+
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
