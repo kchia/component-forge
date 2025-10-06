@@ -44,7 +44,8 @@ export default function RequirementsPage() {
         tokens: tokens || undefined,
       });
     }
-  }, [uploadedFile, componentType, tokens, proposeRequirements]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [uploadedFile, componentType, tokens]);
 
   // Handle export preview
   const handleShowExportPreview = async () => {

@@ -9,6 +9,16 @@ import path from 'path';
 // Test data path
 const TEST_SCREENSHOT = path.join(__dirname, 'fixtures', 'design-system-sample.png');
 
+// Test timeout constants (in milliseconds)
+const TIMEOUTS = {
+  SHORT: 2000,           // Short waits for UI updates
+  MODAL: 5000,           // Modal and dialog appearances
+  ANALYSIS: 30000,       // AI analysis completion
+  RETRY_CHECK: 35000,    // Checking for retry button
+  EXTRACTION: 60000,     // GPT-4V token extraction
+  PREVIEW_LOAD: 1000,    // Export preview loading
+} as const;
+
 test.describe('Epic 2: Requirements Flow Integration', () => {
   test.beforeEach(async ({ page }) => {
     // Navigate to extract page
@@ -16,7 +26,7 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
 
     // Handle onboarding modal if it appears
     const skipButton = page.getByRole('button', { name: /skip/i });
-    if (await skipButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+    if (await skipButton.isVisible({ timeout: TIMEOUTS.SHORT }).catch(() => false)) {
       await skipButton.click();
     }
 
@@ -40,8 +50,8 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
 
       // Wait for extraction to complete (up to 60s for GPT-4V processing)
       await Promise.race([
-        expect(page.getByText(/tokens extracted successfully/i)).toBeVisible({ timeout: 60000 }),
-        expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible({ timeout: 60000 }),
+        expect(page.getByText(/tokens extracted successfully/i)).toBeVisible({ timeout: TIMEOUTS.EXTRACTION }),
+        expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible({ timeout: TIMEOUTS.EXTRACTION }),
       ]);
 
       // Take screenshot of extraction success
@@ -66,7 +76,7 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
     // Step 3: Verify auto-trigger of requirement proposal
     await test.step('Verify AI proposal is auto-triggered', async () => {
       // Should see loading state
-      await expect(page.getByText(/analyzing your component/i)).toBeVisible({ timeout: 5000 });
+      await expect(page.getByText(/analyzing your component/i)).toBeVisible({ timeout: TIMEOUTS.MODAL });
       
       // Take screenshot of loading state
       await page.screenshot({ 
@@ -76,14 +86,14 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
 
       // Wait for analysis to complete (up to 30s)
       // The ApprovalPanel should appear
-      await expect(page.getByText(/analyzing your component/i)).not.toBeVisible({ timeout: 30000 });
+      await expect(page.getByText(/analyzing your component/i)).not.toBeVisible({ timeout: TIMEOUTS.ANALYSIS });
     });
 
     // Step 4: Verify ApprovalPanel displays with proposals
     await test.step('Verify ApprovalPanel renders with proposals', async () => {
       // Component type detection should be visible
       // The exact component type depends on the test image, but we should see some component type
-      await page.waitForTimeout(2000); // Wait for component to render
+      await page.waitForTimeout(TIMEOUTS.SHORT); // Wait for component to render
       
       // Verify that proposal categories are present
       // These should be collapsible sections or cards
@@ -113,7 +123,7 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
       await exportButton.click();
 
       // Wait for export preview to load
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(TIMEOUTS.PREVIEW_LOAD);
 
       // Take screenshot of export preview
       await page.screenshot({ 
@@ -127,11 +137,11 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
 
       // Confirm export by looking for confirmation button
       const confirmButton = page.getByRole('button', { name: /export.*continue/i });
-      if (await confirmButton.isVisible({ timeout: 2000 }).catch(() => false)) {
+      if (await confirmButton.isVisible({ timeout: TIMEOUTS.SHORT }).catch(() => false)) {
         await confirmButton.click();
         
         // Wait for export to complete
-        await page.waitForTimeout(2000);
+        await page.waitForTimeout(TIMEOUTS.SHORT);
         
         // Take screenshot after export
         await page.screenshot({ 
@@ -164,7 +174,7 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
     await page.goto('/requirements');
 
     // Should see warning message
-    await expect(page.getByText(/no screenshot found/i)).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/no screenshot found/i)).toBeVisible({ timeout: TIMEOUTS.MODAL });
     
     // Should have link back to extraction
     await expect(page.getByRole('link', { name: /back to extraction/i })).toBeVisible();
@@ -188,8 +198,8 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
     
     // Wait for extraction
     await Promise.race([
-      expect(page.getByText(/tokens extracted successfully/i)).toBeVisible({ timeout: 60000 }),
-      expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible({ timeout: 60000 }),
+      expect(page.getByText(/tokens extracted successfully/i)).toBeVisible({ timeout: TIMEOUTS.EXTRACTION }),
+      expect(page.getByRole('heading', { name: /edit tokens/i })).toBeVisible({ timeout: TIMEOUTS.EXTRACTION }),
     ]);
 
     // Navigate to requirements
@@ -198,7 +208,7 @@ test.describe('Epic 2: Requirements Flow Integration', () => {
     // If analysis fails, verify retry button exists
     // This is conditional based on backend availability
     const hasRetryButton = await page.getByRole('button', { name: /try again/i })
-      .isVisible({ timeout: 35000 })
+      .isVisible({ timeout: TIMEOUTS.RETRY_CHECK })
       .catch(() => false);
     
     if (hasRetryButton) {
