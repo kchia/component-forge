@@ -46,6 +46,7 @@ sentence-transformers
 
 # Epic 3 - Pattern Retrieval
 rank-bm25>=0.2.2
+tenacity>=8.2.0
 
 # Database
 sqlalchemy
