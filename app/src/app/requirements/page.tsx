@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useRequirementProposal } from "@/lib/query/hooks/useRequirementProposal";
@@ -19,6 +20,7 @@ import {
 } from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
+  const router = useRouter();
   const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
   const tokens = useTokenStore((state) => state.tokens);
   const componentType = useWorkflowStore((state) => state.componentType);
@@ -80,10 +82,10 @@ export default function RequirementsPage() {
   // Handle export confirmation
   const handleExport = async () => {
     if (!componentType || componentConfidence === undefined) return;
-    
+
     setIsExporting(true);
     setExportError(null);
-    
+
     try {
       const result = await exportRequirements({
         componentType,
@@ -94,7 +96,9 @@ export default function RequirementsPage() {
 
       // Store export info in workflow store
       setExportInfo(result.exportId, result.summary.exportedAt);
-      setShowExportPreview(false);
+
+      // Navigate to patterns page
+      router.push(`/patterns?exportId=${result.exportId}`);
     } catch (err) {
       setExportError(err instanceof Error ? err.message : 'Failed to export requirements');
     } finally {
