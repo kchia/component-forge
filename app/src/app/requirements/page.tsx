@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { WorkflowStep } from "@/types";
@@ -93,10 +94,10 @@ export default function RequirementsPage() {
   // Handle export confirmation
   const handleExport = async () => {
     if (!componentType || componentConfidence === undefined) return;
-    
+
     setIsExporting(true);
     setExportError(null);
-    
+
     try {
       const result = await exportRequirements({
         componentType,

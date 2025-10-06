@@ -11,12 +11,14 @@ import { WorkflowStep } from "@/types";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { usePatternSelection } from "@/store/patternSelectionStore";
 import { usePatternRetrieval } from "@/hooks/usePatternRetrieval";
+import { useLibraryStats } from "@/hooks/useLibraryStats";
 import { SearchSummary } from "@/components/patterns/SearchSummary";
 import { PatternList } from "@/components/patterns/PatternList";
 import { PatternLibraryInfo } from "@/components/patterns/PatternLibraryInfo";
 import { PatternSkeletonList } from "@/components/patterns/PatternSkeleton";
 import { ErrorState } from "@/components/patterns/ErrorState";
 import { EmptyState } from "@/components/patterns/EmptyState";
+import { Card, CardContent } from "@/components/ui/card";
 import type { PatternMatch } from "@/types/retrieval";
 import type { Pattern } from "@/store/patternSelectionStore";
 import type { RequirementProposal } from "@/types/requirement.types";
@@ -60,6 +62,13 @@ export default function PatternsPage() {
     requirements,
     enabled: !!componentType,
   });
+
+  // Fetch library statistics
+  const {
+    data: libraryStats,
+    isLoading: statsLoading,
+    isError: statsError
+  } = useLibraryStats();
   
   const handleSelectPattern = (pattern: PatternMatch) => {
     // Convert PatternMatch to Pattern for store
@@ -127,7 +136,34 @@ export default function PatternsPage() {
           {/* Sidebar - Library Info */}
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-8">
-              <PatternLibraryInfo />
+              {statsLoading ? (
+                <Card variant="outlined">
+                  <CardContent className="py-8">
+                    <div className="flex flex-col items-center justify-center space-y-2">
+                      <div className="animate-pulse flex space-x-2">
+                        <div className="h-2 w-2 bg-muted-foreground rounded-full"></div>
+                        <div className="h-2 w-2 bg-muted-foreground rounded-full"></div>
+                        <div className="h-2 w-2 bg-muted-foreground rounded-full"></div>
+                      </div>
+                      <p className="text-sm text-muted-foreground">Loading library stats...</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : statsError ? (
+                <Card variant="outlined">
+                  <CardContent className="py-8">
+                    <p className="text-sm text-muted-foreground text-center">
+                      Unable to load library statistics
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <PatternLibraryInfo
+                  totalPatterns={libraryStats?.total_patterns}
+                  componentTypes={libraryStats?.component_types}
+                  metrics={libraryStats?.metrics}
+                />
+              )}
             </div>
           </div>
         </div>

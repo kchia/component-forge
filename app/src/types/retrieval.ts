@@ -70,3 +70,18 @@ export interface RetrievalError {
   detail?: string;
   status?: number;
 }
+
+export interface LibraryStatsResponse {
+  total_patterns: number;
+  component_types: string[];
+  categories: string[];
+  frameworks: string[];
+  libraries: string[];
+  total_variants: number;
+  total_props: number;
+  metrics?: {
+    mrr: number;
+    hit_at_3: number;
+    last_evaluated?: string;
+  };
+}

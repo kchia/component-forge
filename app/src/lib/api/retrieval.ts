@@ -3,7 +3,7 @@
  */
 
 import { apiClient } from './client';
-import type { RetrievalRequest, RetrievalResponse } from '@/types/retrieval';
+import type { RetrievalRequest, RetrievalResponse, LibraryStatsResponse } from '@/types/retrieval';
 
 export const retrievalApi = {
   /**
@@ -14,6 +14,17 @@ export const retrievalApi = {
     const response = await apiClient.post<RetrievalResponse>(
       '/retrieval/search',
       request
+    );
+    return response.data;
+  },
+
+  /**
+   * Get library statistics
+   * GET /api/v1/retrieval/library/stats
+   */
+  async getLibraryStats(): Promise<LibraryStatsResponse> {
+    const response = await apiClient.get<LibraryStatsResponse>(
+      '/retrieval/library/stats'
     );
     return response.data;
   },

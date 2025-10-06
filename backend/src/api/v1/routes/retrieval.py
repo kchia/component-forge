@@ -6,9 +6,13 @@ POST /api/v1/retrieval/search endpoint.
 
 from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Any
 from langsmith import traceable
+from sqlalchemy.ext.asyncio import AsyncSession
 import logging
+
+from ....core.database import get_async_session as get_db
+from ....services.retrieval_service import get_library_quality_metrics
 
 logger = logging.getLogger(__name__)
 
@@ -76,6 +80,19 @@ class RetrievalResponse(BaseModel):
     """Response model for pattern retrieval."""
     patterns: List[PatternResult]
     retrieval_metadata: RetrievalMetadata
+
+
+class LibraryStatsResponse(BaseModel):
+    """Library-level statistics response."""
+
+    total_patterns: int = Field(..., description="Total number of patterns in library")
+    component_types: List[str] = Field(..., description="List of unique component names")
+    categories: List[str] = Field(default_factory=list, description="Pattern categories")
+    frameworks: List[str] = Field(default_factory=list, description="Supported frameworks")
+    libraries: List[str] = Field(default_factory=list, description="UI libraries used")
+    total_variants: int = Field(default=0, description="Total variant count across all patterns")
+    total_props: int = Field(default=0, description="Total prop count across all patterns")
+    metrics: Optional[Dict] = Field(None, description="Quality metrics (MRR, Hit@3) from latest evaluation")
 
 
 def get_retrieval_service(request: Request):
@@ -209,3 +226,75 @@ async def health_check(request: Request):
             "total_patterns": 0,
             "error": str(e)
         }
+
+
+@router.get("/library/stats", response_model=LibraryStatsResponse)
+async def get_library_statistics(
+    request: Request,
+    db: AsyncSession = Depends(get_db)
+) -> LibraryStatsResponse:
+    """Get library-level statistics and quality metrics.
+
+    Returns library statistics including:
+    - Total number of patterns in library
+    - List of unique component names (types)
+    - Categories (e.g., "form", "layout", "data-display")
+    - Frameworks (e.g., "react", "vue")
+    - Libraries (e.g., "shadcn/ui", "radix-ui")
+    - Total variants and props counts
+    - Quality metrics (MRR, Hit@3) from latest evaluation run (if available)
+
+    Returns:
+        LibraryStatsResponse: Library statistics and optional quality metrics
+
+    Raises:
+        HTTPException 503: Retrieval service not initialized
+        HTTPException 500: Internal server error
+
+    Example Response:
+        {
+            "total_patterns": 10,
+            "component_types": ["Button", "Card", "Input", "Select", "Badge"],
+            "categories": ["form", "data-display", "layout"],
+            "frameworks": ["react"],
+            "libraries": ["shadcn/ui", "radix-ui"],
+            "total_variants": 45,
+            "total_props": 120,
+            "metrics": {
+                "mrr": 0.75,
+                "hit_at_3": 0.85,
+                "last_evaluated": "2025-10-06T14:30:00Z"
+            }
+        }
+    """
+    try:
+        # Get retrieval service from app state
+        if not hasattr(request.app.state, "retrieval_service"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Retrieval service not initialized"
+            )
+
+        service = request.app.state.retrieval_service
+
+        # Get library stats (synchronous)
+        stats = service.get_library_stats()
+
+        # Get quality metrics from database (async)
+        metrics = await get_library_quality_metrics(db)
+        if metrics:
+            stats["metrics"] = metrics
+
+        logger.info(f"Library stats retrieved: {stats['total_patterns']} patterns")
+
+        return LibraryStatsResponse(**stats)
+
+    except HTTPException:
+        raise
+
+    except Exception as e:
+        logger.error(f"Failed to get library statistics: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to retrieve library statistics: {str(e)}"
+        )

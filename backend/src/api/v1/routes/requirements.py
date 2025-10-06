@@ -356,29 +356,37 @@ async def propose_requirements(
 
 class ExportRequirementsRequest(BaseModel):
     """Request model for exporting requirements."""
-    component_type: ComponentType
-    component_confidence: float
+    component_type: ComponentType = Field(..., alias="componentType")
+    component_confidence: float = Field(..., alias="componentConfidence")
     proposals: Dict[str, List[RequirementProposal]] = Field(
         description="All proposals grouped by category"
     )
     source_type: str = Field(
         default="screenshot",
-        description="Source type: figma, screenshot, or design_file"
+        description="Source type: figma, screenshot, or design_file",
+        alias="sourceType"
     )
-    source_metadata: Optional[Dict[str, Any]] = None
+    source_metadata: Optional[Dict[str, Any]] = Field(None, alias="sourceMetadata")
     tokens: Optional[Dict[str, Any]] = None
-    proposal_latency_ms: Optional[int] = None
-    approval_duration_ms: Optional[int] = None
-    proposed_at: Optional[str] = None
-    approved_at: Optional[str] = None
+    proposal_latency_ms: Optional[int] = Field(None, alias="proposalLatencyMs")
+    approval_duration_ms: Optional[int] = Field(None, alias="approvalDurationMs")
+    proposed_at: Optional[str] = Field(None, alias="proposedAt")
+    approved_at: Optional[str] = Field(None, alias="approvedAt")
+
+    class Config:
+        populate_by_name = True
 
 
 class ExportRequirementsResponse(BaseModel):
     """Response model for requirement export."""
-    export_id: str
-    export_data: Dict[str, Any]
+    export_id: str = Field(..., alias="exportId")
+    export_data: Dict[str, Any] = Field(..., alias="exportData")
     summary: Dict[str, Any]
     status: str
+
+    class Config:
+        populate_by_name = True
+        by_alias = True
 
 
 class ExportPreviewRequest(BaseModel):
