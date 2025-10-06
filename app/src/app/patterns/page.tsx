@@ -29,11 +29,11 @@ export default function PatternsPage() {
   // Build requirements for retrieval
   const requirements = {
     component_type: componentType || 'Button',
-    props: proposals.props.filter(p => p.approved).map(p => p.name),
-    variants: proposals.states.filter(p => p.approved).map(p => p.name),
-    events: proposals.events.filter(p => p.approved).map(p => p.name),
-    states: proposals.states.filter(p => p.approved).map(p => p.name),
-    a11y: proposals.accessibility.filter(p => p.approved).map(p => p.name),
+    props: proposals.props.filter((p) => p.approved).map((p) => p.name),
+    variants: proposals.states.filter((p) => p.approved).map((p) => p.name),
+    events: proposals.events.filter((p) => p.approved).map((p) => p.name),
+    states: proposals.states.filter((p) => p.approved).map((p) => p.name),
+    a11y: proposals.accessibility.filter((p) => p.approved).map((p) => p.name),
   };
   
   // Fetch patterns using TanStack Query

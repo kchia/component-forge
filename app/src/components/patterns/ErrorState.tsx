@@ -21,7 +21,7 @@ export function ErrorState({ error, onRetry }: ErrorStateProps) {
                          errorMessage.toLowerCase().includes('connect');
   
   return (
-    <Alert variant="destructive">
+    <Alert variant="error">
       <AlertCircle className="h-4 w-4" />
       <AlertTitle>Error Loading Patterns</AlertTitle>
       <AlertDescription>
