@@ -79,18 +79,21 @@ function calculateProgress(completedSteps: WorkflowStep[]): number {
   return Math.round((completed / totalSteps) * 100);
 }
 
-export const useWorkflowStore = create<WorkflowStore>((set) => ({
-  // Initial state
-  currentStep: WorkflowStep.DASHBOARD,
-  completedSteps: [],
-  progress: 0,
-  uploadedFile: null,
-  proposals: {
-    props: [],
-    events: [],
-    states: [],
-    accessibility: [],
-  },
+export const useWorkflowStore = create<WorkflowStore>()(
+  persist(
+    (set) => ({
+      // Initial state
+      currentStep: WorkflowStep.DASHBOARD,
+      completedSteps: [],
+      progress: 0,
+      uploadedFile: null,
+      fileInfo: null,
+      proposals: {
+        props: [],
+        events: [],
+        states: [],
+        accessibility: [],
+      },
   
   // Actions
   setStep: (step) =>
@@ -101,6 +104,12 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   setUploadedFile: (file) =>
     set({
       uploadedFile: file,
+      fileInfo: file ? {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      } : null,
     }),
   
   completeStep: (step) =>
@@ -257,4 +266,22 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
 
     return allSteps.filter(step => state.canAccessStep(step));
   },
-}));
+    }),
+    {
+      name: 'workflow-storage',
+      storage: createJSONStorage(() => localStorage),
+      // Exclude uploadedFile from persistence as File objects can't be serialized
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        completedSteps: state.completedSteps,
+        progress: state.progress,
+        fileInfo: state.fileInfo,
+        componentType: state.componentType,
+        componentConfidence: state.componentConfidence,
+        proposals: state.proposals,
+        exportId: state.exportId,
+        exportedAt: state.exportedAt,
+      }),
+    }
+  )
+);

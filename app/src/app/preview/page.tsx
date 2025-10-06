@@ -83,10 +83,23 @@ export default function PreviewPage() {
     }
   }, [completedSteps, router]);
 
-  // Mark preview step as completed when page loads
-  useEffect(() => {
+  // Handle download action
+  const handleDownload = () => {
+    // Mark preview step as completed when user downloads
     completeStep(WorkflowStep.PREVIEW);
-  }, [completeStep]);
+    
+    // In a real implementation, this would download the generated code
+    console.log('Downloading component files...');
+  };
+
+  // Handle save action
+  const handleSave = () => {
+    // Mark preview step as completed when user saves
+    completeStep(WorkflowStep.PREVIEW);
+    
+    // In a real implementation, this would save to the project
+    console.log('Saving component to project...');
+  };
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -229,11 +242,11 @@ export default function PreviewPage() {
           </Link>
         </Button>
         <div className="flex gap-4">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
             Download ZIP
           </Button>
-          <Button>
+          <Button onClick={handleSave}>
             Save to Project
           </Button>
         </div>
