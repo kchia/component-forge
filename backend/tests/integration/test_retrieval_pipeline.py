@@ -4,16 +4,17 @@ Integration Tests for Pattern Retrieval Pipeline (Epic 3 - T5)
 Tests the complete retrieval flow from requirements to pattern matching.
 """
 
+"""
+Integration Tests for Pattern Retrieval Pipeline (Epic 3 - T5)
+
+Tests the complete retrieval flow from requirements to pattern matching.
+"""
+
 import pytest
-import sys
-from pathlib import Path
 from unittest.mock import Mock, AsyncMock, patch
-
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
-
 from fastapi.testclient import TestClient
-from backend.src.main import app
+
+from src.main import app
 
 
 class TestRetrievalPipelineIntegration:
