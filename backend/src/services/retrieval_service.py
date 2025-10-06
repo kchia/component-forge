@@ -7,11 +7,11 @@ Coordinates query building, BM25, semantic search, fusion, and explainability.
 from typing import Dict, List, Optional
 import time
 import logging
-from backend.src.retrieval.query_builder import QueryBuilder
-from backend.src.retrieval.bm25_retriever import BM25Retriever
-from backend.src.retrieval.semantic_retriever import SemanticRetriever
-from backend.src.retrieval.weighted_fusion import WeightedFusion
-from backend.src.retrieval.explainer import RetrievalExplainer
+from ..retrieval.query_builder import QueryBuilder
+from ..retrieval.bm25_retriever import BM25Retriever
+from ..retrieval.semantic_retriever import SemanticRetriever
+from ..retrieval.weighted_fusion import WeightedFusion
+from ..retrieval.explainer import RetrievalExplainer
 from langsmith import traceable
 
 logger = logging.getLogger(__name__)
