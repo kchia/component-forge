@@ -4,7 +4,8 @@
  */
 
 import { test, expect, type Page } from '@playwright/test';
-import type { Locator } from '@playwright/test';
+import path from 'path';
+import { mockPatternResponse, mockEmptyResponse, mockErrorResponse } from './fixtures/patternMocks';
 
 // Test timeout constants (in milliseconds)
 const TIMEOUTS = {
@@ -14,6 +15,10 @@ const TIMEOUTS = {
   NAVIGATION: 3000,      // Page navigation
 } as const;
 
+// Screenshot helper
+const screenshotPath = (name: string) => 
+  path.join('test-results', `pattern-selection-${name}.png`);
+
 /**
  * Helper to setup mock retrieval API response
  */
@@ -22,121 +27,7 @@ async function mockRetrievalAPI(page: Page) {
     await route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({
-        patterns: [
-          {
-            id: 'shadcn-button',
-            name: 'Button',
-            category: 'form',
-            description: 'A customizable button component with multiple variants',
-            framework: 'React',
-            library: 'shadcn/ui',
-            code: `export const Button = ({ variant = 'primary', size = 'md', ...props }) => {
-  return <button className={\`btn btn-\${variant} btn-\${size}\`} {...props} />;
-};`,
-            metadata: {
-              props: [
-                { name: 'variant', type: 'string' },
-                { name: 'size', type: 'string' },
-                { name: 'disabled', type: 'boolean' }
-              ],
-              variants: [
-                { name: 'primary' },
-                { name: 'secondary' },
-                { name: 'ghost' }
-              ],
-              a11y: ['aria-label', 'role']
-            },
-            confidence: 0.92,
-            explanation: 'Perfect match: Button component with variant, size props and primary, secondary, ghost variants',
-            match_highlights: {
-              matched_props: ['variant', 'size'],
-              matched_variants: ['primary', 'secondary', 'ghost'],
-              matched_a11y: ['aria-label']
-            },
-            ranking_details: {
-              bm25_score: 15.4,
-              bm25_rank: 1,
-              semantic_score: 0.89,
-              semantic_rank: 1,
-              final_score: 0.92,
-              final_rank: 1
-            }
-          },
-          {
-            id: 'radix-button',
-            name: 'Button',
-            category: 'form',
-            description: 'Radix UI button primitive with composable styling',
-            framework: 'React',
-            library: 'Radix UI',
-            code: 'export const Button = ({ asChild, ...props }) => { /* ... */ }',
-            metadata: {
-              props: [
-                { name: 'asChild', type: 'boolean' }
-              ],
-              variants: [],
-              a11y: ['role', 'aria-pressed']
-            },
-            confidence: 0.68,
-            explanation: 'Partial match: Button component but different prop structure',
-            match_highlights: {
-              matched_props: [],
-              matched_variants: [],
-              matched_a11y: []
-            },
-            ranking_details: {
-              bm25_score: 8.2,
-              bm25_rank: 2,
-              semantic_score: 0.65,
-              semantic_rank: 3,
-              final_score: 0.68,
-              final_rank: 2
-            }
-          },
-          {
-            id: 'headlessui-button',
-            name: 'Button',
-            category: 'form',
-            description: 'HeadlessUI unstyled button component',
-            framework: 'React',
-            library: 'HeadlessUI',
-            code: 'export const Button = ({ as, ...props }) => { /* ... */ }',
-            metadata: {
-              props: [
-                { name: 'as', type: 'string' }
-              ],
-              variants: [],
-              a11y: ['aria-label']
-            },
-            confidence: 0.58,
-            explanation: 'Basic match: Button component with minimal features',
-            match_highlights: {
-              matched_props: [],
-              matched_variants: [],
-              matched_a11y: ['aria-label']
-            },
-            ranking_details: {
-              bm25_score: 6.1,
-              bm25_rank: 3,
-              semantic_score: 0.54,
-              semantic_rank: 4,
-              final_score: 0.58,
-              final_rank: 3
-            }
-          }
-        ],
-        retrieval_metadata: {
-          latency_ms: 450,
-          methods_used: ['bm25', 'semantic'],
-          weights: {
-            bm25: 0.3,
-            semantic: 0.7
-          },
-          total_patterns_searched: 10,
-          query: 'Button component with variant, size and disabled props'
-        }
-      })
+      body: JSON.stringify(mockPatternResponse)
     });
   });
 }
@@ -184,7 +75,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       
       // Take screenshot
       await page.screenshot({ 
-        path: 'test-results/pattern-selection-01-loaded.png',
+        path: screenshotPath('01-loaded'),
         fullPage: true 
       });
     });
@@ -222,8 +113,9 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
 
   test('T5: should support pattern selection workflow', async ({ page }) => {
     await test.step('Select a pattern', async () => {
-      // Wait for patterns to load
-      await page.waitForTimeout(TIMEOUTS.SHORT);
+      // Wait for patterns to be visible (instead of arbitrary timeout)
+      const patternCards = page.locator('[data-testid="pattern-card"], .pattern-card, article').filter({ hasText: /Button/ });
+      await patternCards.first().waitFor({ state: 'visible', timeout: TIMEOUTS.RETRIEVAL });
       
       // Find and click the first "Select" button
       const selectButton = page.getByRole('button', { name: /select/i }).first();
@@ -235,7 +127,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       
       // Take screenshot
       await page.screenshot({ 
-        path: 'test-results/pattern-selection-02-selected.png',
+        path: screenshotPath('02-selected.png'),
         fullPage: true 
       });
     });
@@ -258,16 +150,20 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
 
   test('T5: should persist pattern selection in Zustand store', async ({ page }) => {
     await test.step('Select a pattern and verify persistence', async () => {
-      // Wait for patterns to load
-      await page.waitForTimeout(TIMEOUTS.SHORT);
+      // Wait for patterns to be visible
+      const patternCards = page.locator('[data-testid="pattern-card"], .pattern-card, article').filter({ hasText: /Button/ });
+      await patternCards.first().waitFor({ state: 'visible', timeout: TIMEOUTS.RETRIEVAL });
       
       // Select first pattern
       const selectButton = page.getByRole('button', { name: /select/i }).first();
       await expect(selectButton).toBeVisible({ timeout: TIMEOUTS.RETRIEVAL });
       await selectButton.click();
       
-      // Wait for selection to be stored
-      await page.waitForTimeout(1000);
+      // Wait for storage to be written (with proper check for completion)
+      await page.waitForFunction(() => {
+        const stored = localStorage.getItem('pattern-selection-storage');
+        return stored !== null && JSON.parse(stored).state?.selectedPattern;
+      }, { timeout: 5000 });
       
       // Check localStorage for pattern selection (Zustand persists here)
       const storedData = await page.evaluate(() => {
@@ -328,7 +224,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
         
         // Take screenshot of generation page
         await page.screenshot({ 
-          path: 'test-results/pattern-selection-03-generation.png',
+          path: screenshotPath('03-generation.png'),
           fullPage: true 
         });
       }
@@ -341,9 +237,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       await route.fulfill({
         status: 500,
         contentType: 'application/json',
-        body: JSON.stringify({
-          detail: 'Retrieval service error'
-        })
+        body: JSON.stringify(mockErrorResponse)
       });
     });
 
@@ -358,7 +252,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       
       // Take screenshot
       await page.screenshot({ 
-        path: 'test-results/pattern-selection-04-error.png',
+        path: screenshotPath('04-error.png'),
         fullPage: true 
       });
     });
@@ -379,16 +273,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       await route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({
-          patterns: [],
-          retrieval_metadata: {
-            latency_ms: 200,
-            methods_used: ['bm25', 'semantic'],
-            weights: { bm25: 0.3, semantic: 0.7 },
-            total_patterns_searched: 10,
-            query: 'Unknown component type'
-          }
-        })
+        body: JSON.stringify(mockEmptyResponse)
       });
     });
 
@@ -405,7 +290,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       
       // Take screenshot
       await page.screenshot({ 
-        path: 'test-results/pattern-selection-05-empty.png',
+        path: screenshotPath('05-empty.png'),
         fullPage: true 
       });
     });
@@ -431,7 +316,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
         
         // Take screenshot
         await page.screenshot({ 
-          path: 'test-results/pattern-selection-06-code-preview.png',
+          path: screenshotPath('06-code-preview.png'),
           fullPage: true 
         });
         
@@ -464,7 +349,7 @@ test.describe('Epic 3: Pattern Selection Flow', () => {
       
       // Take screenshot
       await page.screenshot({ 
-        path: 'test-results/pattern-selection-07-highlights.png',
+        path: screenshotPath('07-highlights.png'),
         fullPage: true 
       });
     });

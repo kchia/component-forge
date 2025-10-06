@@ -4,17 +4,14 @@ Integration Tests for Pattern Retrieval Pipeline (Epic 3 - T5)
 Tests the complete retrieval flow from requirements to pattern matching.
 """
 
-"""
-Integration Tests for Pattern Retrieval Pipeline (Epic 3 - T5)
-
-Tests the complete retrieval flow from requirements to pattern matching.
-"""
-
 import pytest
 from unittest.mock import Mock, AsyncMock, patch
 from fastapi.testclient import TestClient
 
 from src.main import app
+
+# API endpoint constants
+RETRIEVAL_ENDPOINT = "/api/v1/retrieval/search"
 
 
 class TestRetrievalPipelineIntegration:
@@ -187,7 +184,7 @@ class TestRetrievalPipelineIntegration:
         # Mock the retrieval service in app state
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
             # Make request to retrieval endpoint
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             # Assert successful response
             assert response.status_code == 200
@@ -247,7 +244,7 @@ class TestRetrievalPipelineIntegration:
         }
         
         with patch.object(app.state, 'retrieval_service', Mock()):
-            response = client.post("/api/v1/retrieval/search", json=invalid_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=invalid_requirements)
             
             # Should return 400 Bad Request
             assert response.status_code == 400
@@ -258,7 +255,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_pipeline_service_unavailable(self, client, sample_requirements):
         """Test error when retrieval service is not initialized."""
         # Don't mock the service - it won't exist
-        response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+        response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
         
         # Should return 503 Service Unavailable
         assert response.status_code == 503
@@ -269,7 +266,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_latency_target(self, client, sample_requirements, mock_retrieval_service):
         """Test that retrieval meets <1s latency target."""
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             assert response.status_code == 200
             data = response.json()
@@ -281,7 +278,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_top_k_limit(self, client, sample_requirements, mock_retrieval_service):
         """Test that retrieval returns at most top-3 patterns."""
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             assert response.status_code == 200
             data = response.json()
@@ -292,7 +289,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_confidence_scores(self, client, sample_requirements, mock_retrieval_service):
         """Test that all patterns have valid confidence scores."""
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             assert response.status_code == 200
             data = response.json()
@@ -307,7 +304,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_patterns_ranked_by_confidence(self, client, sample_requirements, mock_retrieval_service):
         """Test that patterns are ranked by descending confidence."""
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             assert response.status_code == 200
             data = response.json()
@@ -323,7 +320,7 @@ class TestRetrievalPipelineIntegration:
     def test_retrieval_includes_code_and_metadata(self, client, sample_requirements, mock_retrieval_service):
         """Test that patterns include code and comprehensive metadata."""
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=sample_requirements)
+            response = client.post(RETRIEVAL_ENDPOINT, json=sample_requirements)
             
             assert response.status_code == 200
             data = response.json()
@@ -407,7 +404,7 @@ class TestRetrievalPipelineIntegration:
         mock_retrieval_service.search = AsyncMock(side_effect=mock_card_search)
         
         with patch.object(app.state, 'retrieval_service', mock_retrieval_service):
-            response = client.post("/api/v1/retrieval/search", json=retrieval_request)
+            response = client.post(RETRIEVAL_ENDPOINT, json=retrieval_request)
             
             assert response.status_code == 200
             data = response.json()

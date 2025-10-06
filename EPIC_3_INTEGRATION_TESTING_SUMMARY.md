@@ -269,11 +269,11 @@ npm run test:e2e -- pattern-selection.spec.ts
 ## Files Created/Modified
 
 ### New Files
-1. `backend/tests/integration/test_retrieval_pipeline.py` (462 lines)
-2. `app/e2e/pattern-selection.spec.ts` (569 lines)
-3. `.github/workflows/integration-tests.yml` (119 lines)
-4. `EPIC_3_INTEGRATION_TESTING.md` (365 lines)
-5. `backend/tests/integration/README.md` (185 lines)
+1. `backend/tests/integration/test_retrieval_pipeline.py` (434 lines)
+2. `app/e2e/pattern-selection.spec.ts` (522 lines)
+3. `.github/workflows/integration-tests.yml` (127 lines)
+4. `EPIC_3_INTEGRATION_TESTING.md` (347 lines)
+5. `backend/tests/integration/README.md` (202 lines)
 6. `EPIC_3_INTEGRATION_TESTING_SUMMARY.md` (this file)
 
 ### Modified Files
