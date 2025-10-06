@@ -13,7 +13,12 @@ export interface RetrievalDetailsProps {
 
 export function RetrievalDetails({ pattern }: RetrievalDetailsProps) {
   const { scores, explanation } = pattern;
-  
+
+  // Return null if scores or explanation are missing
+  if (!scores || !explanation) {
+    return null;
+  }
+
   return (
     <Accordion type="single" collapsible className="w-full">
       <AccordionItem value="details">
@@ -28,32 +33,32 @@ export function RetrievalDetails({ pattern }: RetrievalDetailsProps) {
                 <div className="flex items-center gap-2">
                   <Badge variant="neutral" size="sm">BM25</Badge>
                   <span className="text-muted-foreground">
-                    Score: {scores.bm25_score.toFixed(3)} • Rank: #{scores.bm25_rank}
+                    Score: {scores.bm25_score?.toFixed(3) ?? 'N/A'} • Rank: #{scores.bm25_rank ?? 'N/A'}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  Weight: {(explanation.weight_breakdown.bm25_weight * 100).toFixed(0)}%
+                  Weight: {explanation.weight_breakdown?.bm25_weight ? (explanation.weight_breakdown.bm25_weight * 100).toFixed(0) : 'N/A'}%
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm">
                 <div className="flex items-center gap-2">
                   <Badge variant="info" size="sm">Semantic</Badge>
                   <span className="text-muted-foreground">
-                    Score: {scores.semantic_score.toFixed(3)} • Rank: #{scores.semantic_rank}
+                    Score: {scores.semantic_score?.toFixed(3) ?? 'N/A'} • Rank: #{scores.semantic_rank ?? 'N/A'}
                   </span>
                 </div>
                 <span className="text-xs text-muted-foreground">
-                  Weight: {(explanation.weight_breakdown.semantic_weight * 100).toFixed(0)}%
+                  Weight: {explanation.weight_breakdown?.semantic_weight ? (explanation.weight_breakdown.semantic_weight * 100).toFixed(0) : 'N/A'}%
                 </span>
               </div>
-              
+
               <div className="flex items-center justify-between text-sm font-medium pt-1 border-t">
                 <span>Weighted Score:</span>
-                <span>{scores.weighted_score.toFixed(3)}</span>
+                <span>{scores.weighted_score?.toFixed(3) ?? 'N/A'}</span>
               </div>
             </div>
-            
+
             {/* Match Reason */}
             {explanation.match_reason && (
               <div className="space-y-1">

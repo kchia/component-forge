@@ -112,7 +112,9 @@ export default function PatternsPage() {
           {/* Sidebar - Library Info */}
           <div className="lg:col-span-1">
             <div className="lg:sticky lg:top-8">
-              <PatternLibraryInfo />
+              <PatternLibraryInfo
+                totalPatterns={data?.retrieval_metadata.total_patterns_searched}
+              />
             </div>
           </div>
         </div>
