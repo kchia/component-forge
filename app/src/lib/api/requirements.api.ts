@@ -8,13 +8,18 @@ import {
   ComponentType,
   ComponentClassification,
 } from '@/types/requirement.types';
+import { DesignTokens } from '@/types/api.types';
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL
+  ? `${process.env.NEXT_PUBLIC_API_URL}/api/v1`
+  : 'http://localhost:8000/api/v1';
 
 /**
  * Requirement proposal request parameters.
  */
 export interface RequirementProposalRequest {
   file: File;
-  tokens?: Record<string, unknown>;
+  tokens?: Record<string, unknown> | DesignTokens;
   figmaData?: Record<string, unknown>;
 }
 
@@ -41,17 +46,126 @@ export interface RequirementProposalResponse {
 }
 
 /**
+ * Progress event data from SSE stream.
+ */
+export interface ProgressEvent {
+  stage: 'starting' | 'classifying' | 'analyzing' | 'finalizing' | 'complete';
+  progress: number;
+  message: string;
+}
+
+/**
+ * Propose requirements with real-time progress updates via SSE.
+ *
+ * @param request - File and optional tokens/Figma data
+ * @param onProgress - Callback for progress updates (0-100)
+ * @returns Promise with component type, proposals by category, metadata
+ */
+export async function proposeRequirementsWithProgress(
+  request: RequirementProposalRequest,
+  onProgress?: (progress: number, message: string) => void
+): Promise<RequirementProposalResponse> {
+  return new Promise(async (resolve, reject) => {
+    const formData = new FormData();
+    formData.append('file', request.file);
+
+    if (request.tokens) {
+      formData.append('tokens', JSON.stringify(request.tokens));
+    }
+    if (request.figmaData) {
+      formData.append('figma_data', JSON.stringify(request.figmaData));
+    }
+
+    // Use fetch for SSE streaming
+    const url = `${API_BASE_URL}/requirements/propose/stream`;
+
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      if (!reader) {
+        throw new Error('Response body is not readable');
+      }
+
+      let currentEvent = '';
+      let shouldContinue = true;
+
+      while (shouldContinue) {
+        const { done, value } = await reader.read();
+
+        if (done) {
+          break;
+        }
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop() || '';
+
+        for (const line of lines) {
+          if (line.startsWith('event: ')) {
+            currentEvent = line.substring(7).trim();
+            continue;
+          }
+
+          if (line.startsWith('data: ')) {
+            const data = line.substring(6);
+            try {
+              const parsed = JSON.parse(data);
+
+              // Handle error event
+              if (currentEvent === 'error' || parsed.error) {
+                await reader.cancel();
+                reject(new Error(parsed.error));
+                shouldContinue = false;
+                break;
+              }
+
+              // Handle progress event
+              if (currentEvent === 'progress' && parsed.progress !== undefined && onProgress) {
+                onProgress(parsed.progress, parsed.message || '');
+              }
+
+              // Handle complete event with full response
+              if (currentEvent === 'complete' && parsed.componentType) {
+                await reader.cancel();
+                resolve(parsed as RequirementProposalResponse);
+                shouldContinue = false;
+                break;
+              }
+            } catch (e) {
+              // Ignore parse errors for non-JSON data
+            }
+          }
+        }
+      }
+    } catch (error) {
+      reject(error);
+    }
+  });
+}
+
+/**
  * Propose functional requirements from screenshot/Figma frame.
- * 
+ *
  * Analyzes uploaded image to propose:
  * - Props (variant, size, disabled, etc.)
  * - Events (onClick, onChange, onHover, etc.)
  * - States (hover, focus, disabled, loading, etc.)
  * - Accessibility (aria-label, semantic HTML, keyboard nav, etc.)
- * 
+ *
  * Each proposal includes confidence score and rationale.
  * Target latency: p50 ≤15s
- * 
+ *
  * @param request - File and optional tokens/Figma data
  * @returns Promise with component type, proposals by category, metadata
  */
@@ -62,7 +176,7 @@ export async function proposeRequirements(
     // Create FormData for file upload
     const formData = new FormData();
     formData.append('file', request.file);
-    
+
     // Add optional data as JSON if provided
     if (request.tokens) {
       formData.append('tokens', JSON.stringify(request.tokens));
@@ -73,7 +187,7 @@ export async function proposeRequirements(
 
     // Use long timeout client for AI processing (up to 60s)
     const client = createLongTimeoutClient();
-    
+
     const response = await client.post<RequirementProposalResponse>(
       '/requirements/propose',
       formData,
@@ -105,7 +219,7 @@ export interface ExportRequirementsRequest {
   };
   sourceType?: string;
   sourceMetadata?: Record<string, unknown>;
-  tokens?: Record<string, unknown>;
+  tokens?: Record<string, unknown> | DesignTokens;
   proposalLatencyMs?: number;
   approvalDurationMs?: number;
   proposedAt?: string;

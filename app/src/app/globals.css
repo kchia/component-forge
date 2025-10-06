@@ -151,12 +151,11 @@
       transform: translateX(-100%);
     }
     100% {
-      transform: translateX(100%);
+      transform: translateX(300%);
     }
   }
-  
+
   .animate-indeterminate {
     animation: indeterminate 1.5s ease-in-out infinite;
-    width: 50%;
   }
 }

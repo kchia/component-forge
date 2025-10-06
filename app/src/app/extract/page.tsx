@@ -45,6 +45,7 @@ export default function TokenExtractionPage() {
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam === "figma" ? "figma" : "screenshot");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
@@ -168,24 +169,37 @@ export default function TokenExtractionPage() {
     const file = event.target.files?.[0];
     if (file) {
       setValidationWarnings([]);
-      
+
       // Validate image
       const validation = await validateImageUpload(file);
-      
+
       // Show errors
       if (!validation.valid) {
         showAlert('error', validation.errors.join(" "));
         return;
       }
-      
+
       // Show warnings (but allow upload)
       if (validation.warnings.length > 0) {
         setValidationWarnings(validation.warnings);
       }
-      
+
       setSelectedFile(file);
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   };
+
+  // Cleanup preview URL on unmount
+  useEffect(() => {
+    return () => {
+      if (imagePreview) {
+        URL.revokeObjectURL(imagePreview);
+      }
+    };
+  }, [imagePreview]);
 
   // Handle drag and drop
   const handleDrag = useCallback((e: React.DragEvent) => {
@@ -206,22 +220,26 @@ export default function TokenExtractionPage() {
     const file = e.dataTransfer.files?.[0];
     if (file) {
       setValidationWarnings([]);
-      
+
       // Validate image
       const validation = await validateImageUpload(file);
-      
+
       // Show errors
       if (!validation.valid) {
         showAlert('error', validation.errors.join(" "));
         return;
       }
-      
+
       // Show warnings (but allow upload)
       if (validation.warnings.length > 0) {
         setValidationWarnings(validation.warnings);
       }
-      
+
       setSelectedFile(file);
+
+      // Create preview URL
+      const previewUrl = URL.createObjectURL(file);
+      setImagePreview(previewUrl);
     }
   }, [showAlert]);
 
@@ -308,60 +326,90 @@ export default function TokenExtractionPage() {
               <CardTitle>Upload Screenshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Drag and Drop Zone */}
-              <div
-                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
-                  dragActive
-                    ? "border-primary bg-primary/5"
-                    : "border-muted-foreground/25"
-                }`}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-              >
-                <div className="flex flex-col items-center gap-4">
-                  <div className="rounded-full bg-muted p-4">
+              {/* Compact Upload Zone */}
+              {!selectedFile && !tokens && (
+                <div
+                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                    dragActive
+                      ? "border-primary bg-primary/5"
+                      : "border-muted-foreground/25"
+                  }`}
+                  onDragEnter={handleDrag}
+                  onDragLeave={handleDrag}
+                  onDragOver={handleDrag}
+                  onDrop={handleDrop}
+                >
+                  <div className="flex flex-col items-center gap-3">
                     <Upload className="h-8 w-8 text-muted-foreground" />
-                  </div>
-                  <div className="space-y-2">
-                    <p className="text-sm font-medium">
-                      Drag and drop your screenshot here, or
-                    </p>
-                    <label htmlFor="file-upload">
-                      <Button variant="outline" asChild>
-                        <span>Browse Files</span>
-                      </Button>
-                      <input
-                        id="file-upload"
-                        type="file"
-                        accept="image/png,image/jpeg,image/jpg"
-                        onChange={handleFileChange}
-                        className="hidden"
-                      />
-                    </label>
-                  </div>
-                  <p className="text-xs text-muted-foreground">
-                    PNG or JPEG, max 10MB
-                  </p>
-                </div>
-              </div>
-
-              {/* Selected File */}
-              {selectedFile && !tokens && (
-                <div className="flex items-center gap-4 p-4 border rounded-lg">
-                  <FileImage className="h-8 w-8 text-muted-foreground" />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">
-                      {selectedFile.name}
-                    </p>
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">
+                        Drag and drop your screenshot here, or
+                      </p>
+                      <label htmlFor="file-upload">
+                        <Button variant="outline" asChild>
+                          <span>Browse Files</span>
+                        </Button>
+                        <input
+                          id="file-upload"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                    </div>
                     <p className="text-xs text-muted-foreground">
-                      {(selectedFile.size / 1024).toFixed(0)} KB
+                      PNG or JPEG, max 10MB
                     </p>
                   </div>
-                  <Button onClick={handleUpload} disabled={isPending}>
-                    {isPending ? "Extracting..." : "Extract Tokens"}
-                  </Button>
+                </div>
+              )}
+
+              {/* Selected File with Preview */}
+              {selectedFile && !tokens && (
+                <div className="space-y-4">
+                  {/* Image Preview */}
+                  {imagePreview && (
+                    <div className="relative rounded-lg overflow-hidden border bg-gray-50">
+                      <img
+                        src={imagePreview}
+                        alt="Screenshot preview"
+                        className="w-full h-auto max-h-[500px] object-contain"
+                      />
+                    </div>
+                  )}
+
+                  {/* File Info and Actions */}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                      <FileImage className="h-5 w-5 text-muted-foreground" />
+                      <div>
+                        <p className="text-sm font-medium">
+                          {selectedFile.name}
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {(selectedFile.size / 1024).toFixed(0)} KB
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <label htmlFor="file-upload-change">
+                        <Button variant="outline" size="sm" asChild>
+                          <span>Change</span>
+                        </Button>
+                        <input
+                          id="file-upload-change"
+                          type="file"
+                          accept="image/png,image/jpeg,image/jpg"
+                          onChange={handleFileChange}
+                          className="hidden"
+                        />
+                      </label>
+                      <Button onClick={handleUpload} disabled={isPending} size="sm">
+                        {isPending ? "Extracting..." : "Extract Tokens"}
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -383,7 +431,7 @@ export default function TokenExtractionPage() {
               {/* Progress */}
               {isPending && (
                 <div className="space-y-2">
-                  <Progress value={66} className="h-2" />
+                  <Progress indeterminate className="h-2" />
                   <p className="text-sm text-muted-foreground text-center">
                     Analyzing screenshot with GPT-4V...
                   </p>
@@ -402,10 +450,23 @@ export default function TokenExtractionPage() {
               {tokens && metadata && hasTokens() && (
                 <div className="space-y-4">
                   <Alert variant="success">
-                    <p className="font-medium">Tokens Extracted Successfully!</p>
-                    <p className="text-sm">
-                      From: {metadata.filename || 'Unknown file'}
-                    </p>
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <p className="font-medium">✓ Tokens Extracted Successfully!</p>
+                        <p className="text-sm mt-1">
+                          From: {metadata.filename || 'Unknown file'}
+                        </p>
+                      </div>
+                      {imagePreview && (
+                        <div className="flex-shrink-0">
+                          <img
+                            src={imagePreview}
+                            alt="Uploaded screenshot"
+                            className="w-24 h-24 object-cover rounded border"
+                          />
+                        </div>
+                      )}
+                    </div>
                   </Alert>
                 </div>
               )}
@@ -557,7 +618,7 @@ export default function TokenExtractionPage() {
               {/* Progress */}
               {isFigmaPending && (
                 <div className="space-y-2">
-                  <Progress value={66} className="h-2" />
+                  <Progress indeterminate className="h-2" />
                   <p className="text-sm text-muted-foreground text-center">
                     Fetching file from Figma API...
                   </p>

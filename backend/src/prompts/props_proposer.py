@@ -252,15 +252,21 @@ def create_props_prompt(
     tokens_context = ""
     if tokens:
         tokens_context = "## Design Tokens Available\n\n"
-        
+
         if "colors" in tokens and tokens["colors"]:
-            colors = [c.get("name", c.get("value", "")) for c in tokens["colors"][:5]]
-            tokens_context += f"**Colors**: {', '.join(colors)}\n"
-        
+            colors_data = tokens["colors"]
+            # Ensure we're working with a list
+            if isinstance(colors_data, list):
+                colors = [c.get("name", c.get("value", "")) for c in colors_data[:5]]
+                tokens_context += f"**Colors**: {', '.join(colors)}\n"
+
         if "spacing" in tokens and tokens["spacing"]:
-            spacing = [s.get("name", s.get("value", "")) for s in tokens["spacing"][:5]]
-            tokens_context += f"**Spacing**: {', '.join(spacing)}\n"
-        
+            spacing_data = tokens["spacing"]
+            # Ensure we're working with a list
+            if isinstance(spacing_data, list):
+                spacing = [s.get("name", s.get("value", "")) for s in spacing_data[:5]]
+                tokens_context += f"**Spacing**: {', '.join(spacing)}\n"
+
         tokens_context += "Use these tokens to inform size and spacing prop detection.\n\n"
     
     return PROPS_PROPOSAL_PROMPT.format(

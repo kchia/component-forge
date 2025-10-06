@@ -144,7 +144,6 @@ export function ApprovalPanel({
           <CategorySection
             category={RequirementCategory.PROPS}
             count={proposals.props.length}
-            defaultOpen={true}
           >
             {proposals.props.map((requirement) => (
               <RequirementCard
@@ -163,7 +162,6 @@ export function ApprovalPanel({
           <CategorySection
             category={RequirementCategory.EVENTS}
             count={proposals.events.length}
-            defaultOpen={true}
           >
             {proposals.events.map((requirement) => (
               <RequirementCard
@@ -182,7 +180,6 @@ export function ApprovalPanel({
           <CategorySection
             category={RequirementCategory.STATES}
             count={proposals.states.length}
-            defaultOpen={true}
           >
             {proposals.states.map((requirement) => (
               <RequirementCard
@@ -201,7 +198,6 @@ export function ApprovalPanel({
           <CategorySection
             category={RequirementCategory.ACCESSIBILITY}
             count={proposals.accessibility.length}
-            defaultOpen={true}
           >
             {proposals.accessibility.map((requirement) => (
               <RequirementCard

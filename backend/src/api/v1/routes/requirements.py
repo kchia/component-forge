@@ -1,8 +1,8 @@
 """API routes for requirement proposal."""
 
 from fastapi import APIRouter, UploadFile, File, Form, HTTPException, status, Depends
-from fastapi.responses import JSONResponse
-from typing import Dict, Any, Optional, List
+from fastapi.responses import JSONResponse, StreamingResponse
+from typing import Dict, Any, Optional, List, AsyncGenerator
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
 import io
@@ -56,6 +56,132 @@ class RequirementProposalResponse(BaseModel):
     class Config:
         populate_by_name = True
         by_alias = True
+
+
+@router.post("/propose/stream")
+async def propose_requirements_stream(
+    file: UploadFile = File(..., description="Screenshot or Figma image (PNG, JPG, JPEG up to 10MB)"),
+    tokens: Optional[str] = Form(None, description="Optional design tokens as JSON string"),
+    figma_data: Optional[str] = Form(None, description="Optional Figma frame data as JSON string")
+) -> StreamingResponse:
+    """Propose requirements with real-time progress streaming via SSE.
+
+    This endpoint streams progress updates using Server-Sent Events (SSE) format:
+    - event: progress | data: {"stage": "...", "progress": 0-100, "message": "..."}
+    - event: complete | data: {complete requirement proposal response}
+    - event: error | data: {"error": "..."}
+
+    Args:
+        file: Uploaded image file
+        tokens: Optional design tokens JSON
+        figma_data: Optional Figma metadata JSON
+
+    Returns:
+        SSE stream with progress updates and final result
+    """
+    async def event_generator() -> AsyncGenerator[str, None]:
+        try:
+            # Read and validate image
+            contents = await file.read()
+
+            try:
+                image, metadata = validate_and_process_image(
+                    contents,
+                    mime_type=file.content_type
+                )
+            except ImageValidationError as e:
+                yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+                return
+
+            # Parse tokens and figma_data
+            tokens_dict = None
+            figma_data_dict = None
+
+            if tokens:
+                try:
+                    tokens_dict = json.loads(tokens)
+                except json.JSONDecodeError as e:
+                    yield f"event: error\ndata: {json.dumps({'error': f'Invalid tokens JSON: {str(e)}'})}\n\n"
+                    return
+
+            if figma_data:
+                try:
+                    figma_data_dict = json.loads(figma_data)
+                except json.JSONDecodeError as e:
+                    yield f"event: error\ndata: {json.dumps({'error': f'Invalid figma_data JSON: {str(e)}'})}\n\n"
+                    return
+
+            # Progress update helper
+            def send_progress(stage: str, progress: int, message: str):
+                return f"event: progress\ndata: {json.dumps({'stage': stage, 'progress': progress, 'message': message})}\n\n"
+
+            # Stage 1: Starting analysis
+            yield send_progress("starting", 0, "Starting component analysis...")
+
+            # Stage 2: Classification
+            yield send_progress("classifying", 20, "Classifying component type...")
+
+            import os as env_os
+            openai_api_key = env_os.getenv("OPENAI_API_KEY")
+            if not openai_api_key:
+                yield f"event: error\ndata: {json.dumps({'error': 'OPENAI_API_KEY not configured'})}\n\n"
+                return
+
+            orchestrator = RequirementOrchestrator(openai_api_key=openai_api_key)
+
+            # Stage 3: Analyzing requirements
+            yield send_progress("analyzing", 40, "Analyzing component requirements...")
+
+            # Run requirement proposal
+            state = await orchestrator.propose_requirements_parallel(
+                image=image,
+                tokens=tokens_dict,
+                figma_data=figma_data_dict
+            )
+
+            # Stage 4: Finalizing
+            yield send_progress("finalizing", 80, "Finalizing proposals...")
+
+            # Group proposals by category and convert Pydantic models to dicts
+            proposals_by_category = {
+                "props": [p.model_dump(by_alias=True) for p in state.props_proposals],
+                "events": [p.model_dump(by_alias=True) for p in state.events_proposals],
+                "states": [p.model_dump(by_alias=True) for p in state.states_proposals],
+                "accessibility": [p.model_dump(by_alias=True) for p in state.accessibility_proposals]
+            }
+
+            # Build response
+            response_data = {
+                "componentType": state.classification.component_type.value,
+                "componentConfidence": state.classification.confidence,
+                "proposals": proposals_by_category,
+                "metadata": {
+                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                    "source": "screenshot" if not figma_data_dict else "figma",
+                    "total_proposals": len(state.get_all_proposals()),
+                }
+            }
+
+            # Stage 5: Complete
+            yield send_progress("complete", 100, "Analysis complete!")
+            yield f"event: complete\ndata: {json.dumps(response_data)}\n\n"
+
+        except Exception as e:
+            logger.error(f"Streaming proposal failed: {e}", exc_info=True)
+            yield f"event: error\ndata: {json.dumps({'error': str(e)})}\n\n"
+
+        finally:
+            await file.close()
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no"
+        }
+    )
 
 
 @router.post("/propose")
@@ -255,12 +381,25 @@ class ExportRequirementsResponse(BaseModel):
     status: str
 
 
+class ExportPreviewRequest(BaseModel):
+    """Request model for export preview."""
+    component_type: ComponentType = Field(..., alias="componentType")
+    component_confidence: float = Field(..., alias="componentConfidence")
+    proposals: Dict[str, List[RequirementProposal]]
+
+    class Config:
+        populate_by_name = True
+
+
 class ExportPreviewResponse(BaseModel):
     """Response model for export preview."""
-    component_type: str
-    component_confidence: float
+    component_type: str = Field(..., alias="componentType")
+    component_confidence: float = Field(..., alias="componentConfidence")
     statistics: Dict[str, Any]
     preview: Dict[str, List[Dict[str, Any]]]
+
+    class Config:
+        populate_by_name = True
 
 
 @router.post("/export")
@@ -366,9 +505,7 @@ async def export_requirements(
 
 @router.post("/export/preview")
 async def preview_export(
-    component_type: ComponentType,
-    component_confidence: float,
-    proposals: Dict[str, List[RequirementProposal]],
+    request: ExportPreviewRequest,
     db: AsyncSession = Depends(get_async_session)
 ) -> ExportPreviewResponse:
     """Generate a preview of what will be exported.
@@ -377,9 +514,7 @@ async def preview_export(
     requirements before committing to the export.
 
     Args:
-        component_type: Detected component type
-        component_confidence: Classification confidence
-        proposals: All proposals grouped by category
+        request: Export preview request with component type, confidence, and proposals
         db: Database session (injected)
 
     Returns:
@@ -389,9 +524,9 @@ async def preview_export(
         exporter = RequirementExporter(db_session=db)
 
         preview = await exporter.get_export_preview(
-            proposals_by_category=proposals,
-            component_type=component_type,
-            component_confidence=component_confidence,
+            proposals_by_category=request.proposals,
+            component_type=request.component_type,
+            component_confidence=request.component_confidence,
         )
 
         return ExportPreviewResponse(**preview)

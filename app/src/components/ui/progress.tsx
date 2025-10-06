@@ -62,7 +62,7 @@ const Progress = React.forwardRef<
       )}
       style={
         indeterminate
-          ? undefined
+          ? { width: '40%' }
           : { transform: `translateX(-${100 - (value || 0)}%)` }
       }
     />

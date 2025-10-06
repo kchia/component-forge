@@ -53,7 +53,7 @@ export function CategorySection({
   category,
   count,
   children,
-  defaultOpen = true,
+  defaultOpen = false,
 }: CategorySectionProps) {
   const info = categoryInfo[category];
 

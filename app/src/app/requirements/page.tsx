@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
@@ -12,10 +12,10 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Card } from "@/components/ui/card";
 import { ArrowRight } from "lucide-react";
-import { 
-  exportRequirements, 
+import {
+  exportRequirements,
   getExportPreview,
-  type ExportPreviewResponse 
+  type ExportPreviewResponse
 } from "@/lib/api/requirements.api";
 
 export default function RequirementsPage() {
@@ -27,17 +27,9 @@ export default function RequirementsPage() {
   const exportId = useWorkflowStore((state) => state.exportId);
   const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
 
-  const { mutate: proposeRequirements, isPending, error } = useRequirementProposal();
+  const { mutate: proposeRequirements, isPending, error, progress, progressMessage } = useRequirementProposal();
+  const hasTriggeredProposal = useRef(false);
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[RequirementsPage] State:', {
-      hasFile: !!uploadedFile,
-      fileName: uploadedFile?.name,
-      componentType,
-      hasProposals: Object.values(proposals).some(arr => arr.length > 0),
-    });
-  }, [uploadedFile, componentType, proposals]);
   
   // Export preview state
   const [showExportPreview, setShowExportPreview] = useState(false);
@@ -48,14 +40,20 @@ export default function RequirementsPage() {
 
   // Auto-trigger requirement proposal on mount if file exists
   useEffect(() => {
-    if (uploadedFile && !componentType) {
+    if (uploadedFile && !componentType && !hasTriggeredProposal.current) {
+      hasTriggeredProposal.current = true;
       proposeRequirements({
         file: uploadedFile,
         tokens: tokens || undefined,
       });
     }
+    // Reset flag when component type is cleared
+    if (!uploadedFile || componentType) {
+      hasTriggeredProposal.current = false;
+    }
+    // Only trigger when file or componentType changes, not tokens
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [uploadedFile, componentType, tokens]);
+  }, [uploadedFile, componentType]);
 
   // Handle export preview
   const handleShowExportPreview = async () => {
@@ -135,10 +133,14 @@ export default function RequirementsPage() {
       {isPending && (
         <div className="space-y-4">
           <Alert variant="info">
-            <p className="font-medium">🤖 Analyzing your component...</p>
+            <p className="font-medium">🤖 {progressMessage || 'Analyzing your component...'}</p>
             <p className="text-sm mt-1">This typically takes 10-15 seconds.</p>
           </Alert>
-          <Progress value={66} className="h-2" />
+          {progress > 0 ? (
+            <Progress value={progress} className="h-2" />
+          ) : (
+            <Progress indeterminate className="h-2" />
+          )}
         </div>
       )}
 
