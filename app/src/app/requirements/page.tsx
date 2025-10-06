@@ -28,6 +28,16 @@ export default function RequirementsPage() {
   const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
 
   const { mutate: proposeRequirements, isPending, error } = useRequirementProposal();
+
+  // Debug logging
+  useEffect(() => {
+    console.log('[RequirementsPage] State:', {
+      hasFile: !!uploadedFile,
+      fileName: uploadedFile?.name,
+      componentType,
+      hasProposals: Object.values(proposals).some(arr => arr.length > 0),
+    });
+  }, [uploadedFile, componentType, proposals]);
   
   // Export preview state
   const [showExportPreview, setShowExportPreview] = useState(false);
@@ -150,6 +160,29 @@ export default function RequirementsPage() {
             }}
           >
             Try Again
+          </Button>
+        </Alert>
+      )}
+
+      {/* No Requirements Yet (shown when file exists but no analysis done) */}
+      {uploadedFile && !componentType && !isPending && !error && (
+        <Alert variant="info">
+          <p className="font-medium">Ready to analyze your component</p>
+          <p className="text-sm mt-1">
+            Click the button below to generate AI-powered requirements from your screenshot.
+          </p>
+          <Button
+            className="mt-4"
+            onClick={() => {
+              if (uploadedFile) {
+                proposeRequirements({
+                  file: uploadedFile,
+                  tokens: tokens || undefined,
+                });
+              }
+            }}
+          >
+            Analyze Screenshot
           </Button>
         </Alert>
       )}

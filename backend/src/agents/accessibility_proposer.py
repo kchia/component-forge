@@ -81,14 +81,14 @@ class AccessibilityProposer(BaseRequirementProposer):
         
         try:
             # Prepare image
-            image_data = prepare_image_for_vision_api(image)
-            
+            image_url = prepare_image_for_vision_api(image)
+
             # Build accessibility analysis prompt using the prompts module
             prompt = create_accessibility_prompt(
                 classification.component_type.value,
                 figma_data=None,  # Will be passed from orchestrator in future
             )
-            
+
             # Call GPT-4V for accessibility analysis
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -100,7 +100,7 @@ class AccessibilityProposer(BaseRequirementProposer):
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/png;base64,{image_data}"
+                                    "url": image_url
                                 }
                             }
                         ]

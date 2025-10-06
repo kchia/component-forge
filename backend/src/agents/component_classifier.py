@@ -85,11 +85,11 @@ class ComponentClassifier:
             )
             
             # Prepare image for vision API
-            image_data = prepare_image_for_vision_api(image)
-            
+            image_url = prepare_image_for_vision_api(image)
+
             # Build prompt
             prompt = self._build_classification_prompt(figma_data)
-            
+
             # Call GPT-4V with structured output
             response = await self.client.chat.completions.create(
                 model=self.model,
@@ -101,7 +101,7 @@ class ComponentClassifier:
                             {
                                 "type": "image_url",
                                 "image_url": {
-                                    "url": f"data:image/png;base64,{image_data}"
+                                    "url": image_url
                                 }
                             }
                         ]

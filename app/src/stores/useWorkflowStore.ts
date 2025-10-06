@@ -4,8 +4,16 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { WorkflowStep } from '@/types';
 import type { RequirementProposal, ComponentType } from '@/types/requirement.types';
+
+interface FileInfo {
+  name: string;
+  size: number;
+  type: string;
+  lastModified: number;
+}
 
 interface WorkflowStore {
   // State
@@ -15,6 +23,7 @@ interface WorkflowStore {
 
   // Screenshot file state
   uploadedFile: File | null;
+  fileInfo: FileInfo | null;
 
   // Requirements state
   componentType?: ComponentType;

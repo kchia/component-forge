@@ -88,8 +88,16 @@ export function OnboardingModal() {
     setOpen(false);
   };
 
+  const handleOpenChange = (isOpen: boolean) => {
+    setOpen(isOpen);
+    // When dialog is closed, mark onboarding as seen
+    if (!isOpen) {
+      skipOnboarding();
+    }
+  };
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
           <DialogTitle className="text-2xl">
@@ -132,7 +140,7 @@ export function OnboardingModal() {
                 </div>
 
                 {/* NEW: Best For Badge */}
-                <Badge variant="secondary" className="mt-3 text-xs">
+                <Badge variant="neutral" className="mt-3 text-xs">
                   {workflow.bestFor}
                 </Badge>
               </Card>

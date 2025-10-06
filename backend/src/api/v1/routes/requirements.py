@@ -44,14 +44,18 @@ class RequirementProposalRequest(BaseModel):
 
 class RequirementProposalResponse(BaseModel):
     """Response model for requirement proposal."""
-    component_type: ComponentType
-    component_confidence: float
+    component_type: ComponentType = Field(..., alias="componentType")
+    component_confidence: float = Field(..., alias="componentConfidence")
     proposals: Dict[str, List[RequirementProposal]] = Field(
         description="Proposals grouped by category (props, events, states, accessibility)"
     )
     metadata: Dict[str, Any] = Field(
         description="Metadata including latency, timestamp, source"
     )
+
+    class Config:
+        populate_by_name = True
+        by_alias = True
 
 
 @router.post("/propose")
@@ -98,10 +102,9 @@ async def propose_requirements(
         contents = await file.read()
         
         try:
-            image = validate_and_process_image(
+            image, metadata = validate_and_process_image(
                 contents,
-                max_size_mb=10,
-                allowed_formats=["PNG", "JPEG", "JPG"]
+                mime_type=file.content_type
             )
         except ImageValidationError as e:
             logger.error(f"Image validation failed: {e}")
@@ -170,19 +173,19 @@ async def propose_requirements(
                 "props_count": len(state.props_proposals),
                 "events_count": len(state.events_proposals),
                 "states_count": len(state.states_proposals),
-                "a11y_count": len(state.a11y_proposals),
+                "a11y_count": len(state.accessibility_proposals),
                 "latency_seconds": round(latency, 2)
             }}
         )
-        
+
         # Group proposals by category
         proposals_by_category = {
             "props": state.props_proposals,
             "events": state.events_proposals,
             "states": state.states_proposals,
-            "accessibility": state.a11y_proposals
+            "accessibility": state.accessibility_proposals
         }
-        
+
         # Build response
         response = RequirementProposalResponse(
             component_type=state.classification.component_type,
@@ -196,7 +199,7 @@ async def propose_requirements(
                     len(state.props_proposals) +
                     len(state.events_proposals) +
                     len(state.states_proposals) +
-                    len(state.a11y_proposals)
+                    len(state.accessibility_proposals)
                 ),
                 "target_latency_p50": 15.0,
                 "meets_latency_target": latency <= 15.0
