@@ -88,7 +88,19 @@ async def lifespan(app: FastAPI):
         # Try to initialize semantic retriever (graceful fallback)
         semantic_retriever = None
         try:
-            semantic_retriever = SemanticRetriever(patterns)
+            from qdrant_client import QdrantClient
+            from openai import AsyncOpenAI
+
+            # Initialize clients
+            qdrant_client = QdrantClient(
+                url=os.getenv("QDRANT_URL", "http://localhost:6333")
+            )
+            openai_client = AsyncOpenAI(api_key=api_key)
+
+            semantic_retriever = SemanticRetriever(
+                qdrant_client=qdrant_client,
+                openai_client=openai_client
+            )
             logger.info("Semantic retriever initialized with Qdrant")
         except Exception as e:
             logger.warning(f"Semantic retriever unavailable: {e}. Using BM25 only.")

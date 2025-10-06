@@ -4,7 +4,6 @@
  */
 
 import { create } from 'zustand';
-import { persist, createJSONStorage } from 'zustand/middleware';
 import { WorkflowStep } from '@/types';
 import type { RequirementProposal, ComponentType } from '@/types/requirement.types';
 
@@ -79,28 +78,26 @@ function calculateProgress(completedSteps: WorkflowStep[]): number {
   return Math.round((completed / totalSteps) * 100);
 }
 
-export const useWorkflowStore = create<WorkflowStore>()(
-  persist(
-    (set) => ({
-      // Initial state
-      currentStep: WorkflowStep.DASHBOARD,
-      completedSteps: [],
-      progress: 0,
-      uploadedFile: null,
-      fileInfo: null,
-      proposals: {
-        props: [],
-        events: [],
-        states: [],
-        accessibility: [],
-      },
-  
+export const useWorkflowStore = create<WorkflowStore>()((set) => ({
+  // Initial state
+  currentStep: WorkflowStep.DASHBOARD,
+  completedSteps: [],
+  progress: 0,
+  uploadedFile: null,
+  fileInfo: null,
+  proposals: {
+    props: [],
+    events: [],
+    states: [],
+    accessibility: [],
+  },
+
   // Actions
   setStep: (step) =>
     set({
       currentStep: step,
     }),
-  
+
   setUploadedFile: (file) =>
     set({
       uploadedFile: file,
@@ -111,31 +108,31 @@ export const useWorkflowStore = create<WorkflowStore>()(
         lastModified: file.lastModified,
       } : null,
     }),
-  
+
   completeStep: (step) =>
     set((state) => {
       const completedSteps = state.completedSteps.includes(step)
         ? state.completedSteps
         : [...state.completedSteps, step];
-      
+
       return {
         completedSteps,
         progress: calculateProgress(completedSteps),
       };
     }),
-  
+
   updateProgress: (progress) =>
     set({
       progress: Math.min(Math.max(progress, 0), 100), // Clamp 0-100
     }),
-  
+
   setRequirements: (componentType, componentConfidence, proposals) =>
     set({
       componentType,
       componentConfidence,
       proposals,
     }),
-  
+
   updateProposal: (id, updates) =>
     set((state) => {
       // Find and update the proposal in the correct category
@@ -266,22 +263,4 @@ export const useWorkflowStore = create<WorkflowStore>()(
 
     return allSteps.filter(step => state.canAccessStep(step));
   },
-    }),
-    {
-      name: 'workflow-storage',
-      storage: createJSONStorage(() => localStorage),
-      // Exclude uploadedFile from persistence as File objects can't be serialized
-      partialize: (state) => ({
-        currentStep: state.currentStep,
-        completedSteps: state.completedSteps,
-        progress: state.progress,
-        fileInfo: state.fileInfo,
-        componentType: state.componentType,
-        componentConfidence: state.componentConfidence,
-        proposals: state.proposals,
-        exportId: state.exportId,
-        exportedAt: state.exportedAt,
-      }),
-    }
-  )
-);
+}));

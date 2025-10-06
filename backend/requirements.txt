@@ -51,6 +51,7 @@ tenacity>=8.2.0
 # Database
 sqlalchemy
 psycopg2-binary
+greenlet
 
 # Server-Sent Events
 sse-starlette

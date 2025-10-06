@@ -8,15 +8,12 @@ import { Progress } from "@/components/ui/progress";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useOnboardingStore } from "@/stores/useOnboardingStore";
 import { WorkflowStep } from "@/types";
-import { Home, Upload, FileCheck, Layers, Eye, Menu, X, HelpCircle } from "lucide-react";
+import { Home, Upload, Menu, X, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
 const allNavItems = [
   { href: "/", label: "Dashboard", icon: Home, step: WorkflowStep.DASHBOARD },
   { href: "/extract", label: "Extract", icon: Upload, step: WorkflowStep.EXTRACT },
-  { href: "/requirements", label: "Requirements", icon: FileCheck, step: WorkflowStep.REQUIREMENTS },
-  { href: "/patterns", label: "Patterns", icon: Layers, step: WorkflowStep.PATTERNS },
-  { href: "/preview", label: "Preview", icon: Eye, step: WorkflowStep.PREVIEW },
 ];
 
 export function Navigation() {

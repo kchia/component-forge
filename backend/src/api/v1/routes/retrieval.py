@@ -11,7 +11,7 @@ from langsmith import traceable
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-from ....core.database import get_async_session as get_db
+from ....core.database import get_async_session
 from ....services.retrieval_service import get_library_quality_metrics
 
 logger = logging.getLogger(__name__)
@@ -231,7 +231,7 @@ async def health_check(request: Request):
 @router.get("/library/stats", response_model=LibraryStatsResponse)
 async def get_library_statistics(
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_async_session)
 ) -> LibraryStatsResponse:
     """Get library-level statistics and quality metrics.
 
