@@ -23,7 +23,8 @@ export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const progress = useWorkflowStore((state) => state.progress);
-  const availableSteps = useWorkflowStore((state) => state.getAvailableSteps());
+  const getAvailableSteps = useWorkflowStore((state) => state.getAvailableSteps);
+  const availableSteps = getAvailableSteps();
   const { resetOnboarding } = useOnboardingStore();
 
   // Filter navigation items to only show available steps

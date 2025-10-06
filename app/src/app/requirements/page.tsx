@@ -3,7 +3,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { WorkflowStep } from "@/types";
@@ -27,27 +26,35 @@ export default function RequirementsPage() {
   const uploadedFile = useWorkflowStore((state) => state.uploadedFile);
   const tokens = useTokenStore((state) => state.tokens);
   const componentType = useWorkflowStore((state) => state.componentType);
-  const componentConfidence = useWorkflowStore((state) => state.componentConfidence);
+  const componentConfidence = useWorkflowStore(
+    (state) => state.componentConfidence
+  );
   const proposals = useWorkflowStore((state) => state.proposals);
   const exportId = useWorkflowStore((state) => state.exportId);
   const setExportInfo = useWorkflowStore((state) => state.setExportInfo);
   const completeStep = useWorkflowStore((state) => state.completeStep);
   const completedSteps = useWorkflowStore((state) => state.completedSteps);
 
-  const { mutate: proposeRequirements, isPending, error, progress, progressMessage } = useRequirementProposal();
+  const {
+    mutate: proposeRequirements,
+    isPending,
+    error,
+    progress,
+    progressMessage
+  } = useRequirementProposal();
   const hasTriggeredProposal = useRef(false);
 
   // Route guard: redirect if extract not completed
   useEffect(() => {
     if (!completedSteps.includes(WorkflowStep.EXTRACT)) {
-      router.push('/extract');
+      router.push("/extract");
     }
   }, [completedSteps, router]);
 
-  
   // Export preview state
   const [showExportPreview, setShowExportPreview] = useState(false);
-  const [exportPreview, setExportPreview] = useState<ExportPreviewResponse | null>(null);
+  const [exportPreview, setExportPreview] =
+    useState<ExportPreviewResponse | null>(null);
   const [isLoadingPreview, setIsLoadingPreview] = useState(false);
   const [isExporting, setIsExporting] = useState(false);
   const [exportError, setExportError] = useState<string | null>(null);
@@ -58,7 +65,7 @@ export default function RequirementsPage() {
       hasTriggeredProposal.current = true;
       proposeRequirements({
         file: uploadedFile,
-        tokens: tokens || undefined,
+        tokens: tokens || undefined
       });
     }
     // Reset flag when component type is cleared
@@ -72,10 +79,10 @@ export default function RequirementsPage() {
   // Handle export preview
   const handleShowExportPreview = async () => {
     if (!componentType || componentConfidence === undefined) return;
-    
+
     setIsLoadingPreview(true);
     setExportError(null);
-    
+
     try {
       const preview = await getExportPreview(
         componentType,
@@ -85,7 +92,9 @@ export default function RequirementsPage() {
       setExportPreview(preview);
       setShowExportPreview(true);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Failed to generate export preview');
+      setExportError(
+        err instanceof Error ? err.message : "Failed to generate export preview"
+      );
     } finally {
       setIsLoadingPreview(false);
     }
@@ -103,21 +112,23 @@ export default function RequirementsPage() {
         componentType,
         componentConfidence,
         proposals,
-        tokens: tokens || undefined,
+        tokens: tokens || undefined
       });
 
       // Store export info in workflow store
       setExportInfo(result.exportId, result.summary.exportedAt);
-      
+
       // Mark requirements step as completed
       completeStep(WorkflowStep.REQUIREMENTS);
-      
+
       setShowExportPreview(false);
-      
+
       // Navigate to patterns page
       router.push(`/patterns?exportId=${result.exportId}`);
     } catch (err) {
-      setExportError(err instanceof Error ? err.message : 'Failed to export requirements');
+      setExportError(
+        err instanceof Error ? err.message : "Failed to export requirements"
+      );
     } finally {
       setIsExporting(false);
     }
@@ -129,7 +140,9 @@ export default function RequirementsPage() {
       <main className="container mx-auto p-8">
         <Alert variant="warning">
           <p className="font-medium mb-2">No screenshot found</p>
-          <p className="text-sm mb-4">Please upload a screenshot first to generate requirements.</p>
+          <p className="text-sm mb-4">
+            Please upload a screenshot first to generate requirements.
+          </p>
           <Button asChild variant="outline" className="mt-2">
             <Link href="/extract">← Back to Extraction</Link>
           </Button>
@@ -157,7 +170,9 @@ export default function RequirementsPage() {
       {isPending && (
         <div className="space-y-4">
           <Alert variant="info">
-            <p className="font-medium">🤖 {progressMessage || 'Analyzing your component...'}</p>
+            <p className="font-medium">
+              🤖 {progressMessage || "Analyzing your component..."}
+            </p>
             <p className="text-sm mt-1">This typically takes 10-15 seconds.</p>
           </Alert>
           {progress > 0 ? (
@@ -173,14 +188,14 @@ export default function RequirementsPage() {
         <Alert variant="error">
           <p className="font-medium">Analysis Failed</p>
           <p className="text-sm mt-1">{error.message}</p>
-          <Button 
-            variant="outline" 
+          <Button
+            variant="outline"
             className="mt-4"
             onClick={() => {
               if (uploadedFile) {
                 proposeRequirements({
                   file: uploadedFile,
-                  tokens: tokens || undefined,
+                  tokens: tokens || undefined
                 });
               }
             }}
@@ -195,7 +210,8 @@ export default function RequirementsPage() {
         <Alert variant="info">
           <p className="font-medium">Ready to analyze your component</p>
           <p className="text-sm mt-1">
-            Click the button below to generate AI-powered requirements from your screenshot.
+            Click the button below to generate AI-powered requirements from your
+            screenshot.
           </p>
           <Button
             className="mt-4"
@@ -203,7 +219,7 @@ export default function RequirementsPage() {
               if (uploadedFile) {
                 proposeRequirements({
                   file: uploadedFile,
-                  tokens: tokens || undefined,
+                  tokens: tokens || undefined
                 });
               }
             }}
@@ -245,12 +261,14 @@ export default function RequirementsPage() {
             </Button>
 
             {!exportId ? (
-              <Button 
-                onClick={handleShowExportPreview} 
+              <Button
+                onClick={handleShowExportPreview}
                 size="lg"
                 disabled={isLoadingPreview}
               >
-                {isLoadingPreview ? 'Loading Preview...' : 'Export Requirements'}
+                {isLoadingPreview
+                  ? "Loading Preview..."
+                  : "Export Requirements"}
               </Button>
             ) : (
               <Button asChild size="lg">
