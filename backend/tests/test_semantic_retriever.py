@@ -118,6 +118,9 @@ class TestSemanticRetriever:
         # Mock Qdrant search
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results)
         
+        # Mock collection info check
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
+        
         # Perform search
         results = await retriever.search("Button component", top_k=5)
         
@@ -151,6 +154,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results)
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Search with filters
         filters = {"type": "button"}
@@ -196,6 +200,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results[:1])
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Search with top_k=1
         results = await retriever.search("test", top_k=1)
@@ -215,6 +220,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=[])
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Search
         results = await retriever.search("nonexistent", top_k=5)
@@ -230,6 +236,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results)
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Batch search
         queries = ["Button component", "Card component"]
@@ -255,6 +262,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results)
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Search with explanation
         results = await retriever.search_with_explanation("Button", top_k=5)
@@ -340,6 +348,7 @@ class TestSemanticRetriever:
         mock_response.data = [Mock(embedding=sample_embedding)]
         retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
         retriever.qdrant.search = Mock(return_value=sample_qdrant_results)
+        retriever.get_collection_info = Mock(return_value={"name": "test_patterns"})
         
         # Search
         results = await retriever.search("test", top_k=5)
@@ -347,3 +356,33 @@ class TestSemanticRetriever:
         # Scores should be descending
         scores = [score for _, score in results]
         assert scores == sorted(scores, reverse=True)
+    
+    @pytest.mark.asyncio
+    async def test_search_collection_not_found(self, retriever, sample_embedding):
+        """Test search raises error when collection doesn't exist."""
+        # Mock OpenAI embedding
+        mock_response = Mock()
+        mock_response.data = [Mock(embedding=sample_embedding)]
+        retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
+        
+        # Mock collection info to return empty dict (collection not found)
+        retriever.get_collection_info = Mock(return_value={})
+        
+        # Should raise ValueError
+        with pytest.raises(ValueError, match="collection.*not found"):
+            await retriever.search("test", top_k=5)
+    
+    @pytest.mark.asyncio
+    async def test_search_collection_check_failure(self, retriever, sample_embedding):
+        """Test search handles collection check failures."""
+        # Mock OpenAI embedding
+        mock_response = Mock()
+        mock_response.data = [Mock(embedding=sample_embedding)]
+        retriever.openai.embeddings.create = AsyncMock(return_value=mock_response)
+        
+        # Mock collection info to raise exception
+        retriever.get_collection_info = Mock(side_effect=Exception("Qdrant connection failed"))
+        
+        # Should raise ValueError with helpful message
+        with pytest.raises(ValueError, match="Vector database unavailable"):
+            await retriever.search("test", top_k=5)

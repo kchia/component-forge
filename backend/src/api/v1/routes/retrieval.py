@@ -4,7 +4,7 @@ Implements the retrieval search API (B7) for Epic 3.
 POST /api/v1/retrieval/search endpoint.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pydantic import BaseModel, Field
 from typing import List, Dict, Optional
 from langsmith import traceable
@@ -78,29 +78,34 @@ class RetrievalResponse(BaseModel):
     retrieval_metadata: RetrievalMetadata
 
 
-# Dependency injection placeholder
-# In production, this would be initialized with actual Qdrant/OpenAI clients
-_retrieval_service = None
-
-
-def get_retrieval_service():
-    """Dependency to get retrieval service instance.
+def get_retrieval_service(request: Request):
+    """Dependency to get retrieval service from FastAPI app state.
     
-    This is a placeholder. In production, this would be initialized
-    in the FastAPI app startup with actual dependencies.
+    Args:
+        request: FastAPI request object containing app state
+    
+    Returns:
+        RetrievalService instance from app state
+    
+    Raises:
+        HTTPException: If retrieval service is not initialized in app state
+    
+    Note:
+        The retrieval service should be initialized in the FastAPI app startup event:
+        
+        ```python
+        @app.on_event("startup")
+        async def startup_event():
+            # Initialize service with actual Qdrant/OpenAI clients
+            app.state.retrieval_service = RetrievalService(patterns, ...)
+        ```
     """
-    if _retrieval_service is None:
+    if not hasattr(request.app.state, "retrieval_service"):
         raise HTTPException(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            detail="Retrieval service not initialized"
+            detail="Retrieval service not initialized. Ensure app startup completed."
         )
-    return _retrieval_service
-
-
-def set_retrieval_service(service):
-    """Set the retrieval service instance (for initialization)."""
-    global _retrieval_service
-    _retrieval_service = service
+    return request.app.state.retrieval_service
 
 
 @router.post("/search", response_model=RetrievalResponse)
@@ -178,20 +183,29 @@ async def search_patterns(
 
 
 @router.get("/health")
-async def health_check():
+async def health_check(request: Request):
     """Health check endpoint for retrieval service.
     
     Returns:
         Status dict indicating service health
     """
     try:
-        service = get_retrieval_service()
+        if hasattr(request.app.state, "retrieval_service"):
+            service = request.app.state.retrieval_service
+            return {
+                "status": "healthy",
+                "total_patterns": len(service.patterns) if service else 0
+            }
+        else:
+            return {
+                "status": "unavailable",
+                "total_patterns": 0,
+                "message": "Service not initialized"
+            }
+    except Exception as e:
+        logger.error(f"Health check failed: {e}")
         return {
-            "status": "healthy",
-            "total_patterns": len(service.patterns) if service else 0
-        }
-    except Exception:
-        return {
-            "status": "unavailable",
-            "total_patterns": 0
+            "status": "error",
+            "total_patterns": 0,
+            "error": str(e)
         }

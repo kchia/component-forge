@@ -10,6 +10,7 @@ from typing import List, Dict, Tuple, Optional
 from openai import AsyncOpenAI
 from qdrant_client import QdrantClient
 from qdrant_client.models import Distance, PointStruct, Filter, FieldCondition, MatchValue
+from tenacity import retry, stop_after_attempt, wait_exponential
 import asyncio
 import logging
 
@@ -43,8 +44,15 @@ class SemanticRetriever:
         self.collection_name = collection_name
         self.embedding_model = embedding_model
     
+    @retry(
+        stop=stop_after_attempt(3),
+        wait=wait_exponential(multiplier=1, min=2, max=10),
+        reraise=True
+    )
     async def _create_embedding(self, text: str) -> List[float]:
         """Generate embedding for query text using OpenAI.
+        
+        Implements retry logic with exponential backoff for transient failures.
         
         Args:
             text: Input text to embed (natural language query)
@@ -53,7 +61,7 @@ class SemanticRetriever:
             List of 1536 floats (embedding vector)
         
         Raises:
-            Exception: If OpenAI API call fails
+            Exception: If OpenAI API call fails after retries
         """
         try:
             response = await self.openai.embeddings.create(
@@ -62,7 +70,7 @@ class SemanticRetriever:
             )
             return response.data[0].embedding
         except Exception as e:
-            logger.error(f"Failed to create embedding: {e}")
+            logger.error(f"Failed to create embedding for '{text[:50]}...': {e}")
             raise
     
     async def search(
@@ -82,6 +90,9 @@ class SemanticRetriever:
             List of (pattern, score) tuples, sorted by similarity (descending)
             Similarity scores are in range [0, 1] due to cosine similarity
         
+        Raises:
+            ValueError: If Qdrant collection doesn't exist
+        
         Example:
             >>> retriever = SemanticRetriever(qdrant, openai)
             >>> query = "A Button component with variant and size props"
@@ -89,6 +100,21 @@ class SemanticRetriever:
             >>> [(r[0]["name"], r[1]) for r in results]
             [('Button', 0.89), ('IconButton', 0.72), ('Link', 0.45)]
         """
+        # Verify collection exists before searching
+        try:
+            collection_info = self.get_collection_info()
+            if not collection_info:
+                raise ValueError(
+                    f"Qdrant collection '{self.collection_name}' not found. "
+                    "Run seed_patterns.py to initialize the vector database."
+                )
+        except Exception as e:
+            logger.error(f"Qdrant collection check failed: {e}")
+            raise ValueError(
+                f"Vector database unavailable. Ensure Qdrant is running and "
+                f"patterns are seeded. Error: {str(e)}"
+            )
+        
         # Generate query embedding
         logger.info(f"Generating embedding for query: {query[:100]}...")
         query_vector = await self._create_embedding(query)
