@@ -78,6 +78,19 @@ class RetrievalResponse(BaseModel):
     retrieval_metadata: RetrievalMetadata
 
 
+class LibraryStatsResponse(BaseModel):
+    """Library-level statistics response."""
+
+    total_patterns: int = Field(..., description="Total number of patterns in library")
+    component_types: List[str] = Field(..., description="List of unique component names")
+    categories: List[str] = Field(default_factory=list, description="Pattern categories")
+    frameworks: List[str] = Field(default_factory=list, description="Supported frameworks")
+    libraries: List[str] = Field(default_factory=list, description="UI libraries used")
+    total_variants: int = Field(default=0, description="Total variant count across all patterns")
+    total_props: int = Field(default=0, description="Total prop count across all patterns")
+    metrics: Optional[Dict] = Field(None, description="Quality metrics (MRR, Hit@3) from latest evaluation")
+
+
 def get_retrieval_service(request: Request):
     """Dependency to get retrieval service from FastAPI app state.
     
