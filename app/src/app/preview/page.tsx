@@ -1,11 +1,16 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
+import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
+import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { WorkflowStep } from "@/types";
 import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
 
 // Placeholder code (will be replaced with Epic 4 backend)
@@ -67,8 +72,40 @@ export const Secondary: Story = {
 }`;
 
 export default function PreviewPage() {
+  const router = useRouter();
+  const completedSteps = useWorkflowStore((state) => state.completedSteps);
+  const completeStep = useWorkflowStore((state) => state.completeStep);
+
+  // Route guard: redirect if patterns not completed
+  useEffect(() => {
+    if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
+      router.push('/patterns');
+    }
+  }, [completedSteps, router]);
+
+  // Handle download action
+  const handleDownload = () => {
+    // Mark preview step as completed when user downloads
+    completeStep(WorkflowStep.PREVIEW);
+    
+    // In a real implementation, this would download the generated code
+    console.log('Downloading component files...');
+  };
+
+  // Handle save action
+  const handleSave = () => {
+    // Mark preview step as completed when user saves
+    completeStep(WorkflowStep.PREVIEW);
+    
+    // In a real implementation, this would save to the project
+    console.log('Saving component to project...');
+  };
+
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
+      {/* Workflow Breadcrumb */}
+      <WorkflowBreadcrumb />
+
       {/* Page Header */}
       <div className="space-y-2">
         <h1 className="text-3xl font-bold tracking-tight">
@@ -205,11 +242,11 @@ export default function PreviewPage() {
           </Link>
         </Button>
         <div className="flex gap-4">
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleDownload}>
             <Download className="mr-2 h-4 w-4" />
             Download ZIP
           </Button>
-          <Button>
+          <Button onClick={handleSave}>
             Save to Project
           </Button>
         </div>

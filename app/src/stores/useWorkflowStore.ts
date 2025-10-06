@@ -66,6 +66,10 @@ interface WorkflowStore {
     accessibility: RequirementProposal[];
   };
   resetWorkflow: () => void;
+  
+  // Navigation helpers
+  canAccessStep: (step: WorkflowStep) => boolean;
+  getAvailableSteps: () => WorkflowStep[];
 }
 
 // Calculate progress percentage based on completed steps
@@ -75,18 +79,21 @@ function calculateProgress(completedSteps: WorkflowStep[]): number {
   return Math.round((completed / totalSteps) * 100);
 }
 
-export const useWorkflowStore = create<WorkflowStore>((set) => ({
-  // Initial state
-  currentStep: WorkflowStep.DASHBOARD,
-  completedSteps: [],
-  progress: 0,
-  uploadedFile: null,
-  proposals: {
-    props: [],
-    events: [],
-    states: [],
-    accessibility: [],
-  },
+export const useWorkflowStore = create<WorkflowStore>()(
+  persist(
+    (set) => ({
+      // Initial state
+      currentStep: WorkflowStep.DASHBOARD,
+      completedSteps: [],
+      progress: 0,
+      uploadedFile: null,
+      fileInfo: null,
+      proposals: {
+        props: [],
+        events: [],
+        states: [],
+        accessibility: [],
+      },
   
   // Actions
   setStep: (step) =>
@@ -97,6 +104,12 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
   setUploadedFile: (file) =>
     set({
       uploadedFile: file,
+      fileInfo: file ? {
+        name: file.name,
+        size: file.size,
+        type: file.type,
+        lastModified: file.lastModified,
+      } : null,
     }),
   
   completeStep: (step) =>
@@ -219,4 +232,56 @@ export const useWorkflowStore = create<WorkflowStore>((set) => ({
       exportId: undefined,
       exportedAt: undefined,
     }),
-}));
+
+  // Check if a step is accessible based on completed steps
+  canAccessStep: (step) => {
+    const state = useWorkflowStore.getState();
+
+    // Dashboard and Extract always accessible
+    if (step === WorkflowStep.DASHBOARD || step === WorkflowStep.EXTRACT) {
+      return true;
+    }
+
+    // Check prerequisite completion
+    const prerequisites: Record<WorkflowStep, WorkflowStep> = {
+      [WorkflowStep.REQUIREMENTS]: WorkflowStep.EXTRACT,
+      [WorkflowStep.PATTERNS]: WorkflowStep.REQUIREMENTS,
+      [WorkflowStep.PREVIEW]: WorkflowStep.PATTERNS,
+    };
+
+    const prereq = prerequisites[step];
+    return prereq ? state.completedSteps.includes(prereq) : true;
+  },
+
+  // Get array of steps user can currently access
+  getAvailableSteps: () => {
+    const state = useWorkflowStore.getState();
+    const allSteps = [
+      WorkflowStep.DASHBOARD,
+      WorkflowStep.EXTRACT,
+      WorkflowStep.REQUIREMENTS,
+      WorkflowStep.PATTERNS,
+      WorkflowStep.PREVIEW,
+    ];
+
+    return allSteps.filter(step => state.canAccessStep(step));
+  },
+    }),
+    {
+      name: 'workflow-storage',
+      storage: createJSONStorage(() => localStorage),
+      // Exclude uploadedFile from persistence as File objects can't be serialized
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        completedSteps: state.completedSteps,
+        progress: state.progress,
+        fileInfo: state.fileInfo,
+        componentType: state.componentType,
+        componentConfidence: state.componentConfidence,
+        proposals: state.proposals,
+        exportId: state.exportId,
+        exportedAt: state.exportedAt,
+      }),
+    }
+  )
+);

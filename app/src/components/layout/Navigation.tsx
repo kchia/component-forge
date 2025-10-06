@@ -7,22 +7,27 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useOnboardingStore } from "@/stores/useOnboardingStore";
+import { WorkflowStep } from "@/types";
 import { Home, Upload, FileCheck, Layers, Eye, Menu, X, HelpCircle } from "lucide-react";
 import { useState } from "react";
 
-const navItems = [
-  { href: "/", label: "Dashboard", icon: Home },
-  { href: "/extract", label: "Extract", icon: Upload },
-  { href: "/requirements", label: "Requirements", icon: FileCheck },
-  { href: "/patterns", label: "Patterns", icon: Layers },
-  { href: "/preview", label: "Preview", icon: Eye },
+const allNavItems = [
+  { href: "/", label: "Dashboard", icon: Home, step: WorkflowStep.DASHBOARD },
+  { href: "/extract", label: "Extract", icon: Upload, step: WorkflowStep.EXTRACT },
+  { href: "/requirements", label: "Requirements", icon: FileCheck, step: WorkflowStep.REQUIREMENTS },
+  { href: "/patterns", label: "Patterns", icon: Layers, step: WorkflowStep.PATTERNS },
+  { href: "/preview", label: "Preview", icon: Eye, step: WorkflowStep.PREVIEW },
 ];
 
 export function Navigation() {
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const progress = useWorkflowStore((state) => state.progress);
+  const availableSteps = useWorkflowStore((state) => state.getAvailableSteps());
   const { resetOnboarding } = useOnboardingStore();
+
+  // Filter navigation items to only show available steps
+  const navItems = allNavItems.filter(item => availableSteps.includes(item.step));
 
   return (
     <nav className="border-b bg-background">

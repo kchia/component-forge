@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ArrowRight } from "lucide-react";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { WorkflowStep } from "@/types";
+import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { usePatternSelection } from "@/store/patternSelectionStore";
 import { usePatternRetrieval } from "@/hooks/usePatternRetrieval";
 import { useLibraryStats } from "@/hooks/useLibraryStats";
@@ -26,8 +28,15 @@ export default function PatternsPage() {
   const router = useRouter();
   
   // Get workflow state (requirements from Epic 2)
-  const { componentType, proposals } = useWorkflowStore();
+  const { componentType, proposals, completedSteps, completeStep } = useWorkflowStore();
   
+  // Route guard: redirect if requirements not completed
+  useEffect(() => {
+    if (!completedSteps.includes(WorkflowStep.REQUIREMENTS)) {
+      router.push('/requirements');
+    }
+  }, [completedSteps, router]);
+
   // Validate requirements from Epic 2
   useEffect(() => {
     if (!componentType || !proposals) {
@@ -73,6 +82,9 @@ export default function PatternsPage() {
       metadata: pattern.metadata,
     };
     selectPattern(patternForStore);
+    
+    // Mark patterns step as completed
+    completeStep(WorkflowStep.PATTERNS);
   };
   
   const handlePreviewPattern = (pattern: PatternMatch) => {
@@ -82,6 +94,9 @@ export default function PatternsPage() {
   return (
     <main className="container mx-auto p-4 sm:p-8">
       <div className="max-w-7xl mx-auto space-y-6">
+        {/* Workflow Breadcrumb */}
+        <WorkflowBreadcrumb />
+
         {/* Page Header */}
         <div className="space-y-2">
           <h1 className="text-3xl font-bold tracking-tight">
@@ -163,8 +178,8 @@ export default function PatternsPage() {
             size="lg"
             disabled={!selectedPattern}
           >
-            <Link href="/generation">
-              Continue to Code Generation
+            <Link href="/preview">
+              Continue to Preview
               <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>

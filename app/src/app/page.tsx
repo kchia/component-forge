@@ -1,10 +1,19 @@
+"use client";
+
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/composite/MetricCard";
-import { Sparkles, Palette, Component } from "lucide-react";
+import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { WorkflowStep } from "@/types";
+import { Sparkles, Palette, Component, RotateCcw } from "lucide-react";
 
 export default function Dashboard() {
+  const completedSteps = useWorkflowStore((state) => state.completedSteps);
+  const resetWorkflow = useWorkflowStore((state) => state.resetWorkflow);
+  const canAccessPatterns = completedSteps.includes(WorkflowStep.REQUIREMENTS);
+  const hasProgress = completedSteps.length > 0;
+
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-8">
       {/* Header */}
@@ -45,9 +54,26 @@ export default function Dashboard() {
           <Button asChild size="lg">
             <Link href="/extract">Extract Tokens</Link>
           </Button>
-          <Button asChild variant="secondary" size="lg">
-            <Link href="/patterns">View Patterns</Link>
-          </Button>
+          {canAccessPatterns ? (
+            <Button asChild variant="secondary" size="lg">
+              <Link href="/patterns">View Patterns</Link>
+            </Button>
+          ) : (
+            <Button variant="secondary" size="lg" disabled>
+              View Patterns (Complete Requirements First)
+            </Button>
+          )}
+          {hasProgress && (
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={resetWorkflow}
+              className="gap-2"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Reset Workflow
+            </Button>
+          )}
         </CardContent>
       </Card>
 
