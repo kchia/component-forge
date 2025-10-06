@@ -1,11 +1,11 @@
-# E2E Tests for Epic 11
+# E2E Tests
 
-This directory contains end-to-end integration tests for Epic 11 - Expanded Design Tokens + Smart Onboarding.
+This directory contains end-to-end integration tests for the Component Forge application.
 
 ## Test Files
 
 ### `onboarding.spec.ts` ✅
-Tests for TASK 13.4 and 13.5 - Onboarding Modal
+Tests for Epic 11 TASK 13.4 and 13.5 - Onboarding Modal
 
 **Status:** Ready to run
 **Requirements:** None (frontend only tests)
@@ -18,7 +18,7 @@ Tests:
 - Workflow card content display
 
 ### `token-extraction.spec.ts` 🚧
-Tests for TASK 12.2-12.8 and TASK 13.1-13.3 - Token Extraction Integration
+Tests for Epic 11 TASK 12.2-12.8 and TASK 13.1-13.3 - Token Extraction Integration
 
 **Status:** Partially implemented (many tests marked `.skip()`)
 **Requirements:** Backend running + test fixtures
@@ -31,6 +31,53 @@ Tests:
 - Error handling
 - Confidence score integration
 - Complete integration flows
+
+### `requirements-flow.spec.ts` ✅
+Tests for Epic 2 - Requirements Flow Integration
+
+**Status:** Complete
+**Requirements:** Backend running + test fixtures
+
+Tests:
+- Extract → Requirements → Export flow
+- AI proposal auto-trigger
+- ApprovalPanel rendering
+- Requirements editing and export
+
+### `pattern-selection.spec.ts` ✅ **NEW**
+Tests for Epic 3 - Pattern Selection Flow Integration (Tasks I1, I2, I3, T5)
+
+**Status:** Complete
+**Requirements:** None (uses mocked API)
+
+Tests:
+- **I1**: Frontend-Backend API Integration
+  - Pattern retrieval results display
+  - Top-3 patterns rendering
+  - Confidence scores visibility
+  - Retrieval metadata display
+- **T5**: Pattern Selection Workflow
+  - Pattern selection interaction
+  - Single pattern selection constraint
+  - Zustand store persistence
+  - Selection persistence across refresh
+- **I2**: Epic 2 → Epic 3 Data Flow
+  - Requirements usage from Epic 2
+  - Requirements transformation
+- **I3**: Epic 3 → Epic 4 Navigation
+  - Navigation to generation page
+  - Pattern data passing to Epic 4
+- **T5**: Error Handling
+  - Error state display
+  - Retry mechanism
+  - Empty results handling
+- **T5**: UI Features
+  - Code preview modal
+  - Match highlights display
+  - Latency display and validation
+- **Accessibility**
+  - Keyboard navigation
+  - Enter key selection
 
 ## Running Tests
 
