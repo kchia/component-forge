@@ -11,8 +11,8 @@ from langsmith import traceable
 from sqlalchemy.ext.asyncio import AsyncSession
 import logging
 
-from ...core.database import get_db
-from ...services.retrieval_service import get_library_quality_metrics
+from ....core.database import get_async_session as get_db
+from ....services.retrieval_service import get_library_quality_metrics
 
 logger = logging.getLogger(__name__)
 
