@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,72 +9,49 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
+import { GenerationProgress } from "@/components/composite/GenerationProgress";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
-import { WorkflowStep } from "@/types";
-import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle } from "lucide-react";
-
-// Placeholder code (will be replaced with Epic 4 backend)
-const placeholderCode = `import * as React from "react"
-import { cn } from "@/lib/utils"
-
-export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
-  variant?: "primary" | "secondary" | "ghost"
-}
-
-const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant = "primary", ...props }, ref) => {
-    return (
-      <button
-        className={cn(
-          "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium",
-          {
-            "bg-primary text-primary-foreground": variant === "primary",
-            "bg-secondary text-secondary-foreground": variant === "secondary",
-            "hover:bg-accent hover:text-accent-foreground": variant === "ghost",
-          },
-          className
-        )}
-        ref={ref}
-        {...props}
-      />
-    )
-  }
-)
-
-Button.displayName = "Button"
-
-export { Button }`;
-
-const placeholderStorybook = `import type { Meta, StoryObj } from '@storybook/react'
-import { Button } from './Button'
-
-const meta: Meta<typeof Button> = {
-  title: 'Components/Button',
-  component: Button,
-  tags: ['autodocs'],
-}
-
-export default meta
-type Story = StoryObj<typeof Button>
-
-export const Primary: Story = {
-  args: {
-    children: 'Button',
-    variant: 'primary',
-  },
-}
-
-export const Secondary: Story = {
-  args: {
-    children: 'Button',
-    variant: 'secondary',
-  },
-}`;
+import { useTokenStore } from "@/stores/useTokenStore";
+import { useGenerateComponent, useGenerationStatus } from "@/hooks/useGenerateComponent";
+import { downloadGeneratedCode } from "@/lib/api";
+import { 
+  WorkflowStep,
+  GenerationStage,
+} from "@/types";
+import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle, RefreshCw } from "lucide-react";
 
 export default function PreviewPage() {
   const router = useRouter();
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [startTime, setStartTime] = useState<number | null>(null);
+  const hasTriggeredRef = useRef(false);
+  
+  // Store state
   const completedSteps = useWorkflowStore((state) => state.completedSteps);
   const completeStep = useWorkflowStore((state) => state.completeStep);
+  const componentType = useWorkflowStore((state) => state.componentType);
+  const getApprovedProposals = useWorkflowStore((state) => state.getApprovedProposals);
+  const tokens = useTokenStore((state) => state.tokens);
+
+  // Generation mutation
+  const generation = useGenerateComponent({
+    onSuccess: () => {
+      // Mark preview step as completed on successful generation
+      completeStep(WorkflowStep.PREVIEW);
+      // Stop timer
+      setStartTime(null);
+    },
+    onError: (error) => {
+      console.error('Generation failed:', error);
+      // Stop timer
+      setStartTime(null);
+    },
+  });
+
+  const generationStatus = useGenerationStatus(generation);
+  const isGenerating = generation.isPending;
+  const isComplete = generation.isSuccess;
+  const hasFailed = generation.isError;
 
   // Route guard: redirect if patterns not completed
   useEffect(() => {
@@ -83,23 +60,105 @@ export default function PreviewPage() {
     }
   }, [completedSteps, router]);
 
+  // Trigger generation on page load (only once)
+  useEffect(() => {
+    // Only generate if we have required data and haven't generated yet
+    if (
+      componentType &&
+      tokens &&
+      !hasTriggeredRef.current &&
+      !generation.data &&
+      !isGenerating &&
+      !hasFailed
+    ) {
+      hasTriggeredRef.current = true;
+      const approvedRequirements = getApprovedProposals();
+      const allRequirements = [
+        ...approvedRequirements.props,
+        ...approvedRequirements.events,
+        ...approvedRequirements.states,
+        ...approvedRequirements.accessibility,
+      ];
+
+      // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
+      const patternId = componentType.toLowerCase() + '-001';
+
+      // Start generation
+      setStartTime(Date.now());
+      generation.mutate({
+        pattern_id: patternId,
+        tokens,
+        requirements: allRequirements,
+      });
+    }
+  }, [componentType, tokens, generation.data, isGenerating, hasFailed, getApprovedProposals]);
+
+  // Update elapsed time while generating
+  useEffect(() => {
+    if (!startTime || !isGenerating) return;
+
+    const interval = setInterval(() => {
+      setElapsedMs(Date.now() - startTime);
+    }, 100); // Update every 100ms for smooth counter
+
+    return () => clearInterval(interval);
+  }, [startTime, isGenerating]);
+
+  // TODO: Replace with real-time stage updates from backend (WebSocket or polling)
+  // Current implementation uses mock timing for MVP demo purposes
+  const currentStage = useMemo(() => {
+    if (!isGenerating) {
+      return isComplete ? GenerationStage.COMPLETE : GenerationStage.PARSING;
+    }
+    
+    // Mock stage progression (temporary until backend integration)
+    // Progress percentage of 60s target
+    const progress = (elapsedMs / 60000) * 100;
+    if (progress < 20) return GenerationStage.PARSING;
+    if (progress < 40) return GenerationStage.INJECTING;
+    if (progress < 60) return GenerationStage.GENERATING;
+    if (progress < 80) return GenerationStage.ASSEMBLING;
+    return GenerationStage.FORMATTING;
+  }, [isGenerating, isComplete, elapsedMs]);
+
   // Handle download action
   const handleDownload = () => {
-    // Mark preview step as completed when user downloads
-    completeStep(WorkflowStep.PREVIEW);
-    
-    // In a real implementation, this would download the generated code
-    console.log('Downloading component files...');
+    if (generation.data?.code) {
+      const componentName = componentType || 'Component';
+      downloadGeneratedCode(generation.data.code, componentName);
+    }
   };
 
-  // Handle save action
-  const handleSave = () => {
-    // Mark preview step as completed when user saves
-    completeStep(WorkflowStep.PREVIEW);
+  // Handle retry action
+  const handleRetry = () => {
+    setElapsedMs(0);
+    setStartTime(Date.now());
+    hasTriggeredRef.current = false; // Reset trigger flag for retry
+    generation.reset();
     
-    // In a real implementation, this would save to the project
-    console.log('Saving component to project...');
+    // Retry generation
+    const approvedRequirements = getApprovedProposals();
+    const allRequirements = [
+      ...approvedRequirements.props,
+      ...approvedRequirements.events,
+      ...approvedRequirements.states,
+      ...approvedRequirements.accessibility,
+    ];
+    // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
+    const patternId = (componentType?.toLowerCase() || 'button') + '-001';
+    
+    generation.mutate({
+      pattern_id: patternId,
+      tokens: tokens!,
+      requirements: allRequirements,
+    });
   };
+
+  // Get generated code or placeholders
+  const componentCode = generation.data?.code.component || '';
+  const storiesCode = generation.data?.code.stories || '';
+  const metadata = generation.data?.metadata;
+  const timing = generation.data?.timing;
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -112,126 +171,213 @@ export default function PreviewPage() {
           Component Preview
         </h1>
         <p className="text-muted-foreground">
-          Review and download your generated component
+          {isGenerating && "Generating your component..."}
+          {isComplete && "Review and download your generated component"}
+          {hasFailed && "Generation failed - please try again"}
         </p>
       </div>
 
-      {/* Quality Metrics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <MetricCard
-          title="Accessibility"
-          value="95%"
-          icon={CheckCircle2}
+      {/* Generation Progress (show when generating) */}
+      {isGenerating && (
+        <GenerationProgress
+          currentStage={currentStage}
+          status={generationStatus}
+          elapsedMs={elapsedMs}
         />
-        <MetricCard
-          title="Type Safety"
-          value="100%"
-          icon={CheckCircle2}
-        />
-        <MetricCard
-          title="Test Coverage"
-          value="N/A"
-          icon={Clock}
-        />
-        <MetricCard
-          title="Warnings"
-          value="0"
-          icon={AlertTriangle}
-        />
-      </div>
+      )}
 
-      {/* Component Tabs */}
-      <Tabs defaultValue="preview" className="space-y-4">
-        <TabsList className="grid w-full max-w-2xl grid-cols-4">
-          <TabsTrigger value="preview">Preview</TabsTrigger>
-          <TabsTrigger value="code">Code</TabsTrigger>
-          <TabsTrigger value="storybook">Storybook</TabsTrigger>
-          <TabsTrigger value="quality">Quality</TabsTrigger>
-        </TabsList>
-
-        {/* Preview Tab */}
-        <TabsContent value="preview">
-          <Card>
-            <CardHeader>
-              <CardTitle>Component Preview</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="border rounded-lg p-8 bg-muted/20">
-                <p className="text-center text-muted-foreground">
-                  Live preview will be available with Epic 4 backend integration.
+      {/* Error State */}
+      {hasFailed && (
+        <Card className="border-destructive">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center text-center space-y-4">
+              <AlertTriangle className="size-12 text-destructive" />
+              <div>
+                <h3 className="font-semibold text-lg">Generation Failed</h3>
+                <p className="text-sm text-muted-foreground mt-2">
+                  {generation.error?.message || "An error occurred during code generation."}
                 </p>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+              <div className="flex gap-4">
+                <Button onClick={handleRetry} variant="default">
+                  <RefreshCw className="mr-2 h-4 w-4" />
+                  Retry Generation
+                </Button>
+                <Button asChild variant="outline">
+                  <Link href="/patterns">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to Patterns
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
-        {/* Code Tab */}
-        <TabsContent value="code">
-          <Card>
-            <CardHeader>
-              <CardTitle>Generated Code</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DynamicCodeBlock language="tsx" code={placeholderCode} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Quality Metrics (show when complete) */}
+      {isComplete && metadata && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <MetricCard
+            title="Accessibility"
+            value={metadata.has_accessibility_warnings ? "Warnings" : "✓ Pass"}
+            icon={metadata.has_accessibility_warnings ? AlertTriangle : CheckCircle2}
+          />
+          <MetricCard
+            title="Type Safety"
+            value={metadata.has_typescript_errors ? "Errors" : "✓ Pass"}
+            icon={metadata.has_typescript_errors ? AlertTriangle : CheckCircle2}
+          />
+          <MetricCard
+            title="Lines of Code"
+            value={metadata.lines_of_code.toString()}
+            icon={Clock}
+          />
+          <MetricCard
+            title="Generation Time"
+            value={timing ? `${(timing.total_ms / 1000).toFixed(1)}s` : "N/A"}
+            icon={Clock}
+          />
+        </div>
+      )}
 
-        {/* Storybook Tab */}
-        <TabsContent value="storybook">
-          <Card>
-            <CardHeader>
-              <CardTitle>Storybook Stories</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <DynamicCodeBlock language="tsx" code={placeholderStorybook} />
-            </CardContent>
-          </Card>
-        </TabsContent>
+      {/* Component Tabs (show when complete) */}
+      {isComplete && componentCode && (
+        <Tabs defaultValue="preview" className="space-y-4">
+          <TabsList className="grid w-full max-w-2xl grid-cols-4">
+            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="code">Code</TabsTrigger>
+            <TabsTrigger value="storybook">Storybook</TabsTrigger>
+            <TabsTrigger value="quality">Quality</TabsTrigger>
+          </TabsList>
 
-        {/* Quality Tab */}
-        <TabsContent value="quality">
-          <Card>
-            <CardHeader>
-              <CardTitle>Quality Report</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <h3 className="font-medium">Accessibility</h3>
+          {/* Preview Tab */}
+          <TabsContent value="preview">
+            <Card>
+              <CardHeader>
+                <CardTitle>Component Preview</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="border rounded-lg p-8 bg-muted/20">
+                  <p className="text-center text-muted-foreground">
+                    Live preview will be available in a future update.
+                  </p>
+                  <p className="text-xs text-center text-muted-foreground mt-2">
+                    For now, copy the code to test your component.
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Code Tab */}
+          <TabsContent value="code">
+            <Card>
+              <CardHeader>
+                <CardTitle>Generated Code</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <DynamicCodeBlock language="tsx" code={componentCode} />
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Storybook Tab */}
+          <TabsContent value="storybook">
+            <Card>
+              <CardHeader>
+                <CardTitle>Storybook Stories</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {storiesCode ? (
+                  <DynamicCodeBlock language="tsx" code={storiesCode} />
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    Storybook stories not available.
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Quality Tab */}
+          <TabsContent value="quality">
+            <Card>
+              <CardHeader>
+                <CardTitle>Quality Report</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <h3 className="font-medium">Generation Metrics</h3>
+                  <div className="text-sm space-y-1">
+                    <p>
+                      <span className="text-muted-foreground">Pattern used:</span>{" "}
+                      {metadata?.pattern_used} v{metadata?.pattern_version}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Tokens applied:</span>{" "}
+                      {metadata?.tokens_applied}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Requirements implemented:</span>{" "}
+                      {metadata?.requirements_implemented}
+                    </p>
+                    <p>
+                      <span className="text-muted-foreground">Imports:</span>{" "}
+                      {metadata?.imports_count}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <h3 className="font-medium">Code Quality</h3>
+                  <div className="text-sm space-y-1">
+                    <p className={metadata?.has_typescript_errors ? "text-destructive" : "text-success"}>
+                      {metadata?.has_typescript_errors ? "✗" : "✓"} TypeScript compilation
+                    </p>
+                    <p className={metadata?.has_accessibility_warnings ? "text-warning" : "text-success"}>
+                      {metadata?.has_accessibility_warnings ? "⚠" : "✓"} Accessibility
+                    </p>
+                  </div>
+                </div>
+
+                {timing && (
+                  <div className="space-y-2">
+                    <h3 className="font-medium">Performance</h3>
+                    <div className="text-sm space-y-1">
+                      <p>
+                        <span className="text-muted-foreground">Total:</span>{" "}
+                        {(timing.total_ms / 1000).toFixed(2)}s
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        Parsing: {(timing.parsing_ms / 1000).toFixed(2)}s •{" "}
+                        Injection: {(timing.injection_ms / 1000).toFixed(2)}s •{" "}
+                        Generation: {(timing.generation_ms / 1000).toFixed(2)}s •{" "}
+                        Assembly: {(timing.assembly_ms / 1000).toFixed(2)}s
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 <p className="text-sm text-muted-foreground">
-                  ✓ Keyboard navigation supported
-                  <br />
-                  ✓ ARIA attributes present
-                  <br />
-                  ✓ Color contrast meets WCAG AA
+                  <strong>Note:</strong> Full quality validation available with Epic 5.
                 </p>
-              </div>
-              <div className="space-y-2">
-                <h3 className="font-medium">Type Safety</h3>
-                <p className="text-sm text-muted-foreground">
-                  ✓ Full TypeScript support
-                  <br />
-                  ✓ Strict mode compliant
-                  <br />
-                  ✓ Props properly typed
-                </p>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                <strong>Note:</strong> Full quality validation available with Epic 5.
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      )}
 
-      {/* Placeholder Note */}
-      <Card>
-        <CardContent className="py-6">
-          <p className="text-sm text-muted-foreground text-center">
-            <strong>Note:</strong> This is a placeholder component. Real components will be generated by Epic 4 backend.
-          </p>
-        </CardContent>
-      </Card>
+      {/* Loading placeholder */}
+      {isGenerating && (
+        <Card>
+          <CardContent className="py-12">
+            <p className="text-center text-muted-foreground">
+              Generating your component... This typically takes less than 60 seconds.
+            </p>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
@@ -241,15 +387,18 @@ export default function PreviewPage() {
             Back to Patterns
           </Link>
         </Button>
-        <div className="flex gap-4">
-          <Button variant="outline" onClick={handleDownload}>
-            <Download className="mr-2 h-4 w-4" />
-            Download ZIP
-          </Button>
-          <Button onClick={handleSave}>
-            Save to Project
-          </Button>
-        </div>
+        {isComplete && (
+          <div className="flex gap-4">
+            <Button variant="outline" onClick={handleDownload}>
+              <Download className="mr-2 h-4 w-4" />
+              Download Files
+            </Button>
+            <Button onClick={handleRetry}>
+              <RefreshCw className="mr-2 h-4 w-4" />
+              Regenerate
+            </Button>
+          </div>
+        )}
       </div>
     </main>
   );
