@@ -11,6 +11,8 @@ import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { GenerationProgress } from "@/components/composite/GenerationProgress";
 import { ComponentPreview } from "@/components/preview/ComponentPreview";
+import { ValidationErrorsDisplay } from "@/components/preview/ValidationErrorsDisplay";
+import { QualityScoresDisplay } from "@/components/preview/QualityScoresDisplay";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useGenerateComponent, useGenerationStatus } from "@/hooks/useGenerateComponent";
@@ -151,17 +153,15 @@ export default function PreviewPage() {
   // Current implementation uses mock timing for MVP demo purposes
   const currentStage = useMemo(() => {
     if (!isGenerating) {
-      return isComplete ? GenerationStage.COMPLETE : GenerationStage.PARSING;
+      return isComplete ? GenerationStage.COMPLETE : GenerationStage.LLM_GENERATING;
     }
     
     // Mock stage progression (temporary until backend integration)
-    // Progress percentage of 60s target
-    const progress = (elapsedMs / 60000) * 100;
-    if (progress < 20) return GenerationStage.PARSING;
-    if (progress < 40) return GenerationStage.INJECTING;
-    if (progress < 60) return GenerationStage.GENERATING;
-    if (progress < 80) return GenerationStage.ASSEMBLING;
-    return GenerationStage.FORMATTING;
+    // Progress percentage of 30s target (Epic 4.5: 3-stage pipeline)
+    const progress = (elapsedMs / 30000) * 100;
+    if (progress < 50) return GenerationStage.LLM_GENERATING;
+    if (progress < 80) return GenerationStage.VALIDATING;
+    return GenerationStage.POST_PROCESSING;
   }, [isGenerating, isComplete, elapsedMs]);
 
   // Handle download action
@@ -229,6 +229,10 @@ export default function PreviewPage() {
   const storiesCode = actualData?.code.stories || '';
   const metadata = actualData?.metadata;
   const timing = actualData?.timing;
+  
+  // Epic 4.5: Extract validation results and quality scores
+  const validationResults = metadata?.validation_results;
+  const qualityScores = metadata?.quality_scores;
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -253,6 +257,8 @@ export default function PreviewPage() {
           currentStage={currentStage}
           status={generationStatus}
           elapsedMs={elapsedMs}
+          validationResults={validationResults}
+          qualityScores={qualityScores}
         />
       )}
 
@@ -442,68 +448,130 @@ export default function PreviewPage() {
 
           {/* Quality Tab */}
           <TabsContent value="quality">
-            <Card>
-              <CardHeader>
-                <CardTitle>Quality Report</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="font-medium">Generation Metrics</h3>
-                  <div className="text-sm space-y-1">
-                    <p>
-                      <span className="text-muted-foreground">Pattern used:</span>{" "}
-                      {metadata?.pattern_used} v{metadata?.pattern_version}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Tokens applied:</span>{" "}
-                      {metadata?.tokens_applied}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Requirements implemented:</span>{" "}
-                      {metadata?.requirements_implemented}
-                    </p>
-                    <p>
-                      <span className="text-muted-foreground">Imports:</span>{" "}
-                      {metadata?.imports_count}
-                    </p>
-                  </div>
-                </div>
+            <div className="space-y-6">
+              {/* Epic 4.5: Quality Scores Display */}
+              {qualityScores && (
+                <QualityScoresDisplay qualityScores={qualityScores} />
+              )}
 
-                <div className="space-y-2">
-                  <h3 className="font-medium">Code Quality</h3>
-                  <div className="text-sm space-y-1">
-                    <p className={metadata?.has_typescript_errors ? "text-destructive" : "text-success"}>
-                      {metadata?.has_typescript_errors ? "✗" : "✓"} TypeScript compilation
-                    </p>
-                    <p className={metadata?.has_accessibility_warnings ? "text-warning" : "text-success"}>
-                      {metadata?.has_accessibility_warnings ? "⚠" : "✓"} Accessibility
-                    </p>
-                  </div>
-                </div>
+              {/* Epic 4.5: Validation Errors Display */}
+              {validationResults && (
+                <ValidationErrorsDisplay validationResults={validationResults} />
+              )}
 
-                {timing && (
-                  <div className="space-y-2">
-                    <h3 className="font-medium">Performance</h3>
-                    <div className="text-sm space-y-1">
-                      <p>
-                        <span className="text-muted-foreground">Total:</span>{" "}
-                        {(timing.total_ms / 1000).toFixed(2)}s
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Parsing: {(timing.parsing_ms / 1000).toFixed(2)}s •{" "}
-                        Injection: {(timing.injection_ms / 1000).toFixed(2)}s •{" "}
-                        Generation: {(timing.generation_ms / 1000).toFixed(2)}s •{" "}
-                        Assembly: {(timing.assembly_ms / 1000).toFixed(2)}s
-                      </p>
+              {/* Legacy quality info (keep for backwards compatibility) */}
+              {!qualityScores && metadata && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Quality Report</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Generation Metrics</h3>
+                      <div className="text-sm space-y-1">
+                        <p>
+                          <span className="text-muted-foreground">Pattern used:</span>{" "}
+                          {metadata?.pattern_used} v{metadata?.pattern_version}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Tokens applied:</span>{" "}
+                          {metadata?.tokens_applied}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Requirements implemented:</span>{" "}
+                          {metadata?.requirements_implemented}
+                        </p>
+                        <p>
+                          <span className="text-muted-foreground">Imports:</span>{" "}
+                          {metadata?.imports_count}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                )}
 
-                <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Full quality validation available with Epic 5.
-                </p>
-              </CardContent>
-            </Card>
+                    <div className="space-y-2">
+                      <h3 className="font-medium">Code Quality</h3>
+                      <div className="text-sm space-y-1">
+                        <p className={metadata?.has_typescript_errors ? "text-destructive" : "text-success"}>
+                          {metadata?.has_typescript_errors ? "✗" : "✓"} TypeScript compilation
+                        </p>
+                        <p className={metadata?.has_accessibility_warnings ? "text-warning" : "text-success"}>
+                          {metadata?.has_accessibility_warnings ? "⚠" : "✓"} Accessibility
+                        </p>
+                      </div>
+                    </div>
+
+                    {timing && (
+                      <div className="space-y-2">
+                        <h3 className="font-medium">Performance</h3>
+                        <div className="text-sm space-y-1">
+                          <p>
+                            <span className="text-muted-foreground">Total:</span>{" "}
+                            {(timing.total_ms / 1000).toFixed(2)}s
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {timing.parsing_ms && `Parsing: ${(timing.parsing_ms / 1000).toFixed(2)}s • `}
+                            {timing.injection_ms && `Injection: ${(timing.injection_ms / 1000).toFixed(2)}s • `}
+                            {timing.generation_ms && `Generation: ${(timing.generation_ms / 1000).toFixed(2)}s • `}
+                            {timing.assembly_ms && `Assembly: ${(timing.assembly_ms / 1000).toFixed(2)}s`}
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Generation Metadata */}
+              {metadata && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Generation Details</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Pattern:</span>
+                        <p className="font-mono">{metadata.pattern_used} v{metadata.pattern_version}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Lines of Code:</span>
+                        <p className="font-mono">{metadata.lines_of_code}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tokens Applied:</span>
+                        <p className="font-mono">{metadata.tokens_applied}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Requirements:</span>
+                        <p className="font-mono">{metadata.requirements_implemented}</p>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Imports:</span>
+                        <p className="font-mono">{metadata.imports_count}</p>
+                      </div>
+                      {metadata.fix_attempts !== undefined && (
+                        <div>
+                          <span className="text-muted-foreground">Fix Attempts:</span>
+                          <p className="font-mono">{metadata.fix_attempts}</p>
+                        </div>
+                      )}
+                    </div>
+
+                    {timing && (
+                      <div className="pt-4 border-t">
+                        <h4 className="text-sm font-medium mb-2">Performance Timing</h4>
+                        <div className="text-sm space-y-1">
+                          <p>
+                            <span className="text-muted-foreground">Total:</span>{" "}
+                            <span className="font-mono">{(timing.total_ms / 1000).toFixed(2)}s</span>
+                          </p>
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
         </Tabs>
       )}
