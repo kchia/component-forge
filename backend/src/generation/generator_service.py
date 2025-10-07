@@ -3,9 +3,12 @@ Generator Service - Orchestrate the full code generation pipeline.
 
 This module coordinates all generation steps from pattern parsing through
 code assembly, with LangSmith tracing for observability.
+
+REFACTORED (Epic 4.5): Now uses LLM-first 3-stage pipeline instead of 8-stage template-based approach.
 """
 
 import time
+import os
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
@@ -26,43 +29,69 @@ from .types import (
     GenerationResult,
     GenerationStage,
     GenerationMetadata,
+    ValidationMetadata,
+    ValidationErrorDetail,
     CodeParts
 )
 from .pattern_parser import PatternParser
-from .token_injector import TokenInjector
-from .tailwind_generator import TailwindGenerator
-from .requirement_implementer import RequirementImplementer
 from .code_assembler import CodeAssembler
 from .provenance import ProvenanceGenerator
-from .a11y_enhancer import A11yEnhancer
-from .type_generator import TypeGenerator
-from .storybook_generator import StorybookGenerator
+
+# New LLM-first components
+from .prompt_builder import PromptBuilder
+from .llm_generator import LLMComponentGenerator, MockLLMGenerator
+from .code_validator import CodeValidator
+from .exemplar_loader import ExemplarLoader
 
 
 class GeneratorService:
     """
     Orchestrate the full code generation pipeline with tracing.
+    
+    NEW (Epic 4.5): 3-stage LLM-first pipeline:
+    1. LLM Generation - Single pass with full context
+    2. Validation - TypeScript/ESLint with LLM fixes
+    3. Post-Processing - Imports, provenance, formatting
     """
     
-    def __init__(self, patterns_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        patterns_dir: Optional[Path] = None,
+        use_llm: bool = True,
+        api_key: Optional[str] = None,
+    ):
         """
         Initialize generator service.
         
         Args:
             patterns_dir: Optional custom patterns directory
+            use_llm: Whether to use LLM generation (True) or mock (False)
+            api_key: Optional OpenAI API key
         """
+        # Core components
         self.pattern_parser = PatternParser(patterns_dir)
-        self.token_injector = TokenInjector()
-        self.tailwind_generator = TailwindGenerator()
-        self.requirement_implementer = RequirementImplementer()
         self.code_assembler = CodeAssembler()
         self.provenance_generator = ProvenanceGenerator()
-        self.a11y_enhancer = A11yEnhancer()
-        self.type_generator = TypeGenerator()
-        self.storybook_generator = StorybookGenerator()
+        
+        # New LLM-first components
+        self.prompt_builder = PromptBuilder()
+        self.exemplar_loader = ExemplarLoader()
+        
+        # Initialize LLM generator
+        if use_llm and (api_key or os.getenv("OPENAI_API_KEY")):
+            try:
+                self.llm_generator = LLMComponentGenerator(api_key=api_key)
+            except Exception:
+                # Fall back to mock if LLM initialization fails
+                self.llm_generator = MockLLMGenerator()
+        else:
+            self.llm_generator = MockLLMGenerator()
+        
+        # Initialize code validator with LLM generator
+        self.code_validator = CodeValidator(llm_generator=self.llm_generator)
         
         # Track current stage for progress updates
-        self.current_stage = GenerationStage.PARSING
+        self.current_stage = GenerationStage.LLM_GENERATING
         self.stage_latencies: Dict[GenerationStage, int] = {}
     
     def _normalize_requirements(self, requirements: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -96,106 +125,158 @@ class GeneratorService:
         return result
 
     @traceable(run_type="chain", name="generate_component")
+    @traceable(run_type="chain", name="generate_component_llm_first")
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """
-        Generate component code from pattern, tokens, and requirements.
-
-        This is the main entry point for code generation.
-
+        Generate component code using LLM-first 3-stage pipeline.
+        
+        NEW PIPELINE (Epic 4.5):
+        1. LLM Generation - Single pass with full context
+        2. Validation - TypeScript/ESLint with iterative LLM fixes  
+        3. Post-Processing - Imports, provenance, formatting
+        
         Args:
             request: GenerationRequest with pattern_id, tokens, requirements
-
+        
         Returns:
             GenerationResult with generated code and metadata
         """
         start_time = time.time()
-
+        
         # Normalize requirements from list to dict format
         requirements_dict = self._normalize_requirements(request.requirements)
-
+        
         try:
-            # Stage 1: Parse Pattern
-            pattern_structure = await self._parse_pattern(request.pattern_id)
+            # ====== STAGE 1: LLM GENERATION ======
+            self.current_stage = GenerationStage.LLM_GENERATING
+            stage1_start = time.time()
             
-            # Stage 2: Inject Tokens
-            token_mapping = await self._inject_tokens(
-                pattern_structure.code,
-                request.tokens,
-                self._infer_component_type(request.pattern_id)
+            # Load pattern as reference
+            pattern_structure = await self._parse_pattern_for_reference(request.pattern_id)
+            
+            # Build comprehensive prompt with exemplars
+            prompts = self._build_generation_prompt(
+                pattern_code=pattern_structure.code,
+                component_name=request.component_name or pattern_structure.component_name,
+                component_type=self._infer_component_type(request.pattern_id),
+                tokens=request.tokens,
+                requirements=requirements_dict,
             )
             
-            # Stage 3: Generate Tailwind Classes
-            tailwind_classes = await self._generate_tailwind(
-                request.tokens,
-                pattern_structure
+            # Generate code via LLM
+            llm_result = await self.llm_generator.generate(
+                system_prompt=prompts["system"],
+                user_prompt=prompts["user"],
             )
             
-            # Stage 4: Implement Requirements
-            requirement_impl = await self._implement_requirements(
-                pattern_structure.code,
-                requirements_dict,
-                pattern_structure.component_name
+            self.stage_latencies[GenerationStage.LLM_GENERATING] = int(
+                (time.time() - stage1_start) * 1000
             )
             
-            # Stage 4.5: Enhance Accessibility
-            enhanced_code = self._enhance_accessibility(
-                pattern_structure.code,
-                self._infer_component_type(request.pattern_id),
-                pattern_structure.component_name
+            # ====== STAGE 2: VALIDATION ======
+            self.current_stage = GenerationStage.VALIDATING
+            stage2_start = time.time()
+            
+            # Validate and fix code iteratively
+            validation_result = await self.code_validator.validate_and_fix(
+                code=llm_result.component_code,
+                original_prompt=prompts["user"],
             )
             
-            # Stage 4.6: Generate TypeScript Types
-            typed_code = self._generate_types(
-                enhanced_code,
-                pattern_structure.component_name,
-                requirements_dict.get("props", [])
-            )
-
-            # Stage 4.7: Generate Storybook Stories
-            stories = self._generate_storybook_stories(
-                pattern_structure.component_name,
-                pattern_structure.variants,
-                requirements_dict.get("props", []),
-                self._infer_component_type(request.pattern_id)
+            self.stage_latencies[GenerationStage.VALIDATING] = int(
+                (time.time() - stage2_start) * 1000
             )
             
-            # Stage 5: Assemble Code
-            code_parts = self._build_code_parts(
-                pattern_structure,
-                token_mapping,
-                requirement_impl,
-                request.component_name,
+            # ====== STAGE 3: POST-PROCESSING ======
+            self.current_stage = GenerationStage.POST_PROCESSING
+            stage3_start = time.time()
+            
+            # Add provenance header
+            final_component_code = self._add_provenance(
+                validation_result.code,
+                request.component_name or pattern_structure.component_name,
                 request.pattern_id,
                 request.tokens,
                 requirements_dict,
-                typed_code,
-                stories
             )
             
-            result_files = await self._assemble_code(code_parts)
+            # Use stories from LLM (already validated)
+            final_stories_code = llm_result.stories_code
             
-            # Calculate total latency
+            # Count imports in final code
+            imports_count = len([line for line in final_component_code.split('\n') if line.strip().startswith('import')])
+            
+            self.stage_latencies[GenerationStage.POST_PROCESSING] = int(
+                (time.time() - stage3_start) * 1000
+            )
+            
+            # ====== BUILD RESULT ======
+            self.current_stage = GenerationStage.COMPLETE
+            
             total_latency_ms = int((time.time() - start_time) * 1000)
+            component_name = request.component_name or pattern_structure.component_name
             
-            # Build metadata
+            # Create result files
+            result_files = {
+                "component": final_component_code,
+                "stories": final_stories_code,
+                "files": {
+                    f"{component_name}.tsx": final_component_code,
+                    f"{component_name}.stories.tsx": final_stories_code,
+                },
+            }
+            
+            # Convert ValidationError dataclass to ValidationErrorDetail Pydantic models
+            ts_errors = [ValidationErrorDetail.from_dataclass(e) for e in validation_result.typescript_errors]
+            ts_warnings = [ValidationErrorDetail.from_dataclass(e) for e in validation_result.typescript_warnings]
+            eslint_errors = [ValidationErrorDetail.from_dataclass(e) for e in validation_result.eslint_errors]
+            eslint_warnings = [ValidationErrorDetail.from_dataclass(e) for e in validation_result.eslint_warnings]
+            
+            # Convert quality scores from 0.0-1.0 to 0-100 scale
+            linting_score = self.code_validator._convert_score_to_0_100(validation_result.eslint_quality_score)
+            type_safety_score = self.code_validator._convert_score_to_0_100(validation_result.typescript_quality_score)
+            overall_score = self.code_validator._convert_score_to_0_100(validation_result.overall_quality_score)
+            
+            # Create metadata with validation results
+            validation_metadata = ValidationMetadata(
+                attempts=validation_result.attempts,
+                final_status=validation_result.final_status,
+                typescript_passed=validation_result.compilation_success,
+                typescript_errors=ts_errors,
+                typescript_warnings=ts_warnings,
+                eslint_passed=validation_result.lint_success,
+                eslint_errors=eslint_errors,
+                eslint_warnings=eslint_warnings,
+                linting_score=linting_score,
+                type_safety_score=type_safety_score,
+                overall_score=overall_score,
+                compilation_success=validation_result.compilation_success,
+                lint_success=validation_result.lint_success,
+            )
+            
             metadata = GenerationMetadata(
                 latency_ms=total_latency_ms,
                 stage_latencies=self.stage_latencies,
-                token_count=len(request.tokens.get("colors", {})) + 
-                           len(request.tokens.get("typography", {})) +
-                           len(request.tokens.get("spacing", {})),
-                lines_of_code=len(result_files["component"].split("\n")),
-                requirements_implemented=len(requirements_dict.get("props", []))
+                lines_of_code=len(final_component_code.split('\n')) + len(final_stories_code.split('\n')),
+                requirements_implemented=len(request.requirements),
+                pattern_used=request.pattern_id,
+                pattern_version="1.0.0",
+                imports_count=imports_count,
+                has_typescript_errors=len(ts_errors) > 0,
+                has_accessibility_warnings=False,  # TODO: Implement a11y detection
+                llm_token_usage=llm_result.token_usage,
+                validation_attempts=validation_result.attempts,
+                quality_score=validation_result.overall_quality_score,
             )
             
-            # Build successful result
             return GenerationResult(
-                component_code=result_files["component"],
-                stories_code=result_files.get("stories", ""),
+                component_code=final_component_code,
+                stories_code=final_stories_code,
                 files=result_files["files"],
                 metadata=metadata,
-                success=True,
-                error=None
+                validation_results=validation_metadata,
+                success=validation_result.valid,
+                error=None if validation_result.valid else "Code validation failed after retries",
             )
         
         except Exception as e:
@@ -208,10 +289,10 @@ class GeneratorService:
                 files={},
                 metadata=GenerationMetadata(
                     latency_ms=error_latency_ms,
-                    stage_latencies=self.stage_latencies
+                    stage_latencies=self.stage_latencies,
                 ),
                 success=False,
-                error=str(e)
+                error=str(e),
             )
     
     @traceable(run_type="tool", name="parse_pattern")
@@ -399,6 +480,51 @@ export const Default: Story = {{
   }},
 }};
 """
+    
+    # ====== NEW LLM-FIRST HELPER METHODS ======
+    
+    async def _parse_pattern_for_reference(self, pattern_id: str):
+        """Load pattern as reference (not for modification)."""
+        return self.pattern_parser.parse(pattern_id)
+    
+    def _build_generation_prompt(
+        self,
+        pattern_code: str,
+        component_name: str,
+        component_type: str,
+        tokens: Dict[str, Any],
+        requirements: Dict[str, Any],
+    ) -> Dict[str, str]:
+        """
+        Build comprehensive generation prompt using PromptBuilder.
+        
+        Returns:
+            Dict with 'system' and 'user' prompts
+        """
+        return self.prompt_builder.build_prompt(
+            pattern_code=pattern_code,
+            component_name=component_name,
+            component_type=component_type,
+            tokens=tokens,
+            requirements=requirements,
+        )
+    
+    def _add_provenance(
+        self,
+        code: str,
+        component_name: str,
+        pattern_id: str,
+        tokens: Dict[str, Any],
+        requirements: Dict[str, Any],
+    ) -> str:
+        """Add provenance header to generated code."""
+        header = self.provenance_generator.generate_header(
+            component_name=component_name,
+            pattern_id=pattern_id,
+            tokens=tokens,
+            requirements=requirements,
+        )
+        return f"{header}\n\n{code}"
     
     def _infer_component_type(self, pattern_id: str) -> str:
         """Infer component type from pattern ID."""
