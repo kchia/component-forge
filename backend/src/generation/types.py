@@ -99,6 +99,14 @@ class ValidationErrorDetail(BaseModel):
     rule_id: str = Field(..., description="Rule ID or error code")
     severity: str = Field(..., description="Severity level (error or warning)")
     
+    def dict(self, *args, **kwargs):
+        """Override dict() to include camelCase fields for frontend compatibility."""
+        result = super().dict(*args, **kwargs)
+        # Add camelCase aliases for frontend compatibility
+        result['ruleId'] = result.get('rule_id', '')
+        result['code'] = result.get('rule_id', '')  # Frontend may use 'code' field
+        return result
+    
     @classmethod
     def from_dataclass(cls, error: Any) -> "ValidationErrorDetail":
         """

@@ -164,28 +164,24 @@ async def generate_component(
         
         # Add validation results if available (LLM-first pipeline)
         if result.validation_results:
+            # Flatten validation results to match frontend schema
             response["validation_results"] = {
                 "attempts": result.validation_results.attempts,
                 "final_status": result.validation_results.final_status,
-                "typescript": {
-                    "passed": result.validation_results.typescript_passed,
-                    "errors": [error.dict() for error in result.validation_results.typescript_errors],
-                    "warnings": [error.dict() for error in result.validation_results.typescript_warnings]
-                },
-                "eslint": {
-                    "passed": result.validation_results.eslint_passed,
-                    "errors": [error.dict() for error in result.validation_results.eslint_errors],
-                    "warnings": [error.dict() for error in result.validation_results.eslint_warnings]
-                }
+                "typescript_passed": result.validation_results.typescript_passed,
+                "typescript_errors": [error.dict() for error in result.validation_results.typescript_errors],
+                "typescript_warnings": [error.dict() for error in result.validation_results.typescript_warnings],
+                "eslint_passed": result.validation_results.eslint_passed,
+                "eslint_errors": [error.dict() for error in result.validation_results.eslint_errors],
+                "eslint_warnings": [error.dict() for error in result.validation_results.eslint_warnings]
             }
             
-            # Add quality scores
+            # Add quality scores with frontend-compatible field names
             response["quality_scores"] = {
                 "overall": result.validation_results.overall_score,
                 "linting": result.validation_results.linting_score,
                 "type_safety": result.validation_results.type_safety_score,
-                "compilation_success": result.validation_results.compilation_success,
-                "lint_success": result.validation_results.lint_success
+                "compilation": result.validation_results.compilation_success,  # Match frontend field name
             }
         
         # Add LLM token usage if available
