@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -24,6 +24,7 @@ export default function PreviewPage() {
   const router = useRouter();
   const [elapsedMs, setElapsedMs] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
+  const hasTriggeredRef = useRef(false);
   
   // Store state
   const completedSteps = useWorkflowStore((state) => state.completedSteps);
@@ -65,10 +66,12 @@ export default function PreviewPage() {
     if (
       componentType &&
       tokens &&
+      !hasTriggeredRef.current &&
       !generation.data &&
       !isGenerating &&
       !hasFailed
     ) {
+      hasTriggeredRef.current = true;
       const approvedRequirements = getApprovedProposals();
       const allRequirements = [
         ...approvedRequirements.props,
@@ -77,8 +80,7 @@ export default function PreviewPage() {
         ...approvedRequirements.accessibility,
       ];
 
-      // Determine pattern_id based on component type
-      // In a real implementation, this would come from pattern selection
+      // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
       const patternId = componentType.toLowerCase() + '-001';
 
       // Start generation
@@ -89,7 +91,7 @@ export default function PreviewPage() {
         requirements: allRequirements,
       });
     }
-  }, [componentType, tokens]); // Only depend on data, not mutation state
+  }, [componentType, tokens, generation.data, isGenerating, hasFailed, getApprovedProposals]);
 
   // Update elapsed time while generating
   useEffect(() => {
@@ -102,17 +104,20 @@ export default function PreviewPage() {
     return () => clearInterval(interval);
   }, [startTime, isGenerating]);
 
-  // Determine current stage (mock for now, real backend will provide this)
+  // TODO: Replace with real-time stage updates from backend (WebSocket or polling)
+  // Current implementation uses mock timing for MVP demo purposes
   const currentStage = useMemo(() => {
     if (!isGenerating) {
       return isComplete ? GenerationStage.COMPLETE : GenerationStage.PARSING;
     }
     
-    // Mock stage progression based on elapsed time
-    if (elapsedMs < 10000) return GenerationStage.PARSING;
-    if (elapsedMs < 25000) return GenerationStage.INJECTING;
-    if (elapsedMs < 40000) return GenerationStage.GENERATING;
-    if (elapsedMs < 50000) return GenerationStage.ASSEMBLING;
+    // Mock stage progression (temporary until backend integration)
+    // Progress percentage of 60s target
+    const progress = (elapsedMs / 60000) * 100;
+    if (progress < 20) return GenerationStage.PARSING;
+    if (progress < 40) return GenerationStage.INJECTING;
+    if (progress < 60) return GenerationStage.GENERATING;
+    if (progress < 80) return GenerationStage.ASSEMBLING;
     return GenerationStage.FORMATTING;
   }, [isGenerating, isComplete, elapsedMs]);
 
@@ -128,6 +133,7 @@ export default function PreviewPage() {
   const handleRetry = () => {
     setElapsedMs(0);
     setStartTime(Date.now());
+    hasTriggeredRef.current = false; // Reset trigger flag for retry
     generation.reset();
     
     // Retry generation
@@ -138,6 +144,7 @@ export default function PreviewPage() {
       ...approvedRequirements.states,
       ...approvedRequirements.accessibility,
     ];
+    // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
     const patternId = (componentType?.toLowerCase() || 'button') + '-001';
     
     generation.mutate({
