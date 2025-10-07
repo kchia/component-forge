@@ -2,6 +2,7 @@
 Tests for Pattern Parser
 
 Tests pattern parsing functionality with all 10 curated patterns.
+Updated for simplified LLM-first pattern parser.
 """
 
 import pytest
@@ -51,10 +52,12 @@ class TestPatternParser:
         
         assert isinstance(result, PatternStructure)
         assert result.component_name == "Button"
-        assert len(result.imports) > 0
+        assert result.component_type == "button"
         assert len(result.variants) > 0
         assert "default" in result.variants or "primary" in result.variants
         assert result.code != ""
+        assert isinstance(result.dependencies, list)
+        assert isinstance(result.metadata, dict)
     
     def test_parse_card_pattern(self, parser):
         """Test parsing card pattern structure."""
@@ -62,34 +65,11 @@ class TestPatternParser:
         
         assert isinstance(result, PatternStructure)
         assert result.component_name == "Card"
-        assert len(result.imports) > 0
+        assert result.component_type == "card"
         assert result.code != ""
+        assert isinstance(result.dependencies, list)
+        assert isinstance(result.metadata, dict)
     
-    def test_extract_props_interface(self, parser):
-        """Test extracting props interface from code."""
-        pattern_data = parser.load_pattern("shadcn-button")
-        code = pattern_data["code"]
-        
-        props_interface = parser._extract_props_interface(code)
-        
-        assert props_interface != ""
-        assert "interface" in props_interface
-        assert "Props" in props_interface
-    
-    def test_extract_imports(self, parser):
-        """Test extracting import statements."""
-        code = """
-import * as React from "react"
-import { Slot } from "@radix-ui/react-slot"
-import { cva, type VariantProps } from "class-variance-authority"
-
-const Button = () => {}
-"""
-        imports = parser._extract_imports(code)
-        
-        assert len(imports) == 3
-        assert any("React" in imp for imp in imports)
-        assert any("Slot" in imp for imp in imports)
     
     def test_extract_variants_from_metadata(self, parser):
         """Test extracting variants from pattern metadata."""
@@ -108,29 +88,22 @@ const Button = () => {}
         assert "secondary" in variants
         assert "ghost" in variants
     
-    def test_find_modification_points(self, parser):
-        """Test finding modification points in code."""
-        code = """
-const buttonVariants = cva(
-  "inline-flex items-center",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary"
-      }
-    }
-  }
-)
-
-const Button = ({ className, variant }) => {
-  return <button className={cn(buttonVariants({ variant, className }))} />
-}
-"""
-        modification_points = parser._find_modification_points(code, {})
+    def test_component_type_extraction(self, parser):
+        """Test that component type is correctly extracted from pattern_id."""
+        result = parser.parse("shadcn-input")
         
-        assert "className_locations" in modification_points
-        assert "variant_definitions" in modification_points
-        assert len(modification_points["className_locations"]) > 0
+        assert result.component_type == "input"
+        
+        result = parser.parse("shadcn-checkbox")
+        assert result.component_type == "checkbox"
+    
+    def test_metadata_extraction(self, parser):
+        """Test that pattern metadata is properly extracted."""
+        result = parser.parse("shadcn-button")
+        
+        assert isinstance(result.metadata, dict)
+        # Metadata should contain pattern information
+        assert len(result.metadata) >= 0  # Can be empty or have data
     
     def test_list_available_patterns(self, parser):
         """Test listing all available patterns."""
@@ -154,11 +127,13 @@ const Button = ({ className, variant }) => {
         "shadcn-tabs"
     ])
     def test_parse_all_patterns(self, parser, pattern_id):
-        """Test that all 10 curated patterns parse successfully."""
+        """Test that all 10 curated patterns parse successfully with simplified interface."""
         result = parser.parse(pattern_id)
         
         assert isinstance(result, PatternStructure)
         assert result.component_name != ""
+        assert result.component_type != ""
         assert result.code != ""
-        # All patterns should have at least some imports
-        assert len(result.imports) >= 0
+        assert isinstance(result.variants, list)
+        assert isinstance(result.dependencies, list)
+        assert isinstance(result.metadata, dict)

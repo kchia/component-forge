@@ -1,8 +1,9 @@
 """
-Pattern Parser - Extract component structure from pattern JSON.
+Pattern Parser - Extract component metadata from pattern JSON.
 
-This module parses shadcn/ui pattern JSON files to extract component metadata,
-props, variants, and modification points for code generation.
+This module parses shadcn/ui pattern JSON files to extract basic component metadata
+for use as reference in LLM-first code generation. The LLM generates complete code,
+so we only need metadata (name, type, variants, dependencies).
 """
 
 import json
@@ -16,9 +17,10 @@ from .types import PatternStructure
 
 class PatternParser:
     """
-    Parser for extracting component structure from pattern JSON.
+    Parser for extracting component metadata from pattern JSON.
     
-    Uses regex-based parsing for MVP (full AST parsing deferred to post-MVP).
+    Simplified for LLM-first generation - only loads pattern code and metadata
+    as reference. No code analysis or modification point detection needed.
     """
     
     def __init__(self, patterns_dir: Optional[Path] = None):
@@ -77,13 +79,13 @@ class PatternParser:
     
     def parse(self, pattern_id: str) -> PatternStructure:
         """
-        Parse pattern and extract component structure.
+        Parse pattern and extract basic metadata.
         
         Args:
             pattern_id: ID of the pattern to parse
         
         Returns:
-            PatternStructure with extracted metadata
+            PatternStructure with pattern code and metadata
         """
         pattern_data = self.load_pattern(pattern_id)
         
@@ -92,56 +94,30 @@ class PatternParser:
         code = pattern_data.get("code", "")
         metadata = pattern_data.get("metadata", {})
         
-        # Extract component structure
-        props_interface = self._extract_props_interface(code)
-        imports = self._extract_imports(code)
+        # Extract component type from pattern_id or metadata
+        # E.g., "shadcn-button" -> "button"
+        component_type = pattern_id.replace("shadcn-", "").lower()
+        component_type = re.sub(r'-\d+$', '', component_type)  # Remove "-001"
+        component_type = re.sub(r'-v\d+$', '', component_type)  # Remove "-v1"
+        
+        # If metadata has explicit type, use that
+        if "type" in metadata:
+            component_type = metadata["type"]
+        
+        # Extract variants list
         variants = self._extract_variants(metadata)
-        modification_points = self._find_modification_points(code, metadata)
+        
+        # Extract dependencies from metadata
+        dependencies = metadata.get("dependencies", [])
         
         return PatternStructure(
             component_name=component_name,
-            props_interface=props_interface,
-            imports=imports,
-            variants=variants,
-            modification_points=modification_points,
+            component_type=component_type,
             code=code,
+            variants=variants,
+            dependencies=dependencies,
             metadata=metadata
         )
-    
-    def _extract_props_interface(self, code: str) -> str:
-        """
-        Extract TypeScript props interface from code.
-        
-        Args:
-            code: Component source code
-        
-        Returns:
-            Props interface definition
-        """
-        # Match interface definitions like: interface ButtonProps extends...
-        interface_pattern = r'(export\s+)?interface\s+\w+Props[^{]*\{[^}]*\}'
-        match = re.search(interface_pattern, code, re.DOTALL)
-        
-        if match:
-            return match.group(0)
-        
-        return ""
-    
-    def _extract_imports(self, code: str) -> List[str]:
-        """
-        Extract all import statements from code.
-        
-        Args:
-            code: Component source code
-        
-        Returns:
-            List of import statements
-        """
-        # Match import statements
-        import_pattern = r'^import\s+.*?from\s+["\'].*?["\'];?$'
-        imports = re.findall(import_pattern, code, re.MULTILINE)
-        
-        return imports
     
     def _extract_variants(self, metadata: Dict[str, Any]) -> List[str]:
         """
@@ -164,54 +140,6 @@ class PatternParser:
                     variants.append(variant)
         
         return [v for v in variants if v]  # Filter empty strings
-    
-    def _find_modification_points(
-        self, code: str, metadata: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        """
-        Identify points in code where modifications can be made.
-        
-        Args:
-            code: Component source code
-            metadata: Pattern metadata
-        
-        Returns:
-            Dictionary of modification points and their locations
-        """
-        modification_points = {
-            "className_locations": [],
-            "variant_definitions": [],
-            "prop_locations": [],
-            "style_locations": []
-        }
-        
-        # Find className attributes
-        className_pattern = r'className=\{[^}]+\}'
-        modification_points["className_locations"] = [
-            match.start() for match in re.finditer(className_pattern, code)
-        ]
-        
-        # Find variant definitions (e.g., in cva() calls)
-        variant_pattern = r'variants:\s*\{[^}]+\}'
-        match = re.search(variant_pattern, code, re.DOTALL)
-        if match:
-            modification_points["variant_definitions"].append({
-                "start": match.start(),
-                "end": match.end(),
-                "content": match.group(0)
-            })
-        
-        # Find prop destructuring locations
-        prop_pattern = r'\(\s*\{[^}]+\}\s*,?\s*ref\)'
-        match = re.search(prop_pattern, code)
-        if match:
-            modification_points["prop_locations"].append({
-                "start": match.start(),
-                "end": match.end(),
-                "content": match.group(0)
-            })
-        
-        return modification_points
     
     def list_available_patterns(self) -> List[str]:
         """
