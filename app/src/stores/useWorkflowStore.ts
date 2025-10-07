@@ -4,6 +4,7 @@
  */
 
 import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
 import { WorkflowStep } from '@/types';
 import type { RequirementProposal, ComponentType } from '@/types/requirement.types';
 
@@ -19,6 +20,7 @@ interface WorkflowStore {
   currentStep: WorkflowStep;
   completedSteps: WorkflowStep[];
   progress: number; // 0-100
+  _hasHydrated: boolean; // Track hydration status
 
   // Screenshot file state
   uploadedFile: File | null;
@@ -73,24 +75,28 @@ interface WorkflowStore {
 
 // Calculate progress percentage based on completed steps
 function calculateProgress(completedSteps: WorkflowStep[]): number {
-  const totalSteps = 5; // Dashboard, Extract, Requirements, Patterns, Preview
-  const completed = completedSteps.length;
+  const totalSteps = 4; // Extract, Requirements, Patterns, Preview
+  // Filter out DASHBOARD step from progress calculation
+  const completed = completedSteps.filter(step => step !== WorkflowStep.DASHBOARD).length;
   return Math.round((completed / totalSteps) * 100);
 }
 
-export const useWorkflowStore = create<WorkflowStore>()((set) => ({
-  // Initial state
-  currentStep: WorkflowStep.DASHBOARD,
-  completedSteps: [],
-  progress: 0,
-  uploadedFile: null,
-  fileInfo: null,
-  proposals: {
-    props: [],
-    events: [],
-    states: [],
-    accessibility: [],
-  },
+export const useWorkflowStore = create<WorkflowStore>()(
+  persist(
+    (set, get) => ({
+      // Initial state
+      currentStep: WorkflowStep.DASHBOARD,
+      completedSteps: [],
+      progress: 0,
+      _hasHydrated: false,
+      uploadedFile: null,
+      fileInfo: null,
+      proposals: {
+        props: [],
+        events: [],
+        states: [],
+        accessibility: [],
+      },
 
   // Actions
   setStep: (step) =>
@@ -200,7 +206,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
     }),
 
   getApprovedProposals: () => {
-    const state = useWorkflowStore.getState();
+    const state = get();
     const filterApproved = (proposals: RequirementProposal[]) =>
       proposals.filter((p) => p.approved);
 
@@ -232,7 +238,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
 
   // Check if a step is accessible based on completed steps
   canAccessStep: (step) => {
-    const state = useWorkflowStore.getState();
+    const state = get();
 
     // Dashboard and Extract always accessible
     if (step === WorkflowStep.DASHBOARD || step === WorkflowStep.EXTRACT) {
@@ -240,7 +246,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
     }
 
     // Check prerequisite completion
-    const prerequisites: Record<WorkflowStep, WorkflowStep> = {
+    const prerequisites: Partial<Record<WorkflowStep, WorkflowStep>> = {
       [WorkflowStep.REQUIREMENTS]: WorkflowStep.EXTRACT,
       [WorkflowStep.PATTERNS]: WorkflowStep.REQUIREMENTS,
       [WorkflowStep.PREVIEW]: WorkflowStep.PATTERNS,
@@ -252,7 +258,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
 
   // Get array of steps user can currently access
   getAvailableSteps: () => {
-    const state = useWorkflowStore.getState();
+    const state = get();
     const allSteps = [
       WorkflowStep.DASHBOARD,
       WorkflowStep.EXTRACT,
@@ -263,4 +269,24 @@ export const useWorkflowStore = create<WorkflowStore>()((set) => ({
 
     return allSteps.filter(step => state.canAccessStep(step));
   },
-}));
+    }),
+    {
+      name: 'workflow-storage',
+      // Don't persist file objects (not serializable), only persist workflow state
+      partialize: (state) => ({
+        currentStep: state.currentStep,
+        completedSteps: state.completedSteps,
+        progress: state.progress,
+        componentType: state.componentType,
+        componentConfidence: state.componentConfidence,
+        proposals: state.proposals,
+        exportId: state.exportId,
+        exportedAt: state.exportedAt,
+      }),
+      onRehydrateStorage: () => () => {
+        // Set hydration flag when rehydration completes
+        useWorkflowStore.setState({ _hasHydrated: true });
+      },
+    }
+  )
+);

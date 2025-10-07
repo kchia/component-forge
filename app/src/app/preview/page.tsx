@@ -31,18 +31,29 @@ export default function PreviewPage() {
   const completeStep = useWorkflowStore((state) => state.completeStep);
   const componentType = useWorkflowStore((state) => state.componentType);
   const getApprovedProposals = useWorkflowStore((state) => state.getApprovedProposals);
+  const hasHydrated = useWorkflowStore((state) => state._hasHydrated);
   const tokens = useTokenStore((state) => state.tokens);
+
+  // Local state to persist generated code across re-renders
+  const [generatedCode, setGeneratedCode] = useState<any>(null);
 
   // Generation mutation
   const generation = useGenerateComponent({
-    onSuccess: () => {
+    onSuccess: (data) => {
+      console.log('[Preview] Generation SUCCESS!', data);
+      console.log('[Preview] Code:', data.code);
+      console.log('[Preview] Status:', data.status);
+
+      // Persist the generated code in local state
+      setGeneratedCode(data);
+
       // Mark preview step as completed on successful generation
       completeStep(WorkflowStep.PREVIEW);
       // Stop timer
       setStartTime(null);
     },
     onError: (error) => {
-      console.error('Generation failed:', error);
+      console.error('[Preview] Generation FAILED:', error);
       // Stop timer
       setStartTime(null);
     },
@@ -50,15 +61,40 @@ export default function PreviewPage() {
 
   const generationStatus = useGenerationStatus(generation);
   const isGenerating = generation.isPending;
-  const isComplete = generation.isSuccess;
+  const isComplete = generation.isSuccess || !!generatedCode; // Use local state as fallback
   const hasFailed = generation.isError;
 
-  // Route guard: redirect if patterns not completed
+  // Debug logging
   useEffect(() => {
-    if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
-      router.push('/patterns');
+    console.log('[Preview] Generation state:', {
+      isPending: generation.isPending,
+      isSuccess: generation.isSuccess,
+      isError: generation.isError,
+      hasData: !!generation.data,
+      data: generation.data
+    });
+  }, [generation.isPending, generation.isSuccess, generation.isError, generation.data]);
+
+  // Route guard: redirect if patterns not completed
+  // Wait for hydration before checking route guard to avoid false redirects
+  useEffect(() => {
+    // Skip route guard check until store is hydrated
+    if (!hasHydrated) {
+      console.log('[Preview] Waiting for store hydration...');
+      return;
     }
-  }, [completedSteps, router]);
+
+    console.log('[Preview] Route guard check (after hydration)');
+    console.log('[Preview] Completed steps:', completedSteps);
+    console.log('[Preview] Has PATTERNS step:', completedSteps.includes(WorkflowStep.PATTERNS));
+
+    if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
+      console.log('[Preview] Redirecting back to /patterns - PATTERNS step not completed');
+      router.push('/patterns');
+    } else {
+      console.log('[Preview] Route guard passed - rendering preview page');
+    }
+  }, [completedSteps, router, hasHydrated]);
 
   // Trigger generation on page load (only once)
   useEffect(() => {
@@ -91,7 +127,7 @@ export default function PreviewPage() {
         requirements: allRequirements,
       });
     }
-  }, [componentType, tokens, generation.data, isGenerating, hasFailed, getApprovedProposals]);
+  }, [componentType, tokens, generation.data, isGenerating, hasFailed]); // Removed getApprovedProposals to prevent unnecessary re-renders
 
   // Update elapsed time while generating
   useEffect(() => {
@@ -123,9 +159,10 @@ export default function PreviewPage() {
 
   // Handle download action
   const handleDownload = () => {
-    if (generation.data?.code) {
+    const codeToDownload = generation.data?.code || generatedCode?.code;
+    if (codeToDownload) {
       const componentName = componentType || 'Component';
-      downloadGeneratedCode(generation.data.code, componentName);
+      downloadGeneratedCode(codeToDownload, componentName);
     }
   };
 
@@ -154,11 +191,12 @@ export default function PreviewPage() {
     });
   };
 
-  // Get generated code or placeholders
-  const componentCode = generation.data?.code.component || '';
-  const storiesCode = generation.data?.code.stories || '';
-  const metadata = generation.data?.metadata;
-  const timing = generation.data?.timing;
+  // Get generated code or placeholders (use local state as fallback)
+  const actualData = generation.data || generatedCode;
+  const componentCode = actualData?.code.component || '';
+  const storiesCode = actualData?.code.stories || '';
+  const metadata = actualData?.metadata;
+  const timing = actualData?.timing;
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -178,7 +216,7 @@ export default function PreviewPage() {
       </div>
 
       {/* Generation Progress (show when generating) */}
-      {isGenerating && (
+      {isGenerating && !isComplete && (
         <GenerationProgress
           currentStage={currentStage}
           status={generationStatus}
@@ -369,7 +407,7 @@ export default function PreviewPage() {
       )}
 
       {/* Loading placeholder */}
-      {isGenerating && (
+      {isGenerating && !isComplete && (
         <Card>
           <CardContent className="py-12">
             <p className="text-center text-muted-foreground">

@@ -57,7 +57,13 @@ class PatternParser:
         """
         # Map pattern ID to filename
         # E.g., "shadcn-button" -> "button.json"
+        # E.g., "button-001" -> "button.json"
         pattern_name = pattern_id.replace("shadcn-", "").lower()
+
+        # Remove version suffix (e.g., "-001", "-v1")
+        pattern_name = re.sub(r'-\d+$', '', pattern_name)  # Remove "-001"
+        pattern_name = re.sub(r'-v\d+$', '', pattern_name)  # Remove "-v1"
+
         pattern_file = self.patterns_dir / f"{pattern_name}.json"
         
         if not pattern_file.exists():

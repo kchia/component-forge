@@ -65,21 +65,54 @@ class GeneratorService:
         self.current_stage = GenerationStage.PARSING
         self.stage_latencies: Dict[GenerationStage, int] = {}
     
+    def _normalize_requirements(self, requirements: List[Dict[str, Any]]) -> Dict[str, Any]:
+        """
+        Convert requirements list to dict format expected by backend.
+
+        Frontend sends: [{name, category, approved}, ...]
+        Backend expects: {props: [], events: [], states: [], accessibility: []}
+
+        Args:
+            requirements: List of requirement objects with category field
+
+        Returns:
+            Dict organized by category
+        """
+        result = {
+            "props": [],
+            "events": [],
+            "states": [],
+            "accessibility": [],
+            "validation": [],
+            "variants": []
+        }
+
+        for req in requirements:
+            category = req.get("category", "props")
+            # Map frontend categories to backend categories
+            if category in result:
+                result[category].append(req)
+
+        return result
+
     @traceable(run_type="chain", name="generate_component")
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """
         Generate component code from pattern, tokens, and requirements.
-        
+
         This is the main entry point for code generation.
-        
+
         Args:
             request: GenerationRequest with pattern_id, tokens, requirements
-        
+
         Returns:
             GenerationResult with generated code and metadata
         """
         start_time = time.time()
-        
+
+        # Normalize requirements from list to dict format
+        requirements_dict = self._normalize_requirements(request.requirements)
+
         try:
             # Stage 1: Parse Pattern
             pattern_structure = await self._parse_pattern(request.pattern_id)
@@ -100,7 +133,7 @@ class GeneratorService:
             # Stage 4: Implement Requirements
             requirement_impl = await self._implement_requirements(
                 pattern_structure.code,
-                request.requirements,
+                requirements_dict,
                 pattern_structure.component_name
             )
             
@@ -115,14 +148,14 @@ class GeneratorService:
             typed_code = self._generate_types(
                 enhanced_code,
                 pattern_structure.component_name,
-                request.requirements.get("props", [])
+                requirements_dict.get("props", [])
             )
-            
+
             # Stage 4.7: Generate Storybook Stories
             stories = self._generate_storybook_stories(
                 pattern_structure.component_name,
                 pattern_structure.variants,
-                request.requirements.get("props", []),
+                requirements_dict.get("props", []),
                 self._infer_component_type(request.pattern_id)
             )
             
@@ -134,7 +167,7 @@ class GeneratorService:
                 request.component_name,
                 request.pattern_id,
                 request.tokens,
-                request.requirements,
+                requirements_dict,
                 typed_code,
                 stories
             )
@@ -152,7 +185,7 @@ class GeneratorService:
                            len(request.tokens.get("typography", {})) +
                            len(request.tokens.get("spacing", {})),
                 lines_of_code=len(result_files["component"].split("\n")),
-                requirements_implemented=len(request.requirements.get("props", []))
+                requirements_implemented=len(requirements_dict.get("props", []))
             )
             
             # Build successful result
@@ -293,13 +326,15 @@ class GeneratorService:
             component_name=component_name
         )
         
+        # NOTE: enhanced_code already contains the full component including types
+        # Don't add requirement_impl["props_interface"] as it would duplicate types
         return CodeParts(
             provenance_header=provenance_header,
-            imports=pattern_structure.imports,
+            imports=[],  # Pattern code already has imports
             css_variables=token_mapping.css_variables,
-            type_definitions=requirement_impl["props_interface"],
-            component_code=enhanced_code,  # Use typed, accessibility-enhanced code
-            storybook_stories=stories,  # Use generated Storybook stories
+            type_definitions="",  # Don't duplicate - enhanced_code has types
+            component_code=enhanced_code,  # Complete component code
+            storybook_stories=stories,
             component_name=component_name
         )
     

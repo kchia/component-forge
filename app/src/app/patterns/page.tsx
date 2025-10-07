@@ -71,6 +71,8 @@ export default function PatternsPage() {
   } = useLibraryStats();
   
   const handleSelectPattern = (pattern: PatternMatch) => {
+    console.log('[Patterns] Selecting pattern:', pattern.name);
+
     // Convert PatternMatch to Pattern for store
     const patternForStore: Pattern = {
       pattern_id: pattern.pattern_id,
@@ -82,9 +84,12 @@ export default function PatternsPage() {
       metadata: pattern.metadata,
     };
     selectPattern(patternForStore);
-    
+
     // Mark patterns step as completed
     completeStep(WorkflowStep.PATTERNS);
+
+    console.log('[Patterns] Pattern selected and step completed');
+    console.log('[Patterns] Completed steps:', completedSteps);
   };
   
   const handlePreviewPattern = (pattern: PatternMatch) => {
@@ -173,16 +178,19 @@ export default function PatternsPage() {
           <Button asChild variant="outline">
             <Link href="/requirements">← Back to Requirements</Link>
           </Button>
-          <Button 
-            asChild 
-            size="lg"
-            disabled={!selectedPattern}
-          >
-            <Link href="/preview">
+          {selectedPattern ? (
+            <Button asChild size="lg">
+              <Link href="/preview">
+                Continue to Preview
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          ) : (
+            <Button size="lg" disabled>
               Continue to Preview
               <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+            </Button>
+          )}
         </div>
 
         {/* Pattern Preview Dialog */}

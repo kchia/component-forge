@@ -111,22 +111,40 @@ async def generate_component(
             }
         )
         
-        # Return successful response
+        # Return successful response matching frontend GenerationResponse type
         return {
-            "success": True,
-            "component_code": result.component_code,
-            "stories_code": result.stories_code,
-            "files": result.files,
+            "code": {
+                "component": result.component_code,
+                "stories": result.stories_code,
+                "tokens_json": result.files.get("tokens", None),
+                "requirements_json": result.files.get("requirements", None)
+            },
             "metadata": {
-                "latency_ms": result.metadata.latency_ms,
-                "stage_latencies": {
-                    stage.value: latency 
-                    for stage, latency in result.metadata.stage_latencies.items()
-                },
-                "token_count": result.metadata.token_count,
+                "pattern_used": request.pattern_id,
+                "pattern_version": "1.0.0",
+                "tokens_applied": result.metadata.token_count,
+                "requirements_implemented": result.metadata.requirements_implemented,
                 "lines_of_code": result.metadata.lines_of_code,
-                "requirements_implemented": result.metadata.requirements_implemented
-            }
+                "imports_count": 0,  # TODO: Calculate from code
+                "has_typescript_errors": False,
+                "has_accessibility_warnings": False
+            },
+            "timing": {
+                "total_ms": result.metadata.latency_ms,
+                "parsing_ms": result.metadata.stage_latencies.get("parsing", 0),
+                "injection_ms": result.metadata.stage_latencies.get("injecting", 0),
+                "generation_ms": result.metadata.stage_latencies.get("generating", 0),
+                "assembly_ms": result.metadata.stage_latencies.get("assembling", 0),
+                "formatting_ms": result.metadata.stage_latencies.get("formatting", 0)
+            },
+            "provenance": {
+                "pattern_id": request.pattern_id,
+                "pattern_version": "1.0.0",
+                "generated_at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                "tokens_hash": "placeholder",  # TODO: Calculate hash
+                "requirements_hash": "placeholder"  # TODO: Calculate hash
+            },
+            "status": "completed"
         }
     
     except HTTPException:

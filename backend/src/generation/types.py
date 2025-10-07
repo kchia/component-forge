@@ -22,7 +22,7 @@ class GenerationRequest(BaseModel):
     """Request model for code generation."""
     pattern_id: str = Field(..., description="ID of the pattern to use")
     tokens: Dict[str, Any] = Field(..., description="Design tokens from extraction")
-    requirements: Dict[str, Any] = Field(..., description="Approved requirements")
+    requirements: List[Dict[str, Any]] = Field(..., description="Approved requirements as array")
     component_name: Optional[str] = Field(None, description="Optional custom component name")
 
 
