@@ -26,6 +26,12 @@ except ImportError:
     LANGSMITH_AVAILABLE = False
 
 
+# Quality scoring constants
+ERROR_PENALTY = 0.25  # Penalty per error (25% reduction)
+WARNING_PENALTY = 0.05  # Penalty per warning (5% reduction)
+MAX_ERRORS_FOR_PROMPT = 10  # Maximum errors to include in fix prompt
+
+
 @dataclass
 class ValidationError:
     """Individual validation error."""
@@ -366,17 +372,21 @@ Return the complete fixed code in JSON format: {"component_code": "...", "storie
         
         if ts_errors:
             error_lines.append("## TypeScript Errors:")
-            for error in ts_errors[:5]:  # Limit to first 5
+            for error in ts_errors[:MAX_ERRORS_FOR_PROMPT]:  # Limit to avoid token overflow
                 error_lines.append(
                     f"- Line {error.line}, Column {error.column}: {error.message}"
                 )
+            if len(ts_errors) > MAX_ERRORS_FOR_PROMPT:
+                error_lines.append(f"... and {len(ts_errors) - MAX_ERRORS_FOR_PROMPT} more errors")
         
         if eslint_errors:
             error_lines.append("\n## ESLint Errors:")
-            for error in eslint_errors[:5]:  # Limit to first 5
+            for error in eslint_errors[:MAX_ERRORS_FOR_PROMPT]:  # Limit to avoid token overflow
                 error_lines.append(
                     f"- Line {error.line}, Column {error.column}: {error.message} ({error.rule_id})"
                 )
+            if len(eslint_errors) > MAX_ERRORS_FOR_PROMPT:
+                error_lines.append(f"... and {len(eslint_errors) - MAX_ERRORS_FOR_PROMPT} more errors")
         
         errors_text = "\n".join(error_lines)
         
@@ -408,25 +418,32 @@ Return the complete fixed code."""
         eslint_warnings: List[ValidationError],
     ) -> float:
         """
-        Calculate overall quality score based on validation results.
+        Calculate overall quality score with improved non-linear penalty.
         
-        Score factors:
-        - No errors: base 1.0
-        - Each error: -0.2
-        - Each warning: -0.05
+        Scoring algorithm:
+        - 0 errors: 1.0
+        - 1-2 errors: 0.7-0.9
+        - 3-5 errors: 0.3-0.6
+        - 6+ errors: 0.0-0.2
         
         Returns:
             Quality score from 0.0 to 1.0
         """
-        score = 1.0
-        
-        # Deduct for errors (major impact)
         error_count = len(ts_errors) + len(eslint_errors)
-        score -= error_count * 0.2
+        warning_count = len(ts_warnings) + len(eslint_warnings)
+        
+        # Non-linear penalty for errors
+        if error_count == 0:
+            score = 1.0
+        elif error_count <= 2:
+            score = 1.0 - (error_count * ERROR_PENALTY)
+        elif error_count <= 5:
+            score = 0.6 - ((error_count - 2) * 0.1)
+        else:
+            score = max(0.0, 0.3 - ((error_count - 5) * 0.05))
         
         # Deduct for warnings (minor impact)
-        warning_count = len(ts_warnings) + len(eslint_warnings)
-        score -= warning_count * 0.05
+        score -= warning_count * WARNING_PENALTY
         
         # Clamp to [0.0, 1.0]
         return max(0.0, min(1.0, score))
@@ -437,14 +454,25 @@ Return the complete fixed code."""
         ts_warnings: List[ValidationError],
     ) -> float:
         """
-        Calculate TypeScript-specific quality score.
+        Calculate TypeScript-specific quality score with non-linear penalty.
         
         Returns:
             Quality score from 0.0 to 1.0
         """
-        score = 1.0
-        score -= len(ts_errors) * 0.2
-        score -= len(ts_warnings) * 0.05
+        error_count = len(ts_errors)
+        warning_count = len(ts_warnings)
+        
+        # Non-linear penalty for errors
+        if error_count == 0:
+            score = 1.0
+        elif error_count <= 2:
+            score = 1.0 - (error_count * ERROR_PENALTY)
+        elif error_count <= 5:
+            score = 0.6 - ((error_count - 2) * 0.1)
+        else:
+            score = max(0.0, 0.3 - ((error_count - 5) * 0.05))
+        
+        score -= warning_count * WARNING_PENALTY
         return max(0.0, min(1.0, score))
     
     def _calculate_eslint_quality_score(
@@ -453,14 +481,25 @@ Return the complete fixed code."""
         eslint_warnings: List[ValidationError],
     ) -> float:
         """
-        Calculate ESLint-specific quality score.
+        Calculate ESLint-specific quality score with non-linear penalty.
         
         Returns:
             Quality score from 0.0 to 1.0
         """
-        score = 1.0
-        score -= len(eslint_errors) * 0.2
-        score -= len(eslint_warnings) * 0.05
+        error_count = len(eslint_errors)
+        warning_count = len(eslint_warnings)
+        
+        # Non-linear penalty for errors
+        if error_count == 0:
+            score = 1.0
+        elif error_count <= 2:
+            score = 1.0 - (error_count * ERROR_PENALTY)
+        elif error_count <= 5:
+            score = 0.6 - ((error_count - 2) * 0.1)
+        else:
+            score = max(0.0, 0.3 - ((error_count - 5) * 0.05))
+        
+        score -= warning_count * WARNING_PENALTY
         return max(0.0, min(1.0, score))
     
     @staticmethod

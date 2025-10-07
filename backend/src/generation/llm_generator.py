@@ -7,13 +7,14 @@ Includes structured output, LangSmith tracing, and error handling.
 
 import json
 import os
+import asyncio
 from typing import Dict, Any, List, Optional
 from dataclasses import dataclass, asdict
 import time
 
 # Try to import OpenAI and LangSmith (optional dependencies)
 try:
-    from openai import OpenAI
+    from openai import AsyncOpenAI
     OPENAI_AVAILABLE = True
 except ImportError:
     OPENAI_AVAILABLE = False
@@ -60,7 +61,7 @@ class LLMComponentGenerator:
     def __init__(
         self,
         api_key: Optional[str] = None,
-        model: str = "gpt-4-turbo-preview",
+        model: str = "gpt-4o",
         max_retries: int = 3,
         timeout: int = 60,
     ):
@@ -82,7 +83,7 @@ class LLMComponentGenerator:
         if not self.api_key:
             raise ValueError("OpenAI API key not provided")
         
-        self.client = OpenAI(api_key=self.api_key)
+        self.client = AsyncOpenAI(api_key=self.api_key)
         self.model = model
         self.max_retries = max_retries
         self.timeout = timeout
@@ -115,10 +116,10 @@ class LLMComponentGenerator:
                 # Calculate backoff delay
                 if attempt > 0:
                     delay = 2 ** attempt  # Exponential backoff
-                    time.sleep(delay)
+                    await asyncio.sleep(delay)
                 
                 # Call OpenAI API with JSON mode
-                response = self.client.chat.completions.create(
+                response = await self.client.chat.completions.create(
                     model=self.model,
                     messages=[
                         {"role": "system", "content": system_prompt},
@@ -249,10 +250,22 @@ class MockLLMGenerator(LLMComponentGenerator):
         temperature: float = 0.7,
     ) -> LLMGeneratedCode:
         """
-        Generate mock component code.
+        Generate mock component code based on prompt content.
         
-        Returns predictable mock output for testing.
+        Detects component type from prompt and returns appropriate mock.
         """
+        # Detect component type from prompt
+        user_prompt_lower = user_prompt.lower()
+        
+        if "card" in user_prompt_lower:
+            return self._generate_mock_card()
+        elif "input" in user_prompt_lower or "textfield" in user_prompt_lower:
+            return self._generate_mock_input()
+        else:
+            return self._generate_mock_button()
+    
+    def _generate_mock_button(self) -> LLMGeneratedCode:
+        """Generate mock button component."""
         return LLMGeneratedCode(
             component_code='''import React from 'react';
 
@@ -307,5 +320,127 @@ export const Primary: Story = {
                 "prompt_tokens": 500,
                 "completion_tokens": 300,
                 "total_tokens": 800,
+            },
+        )
+    
+    def _generate_mock_card(self) -> LLMGeneratedCode:
+        """Generate mock card component."""
+        return LLMGeneratedCode(
+            component_code='''import React from 'react';
+
+interface CardProps {
+  title: string;
+  children: React.ReactNode;
+  variant?: 'outlined' | 'elevated';
+}
+
+export const Card: React.FC<CardProps> = ({
+  title,
+  children,
+  variant = 'elevated',
+}) => {
+  return (
+    <div className={`card card--${variant}`}>
+      <h3 className="card__title">{title}</h3>
+      <div className="card__content">{children}</div>
+    </div>
+  );
+};
+
+Card.displayName = 'Card';
+''',
+            stories_code='''import type { Meta, StoryObj } from '@storybook/react';
+import { Card } from './Card';
+
+const meta: Meta<typeof Card> = {
+  title: 'Components/Card',
+  component: Card,
+};
+
+export default meta;
+type Story = StoryObj<typeof Card>;
+
+export const Default: Story = {
+  args: {
+    title: 'Card Title',
+    children: 'Card content goes here',
+    variant: 'elevated',
+  },
+};
+''',
+            imports=["import React from 'react';"],
+            exports=["Card"],
+            explanation="Generated a card component with title and content sections.",
+            token_usage={
+                "prompt_tokens": 520,
+                "completion_tokens": 320,
+                "total_tokens": 840,
+            },
+        )
+    
+    def _generate_mock_input(self) -> LLMGeneratedCode:
+        """Generate mock input component."""
+        return LLMGeneratedCode(
+            component_code='''import React from 'react';
+
+interface InputProps {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+  disabled?: boolean;
+}
+
+export const Input: React.FC<InputProps> = ({
+  label,
+  value,
+  onChange,
+  placeholder,
+  disabled = false,
+}) => {
+  return (
+    <div className="input-wrapper">
+      <label className="input__label">{label}</label>
+      <input
+        className="input__field"
+        type="text"
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={placeholder}
+        disabled={disabled}
+      />
+    </div>
+  );
+};
+
+Input.displayName = 'Input';
+''',
+            stories_code='''import type { Meta, StoryObj } from '@storybook/react';
+import { Input } from './Input';
+
+const meta: Meta<typeof Input> = {
+  title: 'Components/Input',
+  component: Input,
+};
+
+export default meta;
+type Story = StoryObj<typeof Input>;
+
+export const Default: Story = {
+  args: {
+    label: 'Email',
+    value: '',
+    onChange: () => {},
+    placeholder: 'Enter email',
+  },
+};
+''',
+            imports=["import React from 'react';"],
+            exports=["Input"],
+            explanation="Generated an input component with label and form controls.",
+            token_usage={
+                "prompt_tokens": 510,
+                "completion_tokens": 340,
+                "total_tokens": 850,
             },
         )

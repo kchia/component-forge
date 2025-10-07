@@ -159,7 +159,7 @@ class TestCodeValidator:
         assert score == 1.0
     
     def test_calculate_quality_score_with_errors(self, validator):
-        """Test quality score with errors."""
+        """Test quality score with errors using non-linear penalty."""
         errors = [
             ValidationError(1, 1, "Error 1", "rule1", "error"),
             ValidationError(2, 1, "Error 2", "rule2", "error"),
@@ -167,8 +167,8 @@ class TestCodeValidator:
         
         score = validator._calculate_quality_score(errors, [], [], [])
         
-        # 2 errors * 0.2 = -0.4, so score should be 0.6
-        assert score == 0.6
+        # 2 errors: 1.0 - (2 * 0.25) = 0.5
+        assert score == 0.5
     
     def test_calculate_quality_score_with_warnings(self, validator):
         """Test quality score with warnings."""
@@ -179,7 +179,7 @@ class TestCodeValidator:
         
         score = validator._calculate_quality_score([], [], warnings, [])
         
-        # 2 warnings * 0.05 = -0.1, so score should be 0.9
+        # 0 errors + 2 warnings * 0.05 = 1.0 - 0.1 = 0.9
         assert score == 0.9
     
     def test_calculate_quality_score_mixed(self, validator):
@@ -189,8 +189,8 @@ class TestCodeValidator:
         
         score = validator._calculate_quality_score(errors, [], warnings, [])
         
-        # 1 error * 0.2 + 1 warning * 0.05 = -0.25, so score should be 0.75
-        assert score == 0.75
+        # 1 error: 0.75, minus 1 warning (0.05) = 0.70
+        assert score == 0.70
     
     def test_calculate_quality_score_clamped(self, validator):
         """Test that quality score is clamped to [0.0, 1.0]."""
@@ -211,8 +211,8 @@ class TestCodeValidator:
         
         score = validator._calculate_typescript_quality_score(ts_errors, ts_warnings)
         
-        # 1 error * 0.2 + 1 warning * 0.05 = -0.25, so score should be 0.75
-        assert score == 0.75
+        # 1 error: 0.75, minus 1 warning (0.05) = 0.70
+        assert score == 0.70
     
     def test_calculate_eslint_quality_score(self, validator):
         """Test ESLint-specific quality score calculation."""
@@ -221,8 +221,8 @@ class TestCodeValidator:
         
         score = validator._calculate_eslint_quality_score(eslint_errors, eslint_warnings)
         
-        # 1 error * 0.2 = -0.2, so score should be 0.8
-        assert score == 0.8
+        # 1 error: 1.0 - 0.25 = 0.75
+        assert score == 0.75
     
     def test_convert_score_to_0_100(self, validator):
         """Test score conversion from 0.0-1.0 to 0-100."""

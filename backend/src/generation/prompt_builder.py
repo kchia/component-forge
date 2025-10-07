@@ -9,6 +9,13 @@ from typing import Dict, Any, List, Optional
 from dataclasses import dataclass
 import json
 
+# Try to import tiktoken for accurate token counting
+try:
+    import tiktoken
+    TIKTOKEN_AVAILABLE = True
+except ImportError:
+    TIKTOKEN_AVAILABLE = False
+
 
 @dataclass
 class PromptTemplate:
@@ -246,7 +253,8 @@ Generate complete, working code that meets all requirements."""
         """
         Estimate token count for the prompts.
         
-        Rough estimate: ~4 characters per token
+        Uses tiktoken for accurate counting if available, otherwise falls back
+        to rough estimate (~4 characters per token).
         
         Args:
             prompts: Dict with 'system' and 'user' prompts
@@ -254,6 +262,18 @@ Generate complete, working code that meets all requirements."""
         Returns:
             Estimated token count
         """
+        if TIKTOKEN_AVAILABLE:
+            try:
+                # Use tiktoken for accurate token counting
+                encoder = tiktoken.encoding_for_model("gpt-4o")
+                system_tokens = len(encoder.encode(prompts["system"]))
+                user_tokens = len(encoder.encode(prompts["user"]))
+                return system_tokens + user_tokens
+            except Exception:
+                # Fall back to rough estimate if encoding fails
+                pass
+        
+        # Fallback: rough estimate
         total_chars = len(prompts["system"]) + len(prompts["user"])
         return total_chars // 4
     
