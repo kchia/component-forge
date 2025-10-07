@@ -1,49 +1,83 @@
-# Epic 5: Quality Validation & Testing
+# Epic 5: Extended Quality Validation & Accessibility Testing
 
 **Status**: Not Started
 **Priority**: Critical
 **Epic Owner**: QA/Frontend Team
-**Estimated Tasks**: 9
-**Depends On**: Epic 4 (Code Generation)
+**Estimated Tasks**: 7 (reduced from 9 - see integration notes)
+**Depends On**:
+- ✅ Epic 4 (Code Generation)
+- ⭐ **Epic 4.5 Task 2** (Code Validator with TypeScript/ESLint validation)
+
+**Integration Note**: This epic **extends** Epic 4.5's validation infrastructure with comprehensive accessibility testing, keyboard navigation, color contrast validation, and token adherence measurement.
 
 ---
 
 ## Overview
 
-Build automated quality validation system that ensures every generated component meets accessibility standards, type safety requirements, code quality guidelines, and design token adherence. Validation runs in the **frontend** using existing Next.js/TypeScript tooling, with backend API endpoints for validation orchestration and results storage. Includes auto-fix capabilities with retry logic and comprehensive quality reporting.
+**IMPORTANT**: Epic 4.5 Task 2 already provides TypeScript and ESLint validation with auto-fix and retry logic. Epic 5 **extends** this foundation with:
 
-**Architecture Note**: Validation leverages the frontend's existing TypeScript compiler, ESLint, Prettier, and axe-core setup. Backend provides validation orchestration API and stores results, but does NOT run Node.js tooling via subprocess.
+1. **Accessibility Testing** (axe-core, keyboard navigation, focus indicators)
+2. **Color Contrast Validation** (WCAG AA compliance)
+3. **Token Adherence Measurement** (≥90% target)
+4. **Extended Auto-Fix Logic** (accessibility and token fixes)
+5. **Comprehensive Quality Reporting** (all validation results)
+
+**What Epic 4.5 Task 2 Already Provides:**
+- ✅ TypeScript strict compilation validation (`backend/scripts/validate_typescript.js`)
+- ✅ ESLint validation (`backend/scripts/validate_eslint.js`)
+- ✅ Auto-fix with max 2 retries
+- ✅ Quality scoring (compilation, linting, type safety)
+- ✅ LLM-based error correction
+
+**What Epic 5 Adds:**
+- ✨ axe-core accessibility audit (0 critical violations)
+- ✨ Keyboard navigation testing (Tab, Enter, Escape, Arrows)
+- ✨ Focus indicator validation (≥3:1 contrast)
+- ✨ Color contrast checking (WCAG AA: 4.5:1 text, 3:1 UI)
+- ✨ Token adherence meter (colors, typography, spacing)
+- ✨ Extended auto-fixes (ARIA labels, color adjustments)
+- ✨ Unified quality reports (all metrics in one place)
+
+**Architecture Note**: Epic 5 validators run in the **frontend** using existing Next.js/TypeScript tooling and integrate with Epic 4.5's validation pipeline. Backend stores results and generates reports.
 
 ---
 
 ## Goals
 
-1. Validate TypeScript compilation (strict mode)
-2. Run ESLint and Prettier validation
-3. Execute axe-core accessibility testing (0 critical violations)
-4. Test keyboard navigation and focus management
-5. Verify focus indicators are visible
-6. Check color contrast compliance (WCAG AA)
-7. Calculate token adherence meter (≥90% target)
-8. Implement auto-fix with single retry for failures
-9. Generate comprehensive quality reports
+**Foundation (Epic 4.5 Task 2):**
+1. ✅ TypeScript strict compilation (handled by Epic 4.5)
+2. ✅ ESLint and Prettier validation (handled by Epic 4.5)
+3. ✅ Basic auto-fix with retry logic (handled by Epic 4.5)
+
+**Epic 5 Extensions:**
+4. Execute axe-core accessibility testing (0 critical violations)
+5. Test keyboard navigation and focus management
+6. Verify focus indicators are visible
+7. Check color contrast compliance (WCAG AA)
+8. Calculate token adherence meter (≥90% target)
+9. Extend auto-fix with accessibility and token fixes
+10. Generate comprehensive quality reports (integrate all validation)
 
 ---
 
 ## Success Criteria
 
-- ✅ TypeScript strict compilation succeeds (required)
-- ✅ ESLint validation passes with zero errors
-- ✅ Prettier formatting verified
+**From Epic 4.5 Task 2 (Foundation):**
+- ✅ TypeScript strict compilation succeeds (Epic 4.5)
+- ✅ ESLint validation passes with zero errors (Epic 4.5)
+- ✅ Prettier formatting verified (Epic 4.5)
+- ✅ Basic auto-fix resolves TS/ESLint issues (Epic 4.5)
+
+**Epic 5 Extensions:**
 - ✅ axe-core audit shows 0 critical violations (required)
 - ✅ 0 serious violations (required)
 - ✅ Keyboard navigation works (Tab, Enter, Space, Escape)
 - ✅ Focus indicators visible with ≥3:1 contrast
 - ✅ Color contrast meets WCAG AA (4.5:1 text, 3:1 UI)
 - ✅ Token adherence ≥90% (colors, typography, spacing)
-- ✅ Auto-fix resolves 80%+ of fixable issues
-- ✅ Quality report generated with all metrics
-- ✅ Validation completes in <10s
+- ✅ Extended auto-fix resolves 80%+ of accessibility/token issues
+- ✅ Unified quality report generated with all metrics (TS + ESLint + A11y + Tokens)
+- ✅ Extended validation completes in <15s (Epic 4.5: ~5s + Epic 5: ~10s)
 
 ---
 
@@ -167,339 +201,67 @@ open .claude/wireframes/component-preview-page.html
 
 ---
 
+## Integration with Epic 4.5
+
+**CRITICAL**: Before implementing Epic 5, Epic 4.5 Task 2 (Code Validator) MUST be completed. Epic 5 **extends** this foundation.
+
+### What Epic 4.5 Task 2 Provides
+
+**File**: `backend/src/generation/code_validator.py`
+
+**Functionality**:
+```python
+class CodeValidator:
+    async def validate_and_fix(
+        self,
+        code: str,
+        max_retries: int = 2
+    ) -> ValidationResult:
+        """Validate code, use LLM to fix if needed."""
+
+        # Run validations in parallel
+        ts_result, lint_result = await asyncio.gather(
+            self._validate_typescript(code),  # via validate_typescript.js
+            self._validate_eslint(code)        # via validate_eslint.js
+        )
+
+        if not valid:
+            # Use LLM to fix errors
+            code = await self._llm_fix_errors(code, errors)
+
+        return ValidationResult(valid, code, quality_scores)
+```
+
+**Validation Scripts** (Node.js):
+- `backend/scripts/validate_typescript.js` - TypeScript compilation check
+- `backend/scripts/validate_eslint.js` - ESLint validation
+
+**Epic 5 Integration Point**: Epic 5 validators will receive the validated code from Epic 4.5 and run additional checks (accessibility, tokens, etc.)
+
+---
+
 ## Tasks
 
-**IMPORTANT UPDATE (2025-01-XX)**: Tasks 1-3 have been updated with correct architecture. Tasks 4-9 still contain old Python-based code examples and need updates:
+**IMPORTANT UPDATE (2025-10-07)**:
 
-**Tasks Requiring Updates:**
-- **Task 4**: Keyboard Navigation - Change from Python/Playwright to TypeScript/Playwright
-- **Task 5**: Focus Indicator - Change from Python to TypeScript, use Playwright getComputedStyle
-- **Task 6**: Color Contrast - Remove Python `colour` library, use TypeScript color math
-- **Task 7**: Token Adherence - Change to frontend TypeScript implementation
-- **Task 8**: Auto-Fix Logic - Update to use frontend validators (already partially in Tasks 1-3)
-- **Task 9**: Quality Report - Update to frontend report generation or backend API approach
+### Tasks Removed (Handled by Epic 4.5 Task 2)
+- ~~**Task 1**: TypeScript Compilation Check~~ → **Epic 4.5 Task 2** ✅
+- ~~**Task 2**: ESLint & Prettier Validation~~ → **Epic 4.5 Task 2** ✅
 
-**Key Changes Needed:**
-- Replace `backend/src/validation/*.py` with `app/src/services/validation/*.ts`
-- Remove all `asyncio.create_subprocess_exec()` calls to `tsc`, `eslint`, `npx`
-- Remove Python `playwright.async_api` imports, use `@playwright/test`
-- Remove `colour` library (doesn't exist), use `colormath` or custom WCAG formulas
-- Update file paths from `backend/` to `app/src/`
-- Change all code examples from Python to TypeScript
+### Epic 5 Tasks (Renumbered)
+- **Task 1**: axe-core Accessibility Testing (was Task 3)
+- **Task 2**: Keyboard Navigation Testing (was Task 4)
+- **Task 3**: Focus Indicator Validation (was Task 5)
+- **Task 4**: Color Contrast Validation (was Task 6)
+- **Task 5**: Token Adherence Meter (was Task 7)
+- **Task 6**: Extended Auto-Fix & Retry Logic (was Task 8)
+- **Task 7**: Comprehensive Quality Report Generation (was Task 9)
 
----
-
-### Task 1: TypeScript Compilation Check (✓ UPDATED)
-**Acceptance Criteria**:
-- [ ] Create frontend validation service at `app/src/services/validation/typescript-validator.ts`
-- [ ] Write generated component to temp file in `app/.tmp/` directory
-- [ ] Run TypeScript compiler programmatically using `ts.createProgram` API
-- [ ] Use strict mode configuration from existing `app/tsconfig.json`:
-  - `strict: true`
-  - `noImplicitAny: true`
-  - `strictNullChecks: true`
-  - `noUnusedLocals: true`
-  - `noUnusedParameters: true`
-- [ ] Capture compilation diagnostics with line numbers and categories
-- [ ] Parse error messages for actionable feedback
-- [ ] Return detailed error report if compilation fails
-- [ ] Auto-fix: Remove unused imports, add missing type annotations (using AST manipulation)
-- [ ] Retry compilation after auto-fix
-- [ ] Block component delivery if compilation fails after retry
-- [ ] Backend API: `POST /api/v1/validation/typescript` receives validation results
-
-**Files**:
-- `app/src/services/validation/typescript-validator.ts` (NEW)
-- `app/src/services/validation/types.ts` (NEW - shared validation types)
-- `backend/src/api/v1/routes/validation.py` (NEW - validation result storage)
-- `app/tsconfig.json` (EXISTING - already has strict mode)
-
-**TypeScript Validation**:
-```typescript
-// app/src/services/validation/typescript-validator.ts
-import * as ts from 'typescript';
-import * as fs from 'fs';
-import * as path from 'path';
-import type { ValidationResult, TypeScriptDiagnostic } from './types';
-
-export class TypeScriptValidator {
-  private configPath: string;
-  private compilerOptions: ts.CompilerOptions;
-
-  constructor(configPath: string = './tsconfig.json') {
-    this.configPath = configPath;
-
-    // Load compiler options from tsconfig.json
-    const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
-    const parsedConfig = ts.parseJsonConfigFileContent(
-      configFile.config,
-      ts.sys,
-      path.dirname(configPath)
-    );
-    this.compilerOptions = parsedConfig.options;
-  }
-
-  async validate(code: string, fileName: string = 'Component.tsx'): Promise<ValidationResult> {
-    // Write code to temporary file
-    const tmpDir = path.join(process.cwd(), '.tmp');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-
-    const tmpFilePath = path.join(tmpDir, fileName);
-    fs.writeFileSync(tmpFilePath, code, 'utf-8');
-
-    // Create program and get diagnostics
-    const program = ts.createProgram([tmpFilePath], this.compilerOptions);
-    const diagnostics = ts.getPreEmitDiagnostics(program);
-
-    if (diagnostics.length === 0) {
-      // Clean up
-      fs.unlinkSync(tmpFilePath);
-      return {
-        valid: true,
-        errors: [],
-        warnings: []
-      };
-    }
-
-    // Parse diagnostics
-    const errors = this.parseDiagnostics(diagnostics);
-
-    // Attempt auto-fix
-    const fixedCode = this.autoFix(code, errors);
-    if (fixedCode !== code) {
-      // Retry validation with fixed code
-      fs.writeFileSync(tmpFilePath, fixedCode, 'utf-8');
-      const retryProgram = ts.createProgram([tmpFilePath], this.compilerOptions);
-      const retryDiagnostics = ts.getPreEmitDiagnostics(retryProgram);
-
-      if (retryDiagnostics.length === 0) {
-        fs.unlinkSync(tmpFilePath);
-        return {
-          valid: true,
-          errors: [],
-          warnings: [],
-          autoFixed: true,
-          fixedCode
-        };
-      }
-    }
-
-    // Clean up
-    fs.unlinkSync(tmpFilePath);
-
-    return {
-      valid: false,
-      errors,
-      warnings: [],
-      autoFixAttempted: true
-    };
-  }
-
-  private parseDiagnostics(diagnostics: readonly ts.Diagnostic[]): TypeScriptDiagnostic[] {
-    return diagnostics.map(diagnostic => {
-      const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
-      let line = 0;
-      let column = 0;
-
-      if (diagnostic.file && diagnostic.start !== undefined) {
-        const { line: lineNum, character } = diagnostic.file.getLineAndCharacterOfPosition(
-          diagnostic.start
-        );
-        line = lineNum + 1;
-        column = character + 1;
-      }
-
-      return {
-        code: `TS${diagnostic.code}`,
-        message,
-        line,
-        column,
-        category: ts.DiagnosticCategory[diagnostic.category].toLowerCase() as 'error' | 'warning'
-      };
-    });
-  }
-
-  private autoFix(code: string, errors: TypeScriptDiagnostic[]): string {
-    let fixedCode = code;
-
-    // Remove unused imports
-    if (errors.some(e => e.message.includes('is declared but never used'))) {
-      fixedCode = this.removeUnusedImports(fixedCode);
-    }
-
-    // Add missing React import for JSX
-    if (errors.some(e => e.message.includes("'React' refers to a UMD global"))) {
-      if (!fixedCode.includes("import React from 'react'")) {
-        fixedCode = "import React from 'react';\n" + fixedCode;
-      }
-    }
-
-    return fixedCode;
-  }
-
-  private removeUnusedImports(code: string): string {
-    // Simple regex-based removal (can be enhanced with AST manipulation)
-    const lines = code.split('\n');
-    return lines.filter(line => {
-      // Keep non-import lines
-      if (!line.trim().startsWith('import')) return true;
-      // This is simplified - real implementation should use TS AST
-      return true;
-    }).join('\n');
-  }
-}
-```
-
-**Tests**:
-- Valid TypeScript compiles successfully
-- Compilation errors detected correctly
-- Auto-fix removes unused imports
-- Auto-fix adds type annotations
-- Retry logic works
+**Total Tasks**: 7 (reduced from 9)
 
 ---
 
-### Task 2: ESLint & Prettier Validation (✓ UPDATED)
-**Acceptance Criteria**:
-- [ ] Create frontend validation service at `app/src/services/validation/eslint-validator.ts`
-- [ ] Use ESLint programmatically via `eslint` package (already in `app/package.json`)
-- [ ] Use existing ESLint config from `app/eslint.config.mjs`
-- [ ] Check code formatting with Prettier programmatically
-- [ ] Report errors by severity (error, warning)
-- [ ] Auto-fix: Apply ESLint fixes and Prettier formatting
-- [ ] Retry validation after auto-fix
-- [ ] Allow warnings but block on errors
-- [ ] Generate formatted code output
-
-**Files**:
-- `app/src/services/validation/eslint-validator.ts` (NEW)
-- `app/eslint.config.mjs` (EXISTING - already has Next.js config)
-- `app/.prettierrc` (EXISTING or create if needed)
-
-**ESLint Validation**:
-```typescript
-// app/src/services/validation/eslint-validator.ts
-import { ESLint } from 'eslint';
-import prettier from 'prettier';
-import * as fs from 'fs';
-import * as path from 'path';
-import type { ValidationResult, LintMessage } from './types';
-
-export class ESLintValidator {
-  private eslint: ESLint;
-
-  constructor() {
-    this.eslint = new ESLint({
-      fix: false, // We'll handle fixes separately
-      useEslintrc: true, // Use project's eslint.config.mjs
-    });
-  }
-
-  async validate(code: string, fileName: string = 'Component.tsx'): Promise<ValidationResult> {
-    // Write code to temp file
-    const tmpDir = path.join(process.cwd(), '.tmp');
-    if (!fs.existsSync(tmpDir)) {
-      fs.mkdirSync(tmpDir, { recursive: true });
-    }
-
-    const tmpFilePath = path.join(tmpDir, fileName);
-    fs.writeFileSync(tmpFilePath, code, 'utf-8');
-
-    try {
-      // Run ESLint
-      const results = await this.eslint.lintFiles([tmpFilePath]);
-      const result = results[0];
-
-      if (!result) {
-        return { valid: true, errors: [], warnings: [] };
-      }
-
-      const errors = result.messages.filter(m => m.severity === 2);
-      const warnings = result.messages.filter(m => m.severity === 1);
-
-      // If there are errors, attempt auto-fix
-      if (errors.length > 0) {
-        const fixedCode = await this.autoFix(code, tmpFilePath);
-
-        if (fixedCode !== code) {
-          // Retry validation with fixed code
-          fs.writeFileSync(tmpFilePath, fixedCode, 'utf-8');
-          const retryResults = await this.eslint.lintFiles([tmpFilePath]);
-          const retryResult = retryResults[0];
-
-          const retryErrors = retryResult.messages.filter(m => m.severity === 2);
-          const retryWarnings = retryResult.messages.filter(m => m.severity === 1);
-
-          if (retryErrors.length === 0) {
-            return {
-              valid: true,
-              errors: [],
-              warnings: retryWarnings.map(this.formatMessage),
-              autoFixed: true,
-              fixedCode
-            };
-          }
-
-          return {
-            valid: false,
-            errors: retryErrors.map(this.formatMessage),
-            warnings: retryWarnings.map(this.formatMessage),
-            autoFixAttempted: true
-          };
-        }
-      }
-
-      return {
-        valid: errors.length === 0,
-        errors: errors.map(this.formatMessage),
-        warnings: warnings.map(this.formatMessage)
-      };
-    } finally {
-      // Clean up
-      if (fs.existsSync(tmpFilePath)) {
-        fs.unlinkSync(tmpFilePath);
-      }
-    }
-  }
-
-  private async autoFix(code: string, filePath: string): Promise<string> {
-    // Apply ESLint fixes
-    const eslintWithFix = new ESLint({ fix: true, useEslintrc: true });
-    const results = await eslintWithFix.lintFiles([filePath]);
-    await ESLint.outputFixes(results);
-
-    // Apply Prettier formatting
-    const formatted = await prettier.format(code, {
-      parser: 'typescript',
-      filepath: filePath
-    });
-
-    return formatted;
-  }
-
-  private formatMessage(message: any): LintMessage {
-    return {
-      line: message.line,
-      column: message.column,
-      message: message.message,
-      ruleId: message.ruleId || '',
-      severity: message.severity === 2 ? 'error' : 'warning'
-    };
-  }
-}
-```
-
-**Tests**:
-- ESLint detects errors correctly
-- ESLint auto-fix resolves issues
-- Prettier formatting works
-- Auto-fix and retry logic correct
-
----
-
-### Task 3: axe-core Accessibility Testing (✓ UPDATED)
+### Task 1: axe-core Accessibility Testing
 **Acceptance Criteria**:
 - [ ] Create `app/src/services/validation/a11y-validator.ts` using Playwright (already in `app/package.json`)
 - [ ] Leverage existing `@axe-core/react` (already in `app/package.json`)
@@ -670,8 +432,9 @@ export class A11yValidator {
 
 ---
 
-### Task 4: Keyboard Navigation Testing
+### Task 2: Keyboard Navigation Testing
 **Acceptance Criteria**:
+- [ ] Create `app/src/services/validation/keyboard-validator.ts` using Playwright
 - [ ] Test Tab key navigation through interactive elements
 - [ ] Verify correct tab order
 - [ ] Test Enter/Space activation for buttons
@@ -683,94 +446,206 @@ export class A11yValidator {
 - [ ] Report keyboard navigation issues
 
 **Files**:
-- `backend/src/validation/keyboard_validator.py`
+- `app/src/services/validation/keyboard-validator.ts` (NEW)
 
-**Keyboard Testing**:
-```python
-class KeyboardValidator:
-    async def validate(self, component_code: str,
-                      component_name: str,
-                      component_type: str) -> dict:
-        """Test keyboard navigation."""
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
+**Keyboard Testing** (TypeScript):
+```typescript
+// app/src/services/validation/keyboard-validator.ts
+import { chromium, Browser, Page } from 'playwright';
+import type { ValidationResult, KeyboardIssue } from './types';
 
-            html = self._create_test_page(component_code, component_name)
-            await page.set_content(html)
+export class KeyboardValidator {
+  private browser: Browser | null = null;
 
-            issues = []
+  async validate(
+    componentCode: string,
+    componentName: string,
+    componentType: string
+  ): Promise<ValidationResult> {
+    try {
+      this.browser = await chromium.launch({ headless: true });
+      const page = await this.browser.newPage();
 
-            # Test Tab navigation
-            tab_issues = await self._test_tab_navigation(page, component_type)
-            issues.extend(tab_issues)
+      const html = this.createTestPage(componentCode, componentName);
+      await page.setContent(html);
+      await page.waitForSelector('#root > *', { timeout: 5000 });
 
-            # Test activation keys (Enter/Space)
-            if component_type in ['button', 'link']:
-                activation_issues = await self._test_activation(page)
-                issues.extend(activation_issues)
+      const issues: KeyboardIssue[] = [];
 
-            await browser.close()
+      // Test Tab navigation
+      const tabIssues = await this.testTabNavigation(page, componentType);
+      issues.push(...tabIssues);
 
-            return {
-                "valid": len(issues) == 0,
-                "issues": issues
-            }
+      // Test activation keys (Enter/Space)
+      if (['button', 'link'].includes(componentType)) {
+        const activationIssues = await this.testActivation(page);
+        issues.push(...activationIssues);
+      }
 
-    async def _test_tab_navigation(self, page, component_type: str):
-        """Test Tab key navigation."""
-        issues = []
+      // Test Escape for dismissible components
+      if (['modal', 'dialog', 'dropdown'].includes(componentType)) {
+        const escapeIssues = await this.testEscapeKey(page);
+        issues.push(...escapeIssues);
+      }
 
-        # Press Tab
-        await page.keyboard.press('Tab')
+      await this.browser.close();
+      this.browser = null;
 
-        # Check if component received focus
-        focused = await page.evaluate('document.activeElement.tagName')
+      return {
+        valid: issues.length === 0,
+        errors: issues.filter(i => i.severity === 'critical'),
+        warnings: issues.filter(i => i.severity === 'serious'),
+        details: { issues }
+      };
+    } catch (error) {
+      if (this.browser) {
+        await this.browser.close();
+      }
+      throw error;
+    }
+  }
 
-        if component_type == 'button' and focused != 'BUTTON':
-            issues.append({
-                "type": "tab_navigation",
-                "message": "Button not focusable with Tab key",
-                "severity": "critical"
-            })
+  private async testTabNavigation(
+    page: Page,
+    componentType: string
+  ): Promise<KeyboardIssue[]> {
+    const issues: KeyboardIssue[] = [];
 
-        return issues
+    // Press Tab
+    await page.keyboard.press('Tab');
 
-    async def _test_activation(self, page):
-        """Test Enter/Space activation."""
-        issues = []
+    // Check if component received focus
+    const focused = await page.evaluate(() => document.activeElement?.tagName);
 
-        # Setup click listener
-        await page.evaluate('''
-            window.clicked = false;
-            document.activeElement.addEventListener('click', () => {
-                window.clicked = true;
-            });
-        ''')
+    if (componentType === 'button' && focused !== 'BUTTON') {
+      issues.push({
+        type: 'tab_navigation',
+        message: 'Button not focusable with Tab key',
+        severity: 'critical'
+      });
+    }
 
-        # Press Enter
-        await page.keyboard.press('Enter')
-        clicked = await page.evaluate('window.clicked')
+    // Test tab order for multiple elements
+    const focusableElements = await page.evaluate(() => {
+      const elements = Array.from(
+        document.querySelectorAll('button, a, input, select, textarea, [tabindex]')
+      );
+      return elements.length;
+    });
 
-        if not clicked:
-            issues.append({
-                "type": "keyboard_activation",
-                "message": "Element not activated by Enter key",
-                "severity": "serious"
-            })
+    if (focusableElements > 1) {
+      // Test sequential focus
+      for (let i = 1; i < focusableElements; i++) {
+        await page.keyboard.press('Tab');
+      }
+    }
 
-        return issues
+    return issues;
+  }
+
+  private async testActivation(page: Page): Promise<KeyboardIssue[]> {
+    const issues: KeyboardIssue[] = [];
+
+    // Setup click listener
+    await page.evaluate(() => {
+      (window as any).clicked = false;
+      document.activeElement?.addEventListener('click', () => {
+        (window as any).clicked = true;
+      });
+    });
+
+    // Test Enter key
+    await page.keyboard.press('Enter');
+    const enterClicked = await page.evaluate(() => (window as any).clicked);
+
+    if (!enterClicked) {
+      issues.push({
+        type: 'keyboard_activation',
+        message: 'Element not activated by Enter key',
+        severity: 'serious'
+      });
+    }
+
+    // Test Space key (for buttons)
+    await page.evaluate(() => {
+      (window as any).clicked = false;
+    });
+    await page.keyboard.press('Space');
+    const spaceClicked = await page.evaluate(() => (window as any).clicked);
+
+    if (!spaceClicked) {
+      issues.push({
+        type: 'keyboard_activation',
+        message: 'Button not activated by Space key',
+        severity: 'serious'
+      });
+    }
+
+    return issues;
+  }
+
+  private async testEscapeKey(page: Page): Promise<KeyboardIssue[]> {
+    const issues: KeyboardIssue[] = [];
+
+    // Test Escape key dismisses component
+    const initiallyVisible = await page.evaluate(() => {
+      return document.querySelector('[role="dialog"]')?.getAttribute('aria-hidden') !== 'true';
+    });
+
+    if (initiallyVisible) {
+      await page.keyboard.press('Escape');
+
+      const afterEscape = await page.evaluate(() => {
+        return document.querySelector('[role="dialog"]')?.getAttribute('aria-hidden') === 'true';
+      });
+
+      if (!afterEscape) {
+        issues.push({
+          type: 'escape_key',
+          message: 'Dismissible component not closed by Escape key',
+          severity: 'serious'
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private createTestPage(componentCode: string, componentName: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Keyboard Test - ${componentName}</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    ${componentCode}
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(${componentName}));
+  </script>
+</body>
+</html>
+    `;
+  }
+}
 ```
 
 **Tests**:
 - Tab navigation works correctly
 - Enter/Space activates elements
+- Escape dismisses components
 - Keyboard traps detected
 - Focus order validated
 
 ---
 
-### Task 5: Focus Indicator Validation
+### Task 3: Focus Indicator Validation
 **Acceptance Criteria**:
 - [ ] Verify focus indicator is visible
 - [ ] Check focus indicator contrast (≥3:1 against background)
@@ -782,70 +657,174 @@ class KeyboardValidator:
 - [ ] Report missing or insufficient focus indicators
 
 **Files**:
-- `backend/src/validation/focus_validator.py`
+- `app/src/services/validation/focus-validator.ts` (NEW)
 
-**Focus Indicator Testing**:
-```python
-class FocusValidator:
-    async def validate(self, component_code: str,
-                      component_name: str) -> dict:
-        """Validate focus indicators."""
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
+**Focus Indicator Testing** (TypeScript):
+```typescript
+// app/src/services/validation/focus-validator.ts
+import { chromium, Browser, Page } from 'playwright';
+import type { ValidationResult, FocusIssue } from './types';
 
-            html = self._create_test_page(component_code, component_name)
-            await page.set_content(html)
+export class FocusValidator {
+  private browser: Browser | null = null;
 
-            # Focus element
-            await page.keyboard.press('Tab')
+  async validate(
+    componentCode: string,
+    componentName: string
+  ): Promise<ValidationResult> {
+    try {
+      this.browser = await chromium.launch({ headless: true });
+      const page = await this.browser.newPage();
 
-            # Get computed styles
-            styles = await page.evaluate('''
-                () => {
-                    const el = document.activeElement;
-                    const computed = window.getComputedStyle(el);
-                    return {
-                        outline: computed.outline,
-                        outlineWidth: computed.outlineWidth,
-                        outlineColor: computed.outlineColor,
-                        boxShadow: computed.boxShadow
-                    };
-                }
-            ''')
+      const html = this.createTestPage(componentCode, componentName);
+      await page.setContent(html);
+      await page.waitForSelector('#root > *', { timeout: 5000 });
 
-            # Check for focus indicator
-            has_indicator = (
-                styles['outlineWidth'] != '0px' or
-                'ring' in styles['boxShadow']
-            )
+      // Focus element
+      await page.keyboard.press('Tab');
 
-            issues = []
-            if not has_indicator:
-                issues.append({
-                    "type": "missing_focus_indicator",
-                    "message": "No visible focus indicator detected",
-                    "severity": "critical"
-                })
+      // Get computed styles
+      const styles = await page.evaluate(() => {
+        const el = document.activeElement;
+        if (!el) return null;
+        const computed = window.getComputedStyle(el);
+        return {
+          outline: computed.outline,
+          outlineWidth: computed.outlineWidth,
+          outlineColor: computed.outlineColor,
+          boxShadow: computed.boxShadow,
+          backgroundColor: computed.backgroundColor
+        };
+      });
 
-            # Check contrast if indicator present
-            if has_indicator:
-                contrast_issues = await self._check_focus_contrast(page)
-                issues.extend(contrast_issues)
+      const issues: FocusIssue[] = [];
 
-            await browser.close()
+      if (!styles) {
+        issues.push({
+          type: 'focus_failure',
+          message: 'Could not focus any element',
+          severity: 'critical'
+        });
+      } else {
+        // Check for focus indicator
+        const hasIndicator =
+          styles.outlineWidth !== '0px' ||
+          styles.boxShadow.includes('ring') ||
+          styles.boxShadow !== 'none';
 
-            return {
-                "valid": len(issues) == 0,
-                "issues": issues,
-                "styles": styles
-            }
+        if (!hasIndicator) {
+          issues.push({
+            type: 'missing_focus_indicator',
+            message: 'No visible focus indicator detected',
+            severity: 'critical'
+          });
+        }
 
-    async def _check_focus_contrast(self, page):
-        """Check focus indicator contrast ratio."""
-        # Get colors and calculate contrast
-        # Implementation depends on color parsing library
-        pass
+        // Check contrast if indicator present
+        if (hasIndicator) {
+          const contrastIssues = await this.checkFocusContrast(page, styles);
+          issues.push(...contrastIssues);
+        }
+      }
+
+      await this.browser.close();
+      this.browser = null;
+
+      return {
+        valid: issues.length === 0,
+        errors: issues.filter(i => i.severity === 'critical'),
+        warnings: issues.filter(i => i.severity === 'serious'),
+        details: { styles, issues }
+      };
+    } catch (error) {
+      if (this.browser) {
+        await this.browser.close();
+      }
+      throw error;
+    }
+  }
+
+  private async checkFocusContrast(
+    page: Page,
+    styles: any
+  ): Promise<FocusIssue[]> {
+    const issues: FocusIssue[] = [];
+
+    // Extract colors from outline or box-shadow
+    const indicatorColor = styles.outlineColor || this.extractShadowColor(styles.boxShadow);
+    const backgroundColor = styles.backgroundColor;
+
+    if (indicatorColor && backgroundColor) {
+      const contrastRatio = this.calculateContrastRatio(indicatorColor, backgroundColor);
+
+      if (contrastRatio < 3.0) {
+        issues.push({
+          type: 'insufficient_focus_contrast',
+          message: `Focus indicator contrast ${contrastRatio.toFixed(2)}:1 is below 3:1 minimum`,
+          severity: 'serious',
+          actual: contrastRatio,
+          required: 3.0
+        });
+      }
+    }
+
+    return issues;
+  }
+
+  private extractShadowColor(boxShadow: string): string | null {
+    // Extract color from box-shadow (simplified)
+    const match = boxShadow.match(/rgb\([^)]+\)/);
+    return match ? match[0] : null;
+  }
+
+  private calculateContrastRatio(color1: string, color2: string): number {
+    const l1 = this.getRelativeLuminance(color1);
+    const l2 = this.getRelativeLuminance(color2);
+
+    const lighter = Math.max(l1, l2);
+    const darker = Math.min(l1, l2);
+
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+
+  private getRelativeLuminance(color: string): number {
+    // Parse RGB color
+    const match = color.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+    if (!match) return 0;
+
+    const [, r, g, b] = match.map(Number);
+
+    const adjust = (c: number) => {
+      const val = c / 255;
+      return val <= 0.03928 ? val / 12.92 : Math.pow((val + 0.055) / 1.055, 2.4);
+    };
+
+    return 0.2126 * adjust(r) + 0.7152 * adjust(g) + 0.0722 * adjust(b);
+  }
+
+  private createTestPage(componentCode: string, componentName: string): string {
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Focus Test - ${componentName}</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script type="module">
+    ${componentCode}
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
+    root.render(React.createElement(${componentName}));
+  </script>
+</body>
+</html>
+    `;
+  }
+}
 ```
 
 **Tests**:
@@ -856,7 +835,7 @@ class FocusValidator:
 
 ---
 
-### Task 6: Color Contrast Validation
+### Task 4: Color Contrast Validation
 **Acceptance Criteria**:
 - [ ] Extract all text and UI element colors from component
 - [ ] Calculate contrast ratios using WCAG formula
@@ -870,14 +849,14 @@ class FocusValidator:
 - [ ] Auto-fix: Adjust colors to meet minimum contrast
 
 **Files**:
-- `backend/src/validation/contrast_validator.py`
+- `app/src/services/validation/contrast-validator.ts` (NEW)
 
-**Contrast Validation**:
-```python
-from colour import Color
-import math
+**Contrast Validation** (TypeScript):
+```typescript
+// app/src/services/validation/contrast-validator.ts
+import type { ValidationResult, ContrastViolation } from './types';
 
-class ContrastValidator:
+export class ContrastValidator {
     def validate(self, component_code: str, tokens: dict) -> dict:
         """Validate color contrast ratios."""
         violations = []
@@ -962,7 +941,7 @@ class ContrastValidator:
 
 ---
 
-### Task 7: Token Adherence Meter
+### Task 5: Token Adherence Meter
 **Acceptance Criteria**:
 - [ ] Compare generated component against approved tokens
 - [ ] Check token usage for:
@@ -976,11 +955,14 @@ class ContrastValidator:
 - [ ] Allow tolerance for minor variations (ΔE ≤2 for colors)
 
 **Files**:
-- `backend/src/validation/token_validator.py`
+- `app/src/services/validation/token-validator.ts` (NEW)
 
-**Token Adherence**:
-```python
-class TokenValidator:
+**Token Adherence** (TypeScript):
+```typescript
+// app/src/services/validation/token-validator.ts
+import type { ValidationResult, TokenViolation } from './types';
+
+export class TokenValidator {
     def validate(self, component_code: str, approved_tokens: dict) -> dict:
         """Calculate token adherence."""
         # Extract tokens from generated code
@@ -1070,27 +1052,38 @@ class TokenValidator:
 
 ---
 
-### Task 8: Auto-Fix & Retry Logic
+### Task 6: Extended Auto-Fix & Retry Logic
+
+**Integration Note**: Epic 4.5 Task 2 already provides auto-fix for TypeScript and ESLint. This task **extends** that with accessibility and token fixes.
+
 **Acceptance Criteria**:
-- [ ] Implement auto-fix for common issues:
-  - TypeScript: Remove unused imports, add type annotations
-  - ESLint: Run `eslint --fix`
-  - Prettier: Run `prettier --write`
+- [ ] **Handled by Epic 4.5 Task 2**:
+  - ✅ TypeScript: Remove unused imports, add type annotations
+  - ✅ ESLint: Run `eslint --fix`
+  - ✅ Prettier: Run `prettier --write`
+  - ✅ Retry validation after auto-fix (max 2 attempts)
+- [ ] **Epic 5 Extensions**:
   - Accessibility: Add missing ARIA labels
-  - Contrast: Adjust colors to meet minimum ratios
-- [ ] Retry validation after auto-fix (one attempt)
-- [ ] Track which issues were auto-fixed
+  - Accessibility: Fix button-name violations
+  - Contrast: Adjust colors to meet minimum ratios (optional)
+  - Token: Replace hardcoded values with CSS variables
+- [ ] Integrate with Epic 4.5 CodeValidator
+- [ ] Track which issues were auto-fixed (extend existing tracking)
 - [ ] Report auto-fix success rate
 - [ ] Generate diff showing changes
 - [ ] Provide manual fix suggestions for unfixable issues
-- [ ] Target: 80%+ auto-fix success rate
+- [ ] Target: 80%+ auto-fix success rate (combined Epic 4.5 + Epic 5)
 
 **Files**:
-- `backend/src/validation/auto_fixer.py`
+- `app/src/services/validation/auto-fixer.ts` (NEW - extends Epic 4.5 fixes)
+- Integration with `backend/src/generation/code_validator.py` (Epic 4.5)
 
-**Auto-Fix Logic**:
-```python
-class AutoFixer:
+**Extended Auto-Fix Logic** (TypeScript):
+```typescript
+// app/src/services/validation/auto-fixer.ts
+import type { ValidationResult, AutoFixResult } from './types';
+
+export class ExtendedAutoFixer {
     async def fix_and_retry(self, code: str,
                            validation_result: dict) -> dict:
         """Attempt to auto-fix issues and retry validation."""
@@ -1154,7 +1147,7 @@ class AutoFixer:
 
 ---
 
-### Task 9: Quality Report Generation
+### Task 7: Comprehensive Quality Report Generation
 **Acceptance Criteria**:
 - [ ] Generate comprehensive quality report with:
   - Overall pass/fail status
@@ -1235,91 +1228,157 @@ class QualityReportGenerator:
 ## Dependencies
 
 **Requires**:
-- Epic 4: Generated components to validate
+- ✅ Epic 4 (Code Generation) - Complete
+- ⭐ **Epic 4.5 Task 2 (Code Validator)** - **CRITICAL DEPENDENCY**
+  - Provides TypeScript/ESLint validation
+  - Provides auto-fix infrastructure
+  - Provides quality scoring foundation
+  - Must be completed before Epic 5 starts
+
+**Extends**:
+- Epic 4.5 validation loop with accessibility checks
+- Epic 4.5 quality scoring with token adherence
+- Epic 4.5 auto-fix with ARIA label fixes
 
 **Blocks**:
-- Component delivery (cannot ship without validation)
+- Component delivery (comprehensive validation required)
+- User acceptance of generated components
 
 ---
 
 ## Technical Architecture
 
-### Validation Pipeline (Updated Architecture)
+### Validation Pipeline (Integrated with Epic 4.5)
 
 ```
-Epic 4: Code Generation (Backend)
+┌──────────────────────────────────────────────────────────────┐
+│  Epic 4: Code Generation (Backend)                           │
+│         ↓                                                     │
+│  Epic 4.5 Task 1: LLM Generator                             │
+│         ↓                                                     │
+│  Generated Component Code                                    │
+└──────────────────────────────────────────────────────────────┘
          ↓
-   Generated Code
+┌──────────────────────────────────────────────────────────────┐
+│  Epic 4.5 Task 2: Code Validator ⭐ (Foundation)             │
+│  (backend/src/generation/code_validator.py)                  │
+│                                                               │
+│  ┌────────────────────────────────────────────┐             │
+│  │ TypeScript Validation                      │ ✅           │
+│  │ (backend/scripts/validate_typescript.js)   │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ ESLint Validation                          │ ✅           │
+│  │ (backend/scripts/validate_eslint.js)       │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ LLM-Based Fix Loop (max 2 retries)        │ ✅           │
+│  │ - Auto-fix TypeScript errors               │             │
+│  │ - Auto-fix ESLint errors                   │             │
+│  │ - Apply Prettier formatting                │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  Quality Scores: Compilation, Linting, Type Safety          │
+└──────────────────────────────────────────────────────────────┘
          ↓
-┌─────────────────────────────────────────────────┐
-│       Frontend Validation Service               │
-│    (app/src/services/validation/)               │
-│                                                  │
-│  ┌──────────────────────────────────────┐      │
-│  │ TypeScript Compiler API              │ ✓    │
-│  │ (ts.createProgram)                   │      │
-│  └──────────────────────────────────────┘      │
-│           ↓                                      │
-│  ┌──────────────────────────────────────┐      │
-│  │ ESLint API + Prettier                │ ✓    │
-│  │ (existing app/eslint.config.mjs)     │      │
-│  └──────────────────────────────────────┘      │
-│           ↓                                      │
-│  ┌──────────────────────────────────────┐      │
-│  │ Playwright + axe-core                │ ✓    │
-│  │ (existing @playwright/test)          │      │
-│  └──────────────────────────────────────┘      │
-│           ↓                                      │
-│  ┌──────────────────────────────────────┐      │
-│  │ Keyboard Navigation Tests            │      │
-│  │ (Playwright page.keyboard)           │      │
-│  └──────────────────────────────────────┘      │
-│           ↓                                      │
-│  ┌──────────────────────────────────────┐      │
-│  │ Focus & Contrast Validators          │      │
-│  │ (getComputedStyle + WCAG formulas)   │      │
-│  └──────────────────────────────────────┘      │
-│           ↓                                      │
-│  ┌──────────────────────────────────────┐      │
-│  │ Token Adherence Calculator           │      │
-│  │ (AST parsing + color math)           │      │
-│  └──────────────────────────────────────┘      │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Epic 5: Extended Validation ✨ (Accessibility & Tokens)     │
+│  (app/src/services/validation/)                              │
+│                                                               │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 1: axe-core Accessibility Testing    │             │
+│  │ (@playwright/test + @axe-core/react)       │             │
+│  │ - 0 critical violations required           │             │
+│  │ - 0 serious violations required            │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 2: Keyboard Navigation Testing       │             │
+│  │ (Playwright page.keyboard)                 │             │
+│  │ - Tab order, Enter/Space, Escape          │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 3: Focus Indicator Validation        │             │
+│  │ (getComputedStyle + contrast formulas)     │             │
+│  │ - ≥3:1 contrast required                   │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 4: Color Contrast Validation         │             │
+│  │ (WCAG formulas: 4.5:1 text, 3:1 UI)       │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 5: Token Adherence Meter             │             │
+│  │ (AST parsing + color math)                 │             │
+│  │ - ≥90% adherence required                  │             │
+│  └────────────────────────────────────────────┘             │
+│         ↓                                                     │
+│  ┌────────────────────────────────────────────┐             │
+│  │ Task 6: Extended Auto-Fix                 │             │
+│  │ - Add ARIA labels                          │             │
+│  │ - Fix button-name violations               │             │
+│  │ - Adjust colors (optional)                 │             │
+│  └────────────────────────────────────────────┘             │
+└──────────────────────────────────────────────────────────────┘
          ↓
-┌─────────────────────────────────────────────────┐
-│  Backend Validation API (Optional)               │
-│  POST /api/v1/validation/results                 │
-│  - Store validation results                      │
-│  - Generate quality reports                      │
-│  - Track metrics over time                       │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Task 7: Comprehensive Quality Report                        │
+│  - Epic 4.5 results (TS, ESLint, Quality Scores)            │
+│  - Epic 5 results (A11y, Keyboard, Focus, Contrast, Tokens) │
+│  - Auto-fix summary (both epics)                            │
+│  - Overall PASS/FAIL decision                               │
+└──────────────────────────────────────────────────────────────┘
          ↓
-┌─────────────────────────────────────────────────┐
-│  Frontend Validation Results UI                  │
-│  - Quality scorecard display                     │
-│  - Detailed validation tabs                      │
-│  - Download reports (JSON/HTML)                  │
-│  - Accept/Reject component                       │
-└─────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│  Epic 4.5 Task 5: Post-Processing & Assembly                │
+│  - Import resolution                                         │
+│  - Provenance header injection                              │
+│  - Prettier formatting                                       │
+└──────────────────────────────────────────────────────────────┘
+         ↓
+┌──────────────────────────────────────────────────────────────┐
+│  Final Validated Component (Ready for Delivery)             │
+│  - TypeScript compiled ✓                                     │
+│  - ESLint passed ✓                                           │
+│  - Accessibility validated ✓                                 │
+│  - Tokens adhered ✓                                          │
+│  - Quality report available                                  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
 **Key Architectural Decisions:**
 
-1. **Frontend-First Validation**: All validation runs in the frontend using existing Node.js tooling (TypeScript, ESLint, Prettier, Playwright). No Python subprocess calls to `tsc`/`npx`.
+1. **Epic 4.5 Foundation**: TypeScript and ESLint validation already handled by Epic 4.5 Task 2 using Node.js scripts (`backend/scripts/validate_*.js`)
 
-2. **Existing Dependencies**: Leverages packages already in `app/package.json`:
+2. **Epic 5 Extensions**: Runs in frontend (`app/src/services/validation/`) and adds:
+   - Accessibility testing (axe-core + Playwright)
+   - Keyboard navigation validation
+   - Focus indicator checking
+   - Color contrast validation (WCAG)
+   - Token adherence measurement
+
+3. **No Duplication**: Epic 5 does NOT reimplement TypeScript/ESLint validation - it extends the Epic 4.5 foundation
+
+4. **Existing Dependencies**: Leverages packages already in `app/package.json`:
    - `typescript` (5.9.3)
    - `eslint` (^9)
    - `@playwright/test` (^1.55.1)
    - `@axe-core/react` (^4.10.2)
 
-3. **Backend Role**: Backend provides:
-   - Validation result storage API
-   - Quality report generation
+5. **Backend Role**: Backend provides:
+   - Validation orchestration (Epic 4.5 Task 2)
+   - Validation result storage API (optional)
+   - Quality report generation (Task 7)
    - Historical metrics tracking
-   - S3 upload for reports (Epic 6)
 
-4. **No Python-to-Node.js Bridge**: Validation does not require backend to spawn Node.js processes.
+6. **Integration Points**:
+   - Epic 4.5 Task 2 → Epic 5 Tasks 1-6 (validated code flows into Epic 5)
+   - Epic 5 Task 6 → Epic 4.5 CodeValidator (extended auto-fixes)
+   - Epic 5 Task 7 → Epic 4.5 metadata (combined report)
 
 ---
 
@@ -1349,27 +1408,30 @@ Epic 4: Code Generation (Backend)
 
 ## Definition of Done
 
-- [ ] All 9 tasks completed with acceptance criteria met
-- [ ] TypeScript validation works correctly
-- [ ] ESLint and Prettier validation functional
-- [ ] axe-core testing detects violations
-- [ ] Keyboard navigation tested
-- [ ] Focus indicators validated
-- [ ] Color contrast checked (WCAG AA)
-- [ ] Token adherence meter implemented (≥90%)
-- [ ] Auto-fix resolves 80%+ of issues
-- [ ] Quality reports generated
-- [ ] Validation completes in <10s
-- [ ] Integration tests passing
+- [ ] All 7 Epic 5 tasks completed with acceptance criteria met
+- [ ] **Epic 4.5 Task 2 completed** (TypeScript/ESLint validation foundation)
+- [ ] axe-core testing detects violations (Task 1)
+- [ ] Keyboard navigation tested (Task 2)
+- [ ] Focus indicators validated (Task 3)
+- [ ] Color contrast checked WCAG AA (Task 4)
+- [ ] Token adherence meter implemented ≥90% (Task 5)
+- [ ] Extended auto-fix resolves 80%+ of accessibility/token issues (Task 6)
+- [ ] Comprehensive quality reports generated (Task 7)
+- [ ] Extended validation completes in <15s (Epic 4.5: ~5s + Epic 5: ~10s)
+- [ ] Integration tests passing with Epic 4.5 validators
 - [ ] Documentation updated
+- [ ] No duplication with Epic 4.5 Task 2
 
 ---
 
 ## Related Epics
 
-- **Depends On**: Epic 4
-- **Blocks**: Component delivery
-- **Related**: Epic 8 (regeneration uses same validation)
+- **Depends On**:
+  - Epic 4 (Code Generation) - Complete
+  - ⭐ Epic 4.5 Task 2 (Code Validator) - **CRITICAL DEPENDENCY**
+- **Extends**: Epic 4.5 validation with accessibility and token checks
+- **Blocks**: Component delivery (full validation required)
+- **Related**: Epic 8 (regeneration uses combined Epic 4.5 + Epic 5 validation)
 
 ---
 
@@ -1383,66 +1445,72 @@ Epic 4: Code Generation (Backend)
 
 ---
 
-## Implementation Summary (2025-01-XX Update)
+## Implementation Summary (2025-10-07 Update)
 
-### What Changed
-Epic 5 has been **architecturally updated** to align with the actual codebase after completing Epics 1-4:
+### Major Changes - Integration with Epic 4.5
 
-**Original Plan (Incorrect)**:
-- ❌ Backend Python validators in `backend/src/validation/`
-- ❌ Python subprocess calls to `tsc`, `eslint`, `prettier`, `npx`
-- ❌ Python Playwright (`playwright.async_api`)
-- ❌ Non-existent `colour` library
-- ❌ Backend running Node.js tooling
+Epic 5 has been **completely restructured** to properly integrate with Epic 4.5's validation infrastructure:
 
-**Updated Plan (Correct)**:
-- ✅ Frontend TypeScript validators in `app/src/services/validation/`
-- ✅ Use existing `typescript`, `eslint`, `@playwright/test` packages
-- ✅ TypeScript Playwright API
-- ✅ Proper color math libraries (`colormath` or custom WCAG formulas)
-- ✅ Backend provides API endpoints for results storage only
+**What Changed:**
 
-### What's Completed
-- ✅ Overview and architecture updated
-- ✅ Task 1 (TypeScript validation) rewritten in TypeScript
-- ✅ Task 2 (ESLint/Prettier validation) rewritten in TypeScript
-- ✅ Task 3 (axe-core accessibility) rewritten in TypeScript
-- ✅ Technical architecture diagram updated
-- ✅ Key architectural decisions documented
+1. **Title Updated**: "Quality Validation" → "**Extended Quality Validation & Accessibility Testing**"
+   - Clarifies this epic extends Epic 4.5, doesn't replace it
 
-### What Needs Completion
-**Tasks 4-9 still contain Python code examples** and need similar updates:
+2. **Tasks Reduced**: 9 tasks → **7 tasks**
+   - ~~Task 1: TypeScript Validation~~ → **Epic 4.5 Task 2** ✅
+   - ~~Task 2: ESLint Validation~~ → **Epic 4.5 Task 2** ✅
+   - Remaining tasks renumbered (Task 3→1, Task 4→2, etc.)
 
-1. **Task 4**: Keyboard Navigation Testing
-   - Convert from Python to TypeScript
-   - Use `@playwright/test` instead of `playwright.async_api`
+3. **Dependencies Added**:
+   - ⭐ **Epic 4.5 Task 2 (Code Validator)** is now a **CRITICAL DEPENDENCY**
+   - Must be completed before Epic 5 starts
 
-2. **Task 5**: Focus Indicator Validation
-   - Convert from Python to TypeScript
-   - Use Playwright's `page.evaluate()` with `getComputedStyle`
+4. **Architecture Diagram Updated**:
+   - Shows Epic 4.5 Task 2 as foundation
+   - Epic 5 extends with accessibility and token validation
+   - Clear integration points documented
 
-3. **Task 6**: Color Contrast Validation
-   - Remove Python `colour` library references
-   - Implement WCAG contrast formulas in TypeScript
-   - Use proper color parsing library
+5. **Auto-Fix Updated** (Task 6):
+   - Epic 4.5 handles TypeScript/ESLint fixes
+   - Epic 5 extends with ARIA labels and token fixes
 
-4. **Task 7**: Token Adherence Meter
-   - Convert from Python to TypeScript
-   - Frontend AST parsing or regex-based extraction
-   - Color difference calculations (ΔE)
+6. **Quality Report Updated** (Task 7):
+   - Combines results from Epic 4.5 + Epic 5
+   - Single unified report
 
-5. **Task 8**: Auto-Fix & Retry Logic
-   - Partially done in Tasks 1-3
-   - Consolidate auto-fix patterns
-   - Add coordinator service
+### What's Clear Now
 
-6. **Task 9**: Quality Report Generation
-   - Choose between frontend or backend report generation
-   - If frontend: Use React components
-   - If backend: Create API endpoint for report storage
-   - HTML template generation
+**Epic 4.5 Provides** (Foundation):
+- ✅ TypeScript strict compilation validation
+- ✅ ESLint validation
+- ✅ Prettier formatting
+- ✅ Auto-fix with LLM-based error correction
+- ✅ Max 2 retry attempts
+- ✅ Quality scoring (compilation, linting, type safety)
+
+**Epic 5 Adds** (Extensions):
+- ✨ axe-core accessibility testing (0 critical violations)
+- ✨ Keyboard navigation validation
+- ✨ Focus indicator checking (≥3:1 contrast)
+- ✨ Color contrast validation (WCAG AA)
+- ✨ Token adherence meter (≥90%)
+- ✨ Extended auto-fixes (ARIA, tokens)
+- ✨ Comprehensive quality reports
+
+### No Duplication
+
+**Before Update:**
+- Epic 4.5 Task 2: TypeScript + ESLint validation
+- Epic 5 Task 1: TypeScript validation (DUPLICATE ❌)
+- Epic 5 Task 2: ESLint validation (DUPLICATE ❌)
+
+**After Update:**
+- Epic 4.5 Task 2: TypeScript + ESLint validation ✅
+- Epic 5 extends with accessibility + tokens ✅
+- Zero duplication ✅
 
 ### Dependencies Status
+
 **No new dependencies needed!** All required packages are already in `app/package.json`:
 - ✅ `typescript` (5.9.3)
 - ✅ `eslint` (^9)
@@ -1450,14 +1518,22 @@ Epic 5 has been **architecturally updated** to align with the actual codebase af
 - ✅ `@axe-core/react` (^4.10.2)
 - ✅ `prettier` (via eslint config)
 
-**Optional additions for Tasks 6-7**:
+**Optional additions for color/token validation**:
 - Color math library (e.g., `chroma-js`, `color`, or custom WCAG formulas)
-- AST parsing (if needed beyond TypeScript Compiler API)
+- AST parsing library (if needed beyond TypeScript Compiler API)
 
-### Next Steps for Implementation
-1. Complete remaining task code examples (Tasks 4-9)
-2. Create shared types file: `app/src/services/validation/types.ts`
-3. Create validation orchestrator service
-4. Build frontend validation results UI
-5. Add backend validation storage API (optional)
-6. Integrate with Epic 4 generation flow
+### Implementation Order
+
+1. **Complete Epic 4.5 Task 2 first** (Code Validator)
+2. Then implement Epic 5 Tasks 1-7 in order
+3. Integrate Epic 5 validators with Epic 4.5 pipeline
+4. Build unified quality report (Task 7)
+5. Update frontend UI to show combined results
+
+### Key Benefits of This Approach
+
+1. ✅ **No duplicate code** - Single source of truth for TS/ESLint validation
+2. ✅ **Clear separation** - Epic 4.5 = code quality, Epic 5 = accessibility/tokens
+3. ✅ **Better integration** - Epic 5 builds on Epic 4.5's foundation
+4. ✅ **Easier maintenance** - One place to update TS/ESLint logic
+5. ✅ **Combined reports** - Single quality score across all validations
