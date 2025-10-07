@@ -124,7 +124,6 @@ class GeneratorService:
 
         return result
 
-    @traceable(run_type="chain", name="generate_component")
     @traceable(run_type="chain", name="generate_component_llm_first")
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """
@@ -309,66 +308,6 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
     
-    @traceable(run_type="tool", name="inject_tokens")
-    async def _inject_tokens(self, pattern_code: str, tokens: Dict[str, Any], component_type: str):
-        """Inject tokens and track latency."""
-        self.current_stage = GenerationStage.INJECTING
-        stage_start = time.time()
-        
-        try:
-            result = self.token_injector.inject(pattern_code, tokens, component_type)
-            return result
-        finally:
-            self.stage_latencies[GenerationStage.INJECTING] = int(
-                (time.time() - stage_start) * 1000
-            )
-    
-    @traceable(run_type="tool", name="generate_tailwind")
-    async def _generate_tailwind(self, tokens: Dict[str, Any], pattern_structure):
-        """Generate Tailwind classes and track latency."""
-        self.current_stage = GenerationStage.GENERATING
-        stage_start = time.time()
-        
-        try:
-            # Generate classes for main component
-            component_type = self._infer_component_type_from_name(
-                pattern_structure.component_name
-            )
-            
-            classes = self.tailwind_generator.generate_classes(
-                element=component_type,
-                tokens=tokens,
-                variant="default"
-            )
-            return classes
-        finally:
-            self.stage_latencies[GenerationStage.GENERATING] = int(
-                (time.time() - stage_start) * 1000
-            )
-    
-    @traceable(run_type="tool", name="implement_requirements")
-    async def _implement_requirements(
-        self,
-        component_code: str,
-        requirements: Dict[str, Any],
-        component_name: str
-    ):
-        """Implement requirements and track latency."""
-        self.current_stage = GenerationStage.IMPLEMENTING
-        stage_start = time.time()
-        
-        try:
-            result = self.requirement_implementer.implement(
-                component_code,
-                requirements,
-                component_name
-            )
-            return result
-        finally:
-            self.stage_latencies[GenerationStage.IMPLEMENTING] = int(
-                (time.time() - stage_start) * 1000
-            )
-    
     @traceable(run_type="tool", name="assemble_code")
     async def _assemble_code(self, code_parts: CodeParts):
         """Assemble and format code, track latency."""
@@ -383,82 +322,6 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
             self.current_stage = GenerationStage.COMPLETE
-    
-    def _build_code_parts(
-        self,
-        pattern_structure,
-        token_mapping,
-        requirement_impl,
-        custom_component_name: Optional[str],
-        pattern_id: str,
-        tokens: Dict[str, Any],
-        requirements: Dict[str, Any],
-        enhanced_code: str,
-        stories: str
-    ) -> CodeParts:
-        """Build CodeParts from all generated components."""
-        component_name = custom_component_name or pattern_structure.component_name
-        
-        # Generate provenance header with full metadata
-        provenance_header = self.provenance_generator.generate_header(
-            pattern_id=pattern_id,
-            tokens=tokens,
-            requirements=requirements,
-            component_name=component_name
-        )
-        
-        # NOTE: enhanced_code already contains the full component including types
-        # Don't add requirement_impl["props_interface"] as it would duplicate types
-        return CodeParts(
-            provenance_header=provenance_header,
-            imports=[],  # Pattern code already has imports
-            css_variables=token_mapping.css_variables,
-            type_definitions="",  # Don't duplicate - enhanced_code has types
-            component_code=enhanced_code,  # Complete component code
-            storybook_stories=stories,
-            component_name=component_name
-        )
-    
-    def _enhance_accessibility(
-        self,
-        component_code: str,
-        component_type: str,
-        component_name: str
-    ) -> str:
-        """Enhance component with accessibility features."""
-        return self.a11y_enhancer.enhance(
-            component_code,
-            component_type,
-            component_name
-        )
-    
-    def _generate_types(
-        self,
-        component_code: str,
-        component_name: str,
-        props: List[Dict[str, Any]]
-    ) -> str:
-        """Generate TypeScript types for component."""
-        return self.type_generator.generate_types(
-            component_code,
-            component_name,
-            props
-        )
-    
-    def _generate_storybook_stories(
-        self,
-        component_name: str,
-        variants: List[str],
-        props: List[Dict[str, Any]],
-        component_type: str
-    ) -> str:
-        """Generate Storybook stories for component."""
-        return self.storybook_generator.generate_stories(
-            component_name,
-            variants,
-            props,
-            component_type
-        )
     
     def _generate_basic_story(self, component_name: str) -> str:
         """Generate basic Storybook story (full implementation in P5)."""
