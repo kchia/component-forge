@@ -365,7 +365,11 @@ class CodeValidator:
         # Build fix prompt
         system_prompt = """You are an expert at debugging and fixing TypeScript and React code.
 Your task is to fix ONLY the specific errors listed below while preserving all working code.
-Return the complete fixed code in JSON format: {"component_code": "...", "stories_code": "...", "imports": [], "exports": [], "explanation": "..."}"""
+
+**CRITICAL**: Return ALL THREE code files in JSON format:
+{"component_code": "...", "stories_code": "...", "showcase_code": "...", "imports": [], "exports": [], "explanation": "..."}
+
+**IMPORTANT**: You MUST include showcase_code even when fixing errors. Do not drop it!"""
         
         # Format errors
         error_lines = []

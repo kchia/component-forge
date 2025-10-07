@@ -145,14 +145,10 @@ class ImportResolver:
             )
         
         # Check if utils are imported (cn function)
-        has_utils = len(categorized[ImportCategory.UTILS]) > 0
-        
-        if not has_utils:
-            # Add utils import
-            categorized[ImportCategory.UTILS].append(
-                'import { cn } from "@/lib/utils"'
-            )
-        
+        # NOTE: We no longer auto-add @/lib/utils import since we generate self-contained code
+        # with inlined utility functions. This prevents missing dependency errors in
+        # standalone environments like StackBlitz.
+
         return categorized
     
     def _deduplicate_imports(

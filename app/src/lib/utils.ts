@@ -45,7 +45,9 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 export function openInCodeSandbox(
   componentCode: string,
   componentName: string,
-  storiesCode?: string
+  storiesCode?: string,
+  showcaseCode?: string,
+  appCode?: string
 ): void {
   // Using StackBlitz as it has a more reliable API
   // https://developer.stackblitz.com/platform/api/javascript-sdk-options
@@ -83,7 +85,8 @@ export function openInCodeSandbox(
   const files: Record<string, string> = {
     'package.json': JSON.stringify(packageJson, null, 2),
     [`src/components/${componentName}.tsx`]: componentCode,
-    'src/App.tsx': `import { ${componentName} } from './components/${componentName}';
+    // Use provided App.tsx or fallback to hardcoded preview
+    'src/App.tsx': appCode || `import { ${componentName} } from './components/${componentName}';
 
 export default function App() {
   return (
@@ -193,6 +196,11 @@ export default {
   // Add storybook file if provided
   if (storiesCode) {
     files[`src/components/${componentName}.stories.tsx`] = storiesCode;
+  }
+
+  // Add showcase file if provided
+  if (showcaseCode) {
+    files[`src/components/${componentName}.showcase.tsx`] = showcaseCode;
   }
 
   // Open StackBlitz using their SDK approach

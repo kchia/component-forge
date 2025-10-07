@@ -30,7 +30,7 @@ export async function generateComponent(
       '/generation/generate',
       request,
       {
-        timeout: 90000, // 90s to accommodate p95 latency target
+        timeout: 150000, // 150s (2.5min) to accommodate validation retries
       }
     );
 

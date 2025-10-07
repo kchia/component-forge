@@ -35,6 +35,8 @@ export interface GenerationRequest {
 export interface GeneratedCode {
   component: string;        // Component.tsx content
   stories: string;         // Component.stories.tsx content
+  showcase?: string;        // Component.showcase.tsx content (auto-preview)
+  app?: string;             // App.tsx content (auto-discovery template)
   tokens_json?: string;    // tokens.json content (optional)
   requirements_json?: string; // requirements.json content (optional)
 }

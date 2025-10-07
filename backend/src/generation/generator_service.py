@@ -88,7 +88,12 @@ class GeneratorService:
             self.llm_generator = MockLLMGenerator()
         
         # Initialize code validator with LLM generator
-        self.code_validator = CodeValidator(llm_generator=self.llm_generator)
+        # Set max_retries=0 to disable auto-fix retries (speeds up generation from ~97s to ~35s)
+        # Validation still runs once to provide quality scores and error details
+        self.code_validator = CodeValidator(
+            llm_generator=self.llm_generator,
+            max_retries=0  # Disable retries for faster generation
+        )
         
         # Track current stage for progress updates
         self.current_stage = GenerationStage.LLM_GENERATING
@@ -175,13 +180,16 @@ class GeneratorService:
             # ====== STAGE 2: VALIDATION ======
             self.current_stage = GenerationStage.VALIDATING
             stage2_start = time.time()
-            
-            # Validate and fix code iteratively
+
+            # Store original showcase before validation (to preserve it)
+            original_showcase_code = llm_result.showcase_code
+
+            # Validate and fix code iteratively (only validates component_code)
             validation_result = await self.code_validator.validate_and_fix(
                 code=llm_result.component_code,
                 original_prompt=prompts["user"],
             )
-            
+
             self.stage_latencies[GenerationStage.VALIDATING] = int(
                 (time.time() - stage2_start) * 1000
             )
@@ -201,28 +209,37 @@ class GeneratorService:
             
             # Use stories from LLM (already validated)
             final_stories_code = llm_result.stories_code
-            
+
+            # Use showcase from ORIGINAL LLM response (preserved from first generation)
+            # Validation retries don't update showcase, so we keep the original
+            final_showcase_code = original_showcase_code
+
             # Count imports in final code
             imports_count = len([line for line in final_component_code.split('\n') if line.strip().startswith('import')])
-            
+
             self.stage_latencies[GenerationStage.POST_PROCESSING] = int(
                 (time.time() - stage3_start) * 1000
             )
-            
+
             # ====== BUILD RESULT ======
             self.current_stage = GenerationStage.COMPLETE
-            
+
             total_latency_ms = int((time.time() - start_time) * 1000)
             component_name = request.component_name or pattern_structure.component_name
-            
-            # Create result files
+
+            # Generate App.tsx template for auto-discovery showcase
+            app_tsx_template = self._generate_app_tsx_template()
+
+            # Create result files including showcase and App.tsx
+            # Include both filename-based keys AND direct keys for API compatibility
             result_files = {
-                "component": final_component_code,
-                "stories": final_stories_code,
-                "files": {
-                    f"{component_name}.tsx": final_component_code,
-                    f"{component_name}.stories.tsx": final_stories_code,
-                },
+                f"{component_name}.tsx": final_component_code,
+                f"{component_name}.stories.tsx": final_stories_code,
+                f"{component_name}.showcase.tsx": final_showcase_code,
+                "App.tsx": app_tsx_template,
+                # Add direct keys for API route to access
+                "showcase": final_showcase_code,
+                "app": app_tsx_template,
             }
             
             # Convert ValidationError dataclass to ValidationErrorDetail Pydantic models
@@ -287,7 +304,7 @@ class GeneratorService:
             return GenerationResult(
                 component_code=final_component_code,
                 stories_code=final_stories_code,
-                files=result_files["files"],
+                files=result_files,  # Contains both filename keys and direct showcase/app keys
                 metadata=metadata,
                 validation_results=validation_metadata,
                 success=validation_result.valid,
@@ -359,7 +376,73 @@ export const Default: Story = {{
   }},
 }};
 """
-    
+
+    def _generate_app_tsx_template(self) -> str:
+        """Generate App.tsx with auto-discovery showcase system."""
+        return """import { useState } from 'react';
+
+// Auto-discover all showcase files
+const showcaseModules = import.meta.glob('./components/*.showcase.tsx', { eager: true });
+
+export default function App() {
+  const showcaseEntries = Object.entries(showcaseModules);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Extract component names from file paths
+  const componentNames = showcaseEntries.map(([path]) => {
+    const match = path.match(/\\/([^/]+)\\.showcase\\.tsx$/);
+    return match ? match[1] : null;
+  }).filter(Boolean);
+
+  // Get the active showcase component
+  const activeShowcaseModule = showcaseEntries[activeIndex]?.[1];
+  const ActiveShowcase = activeShowcaseModule?.default;
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      {/* Header with component tabs */}
+      <div className="border-b bg-white sticky top-0 z-10 shadow-sm">
+        <div className="max-w-7xl mx-auto px-8 py-4">
+          <h1 className="text-2xl font-bold mb-4">Component Showcase</h1>
+
+          {componentNames.length > 0 ? (
+            <div className="flex gap-2 overflow-x-auto pb-2">
+              {componentNames.map((name, idx) => (
+                <button
+                  key={name}
+                  onClick={() => setActiveIndex(idx)}
+                  className={`px-4 py-2 rounded-lg font-medium whitespace-nowrap transition-colors ${
+                    activeIndex === idx
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-100 hover:bg-gray-200'
+                  }`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          ) : (
+            <p className="text-gray-500">No showcase files found. Create a .showcase.tsx file in /src/components/</p>
+          )}
+        </div>
+      </div>
+
+      {/* Showcase content */}
+      <div className="max-w-7xl mx-auto px-8 py-8">
+        {ActiveShowcase ? (
+          <ActiveShowcase />
+        ) : (
+          <div className="text-center py-12 text-gray-500">
+            <p className="text-lg mb-4">No components to display</p>
+            <p className="text-sm">Add a .showcase.tsx file to see your component variations here</p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+"""
+
     # ====== NEW LLM-FIRST HELPER METHODS ======
     
     async def _parse_pattern_for_reference(self, pattern_id: str):

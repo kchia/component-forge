@@ -131,6 +131,8 @@ async def generate_component(
             "code": {
                 "component": result.component_code,
                 "stories": result.stories_code,
+                "showcase": result.files.get("showcase", ""),
+                "app": result.files.get("app", ""),
                 "tokens_json": result.files.get("tokens", None),
                 "requirements_json": result.files.get("requirements", None)
             },
@@ -163,7 +165,8 @@ async def generate_component(
                 "tokens_hash": "placeholder",  # TODO: Calculate hash
                 "requirements_hash": "placeholder"  # TODO: Calculate hash
             },
-            "status": "completed" if result.success else "completed_with_errors"
+            # Always return "completed" - validation details are in validation_results
+            "status": "completed"
         }
         
         # Add validation results if available (LLM-first pipeline)

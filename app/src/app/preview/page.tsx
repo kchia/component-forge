@@ -10,7 +10,6 @@ import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { GenerationProgress } from "@/components/composite/GenerationProgress";
-import { ComponentPreview } from "@/components/preview/ComponentPreview";
 import { ValidationErrorsDisplay } from "@/components/preview/ValidationErrorsDisplay";
 import { QualityScoresDisplay } from "@/components/preview/QualityScoresDisplay";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
@@ -40,9 +39,9 @@ export default function PreviewPage() {
 
   // Local state to persist generated code across re-renders
   const [generatedCode, setGeneratedCode] = useState<{
-    code: { component: string; stories?: string };
-    metadata?: any;
-    timing?: any;
+    code: { component: string; stories?: string; showcase?: string };
+    metadata?: Record<string, unknown>;
+    timing?: Record<string, unknown>;
   } | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -218,7 +217,9 @@ export default function PreviewPage() {
       openInCodeSandbox(
         codeToDownload.component,
         componentName,
-        codeToDownload.stories
+        codeToDownload.stories,
+        codeToDownload.showcase,
+        codeToDownload.app
       );
     }
   };
@@ -321,38 +322,20 @@ export default function PreviewPage() {
       {isComplete && componentCode && (
         <Tabs defaultValue="preview" className="space-y-4">
           <TabsList className="grid w-full max-w-2xl grid-cols-4">
-            <TabsTrigger value="preview">Preview</TabsTrigger>
+            <TabsTrigger value="preview">Test</TabsTrigger>
             <TabsTrigger value="code">Code</TabsTrigger>
             <TabsTrigger value="storybook">Storybook</TabsTrigger>
             <TabsTrigger value="quality">Quality</TabsTrigger>
           </TabsList>
 
-          {/* Preview Tab */}
+          {/* Test Tab */}
           <TabsContent value="preview">
             <Card>
               <CardHeader>
-                <CardTitle>Component Preview</CardTitle>
+                <CardTitle>Test Your Component</CardTitle>
               </CardHeader>
               <CardContent className="space-y-6">
-                {/* Quick Preview */}
-                <ComponentPreview
-                  code={componentCode}
-                  componentName={componentType || 'Component'}
-                />
-
-                {/* Divider */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <span className="w-full border-t" />
-                  </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="bg-background px-2 text-muted-foreground">
-                      Test with full features
-                    </span>
-                  </div>
-                </div>
-
-                {/* Full Testing Options */}
+                {/* Testing Options */}
                 <div className="space-y-4">
                   <div className="flex flex-col sm:flex-row gap-3">
                     <Button
