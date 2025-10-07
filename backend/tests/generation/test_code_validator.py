@@ -224,6 +224,14 @@ class TestCodeValidator:
         # 1 error * 0.2 = -0.2, so score should be 0.8
         assert score == 0.8
     
+    def test_convert_score_to_0_100(self, validator):
+        """Test score conversion from 0.0-1.0 to 0-100."""
+        assert validator._convert_score_to_0_100(0.0) == 0
+        assert validator._convert_score_to_0_100(0.5) == 50
+        assert validator._convert_score_to_0_100(1.0) == 100
+        assert validator._convert_score_to_0_100(0.75) == 75
+        assert validator._convert_score_to_0_100(0.123) == 12  # Rounds to nearest integer
+    
     @pytest.mark.asyncio
     async def test_validate_and_fix_valid_code(self, validator):
         """Test validation with code that passes immediately."""
@@ -250,6 +258,7 @@ class TestCodeValidator:
         assert hasattr(result, "valid")
         assert hasattr(result, "code")
         assert hasattr(result, "attempts")
+        assert hasattr(result, "final_status")
         assert hasattr(result, "typescript_errors")
         assert hasattr(result, "eslint_errors")
         assert hasattr(result, "typescript_warnings")

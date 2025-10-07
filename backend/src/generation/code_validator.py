@@ -42,6 +42,7 @@ class ValidationResult:
     valid: bool
     code: str  # Final (possibly fixed) code
     attempts: int  # Number of validation/fix attempts
+    final_status: str  # "passed", "failed", or "skipped"
     typescript_errors: List[ValidationError]
     eslint_errors: List[ValidationError]
     typescript_warnings: List[ValidationError]
@@ -154,6 +155,7 @@ class CodeValidator:
                     valid=True,
                     code=current_code,
                     attempts=attempt + 1,
+                    final_status="passed",
                     typescript_errors=ts_error_list,
                     eslint_errors=eslint_error_list,
                     typescript_warnings=ts_warning_list,
@@ -199,6 +201,7 @@ class CodeValidator:
             valid=False,
             code=current_code,
             attempts=self.max_retries + 1,
+            final_status="failed",
             typescript_errors=ts_error_list,
             eslint_errors=eslint_error_list,
             typescript_warnings=ts_warning_list,
@@ -459,3 +462,16 @@ Return the complete fixed code."""
         score -= len(eslint_errors) * 0.2
         score -= len(eslint_warnings) * 0.05
         return max(0.0, min(1.0, score))
+    
+    @staticmethod
+    def _convert_score_to_0_100(score: float) -> int:
+        """
+        Convert quality score from 0.0-1.0 scale to 0-100 scale.
+        
+        Args:
+            score: Score from 0.0 to 1.0
+        
+        Returns:
+            Score from 0 to 100 (integer)
+        """
+        return int(round(score * 100))
