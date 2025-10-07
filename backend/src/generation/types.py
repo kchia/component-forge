@@ -34,14 +34,19 @@ class GenerationRequest(BaseModel):
 
 
 class PatternStructure(BaseModel):
-    """Structured representation of a parsed pattern."""
-    component_name: str
-    props_interface: str
-    imports: List[str]
-    variants: List[str]
-    modification_points: Dict[str, Any]
-    code: str
-    metadata: Dict[str, Any]
+    """Simplified structured representation of a parsed pattern.
+    
+    For LLM-first generation, we only need:
+    - Basic metadata (name, type, variants)
+    - Complete pattern code as reference
+    - Dependencies list
+    """
+    component_name: str = Field(..., description="Component name (e.g., 'Button')")
+    component_type: str = Field(..., description="Component type (e.g., 'button', 'card', 'input')")
+    code: str = Field(..., description="Complete pattern code (reference only)")
+    variants: List[str] = Field(default_factory=list, description="List of variant names")
+    dependencies: List[str] = Field(default_factory=list, description="List of dependency packages")
+    metadata: Dict[str, Any] = Field(default_factory=dict, description="Additional pattern metadata")
 
 
 class TokenMapping(BaseModel):
@@ -93,6 +98,14 @@ class ValidationErrorDetail(BaseModel):
     message: str = Field(..., description="Error message")
     rule_id: str = Field(..., description="Rule ID or error code")
     severity: str = Field(..., description="Severity level (error or warning)")
+    
+    def dict(self, *args, **kwargs):
+        """Override dict() to include camelCase fields for frontend compatibility."""
+        result = super().dict(*args, **kwargs)
+        # Add camelCase aliases for frontend compatibility
+        result['ruleId'] = result.get('rule_id', '')
+        result['code'] = result.get('rule_id', '')  # Frontend may use 'code' field
+        return result
     
     @classmethod
     def from_dataclass(cls, error: Any) -> "ValidationErrorDetail":

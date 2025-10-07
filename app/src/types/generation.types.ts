@@ -44,8 +44,10 @@ export interface ValidationError {
   line: number;
   column: number;
   message: string;
-  code?: string;      // e.g., "TS2322" or ESLint rule ID
-  ruleId?: string;    // ESLint rule ID
+  rule_id?: string;   // Backend snake_case field
+  ruleId?: string;    // Camelcase alias from backend
+  code?: string;      // Alternative field name (alias for rule_id)
+  severity?: string;  // Severity level (error or warning)
 }
 
 // Validation results from code validator
@@ -81,16 +83,28 @@ export interface GenerationMetadata {
   validation_results?: ValidationResults;
   quality_scores?: QualityScores;
   fix_attempts?: number;  // Alias for validation_results.attempts for convenience
+  // Epic 4.5: LLM token usage tracking
+  llm_token_usage?: {
+    prompt_tokens: number;
+    completion_tokens: number;
+    total_tokens: number;
+  };
+  validation_attempts?: number;  // Number of validation/fix attempts
 }
 
 // Generation timing breakdown
 export interface GenerationTiming {
   total_ms: number;
-  parsing_ms: number;
-  injection_ms: number;
-  generation_ms: number;
-  assembly_ms: number;
-  formatting_ms: number;
+  // Legacy fields (deprecated in Epic 4.5, maintained for backward compatibility)
+  parsing_ms?: number;
+  injection_ms?: number;
+  generation_ms?: number;
+  assembly_ms?: number;
+  formatting_ms?: number;
+  // New LLM-first fields (Epic 4.5)
+  llm_generating_ms?: number;
+  validating_ms?: number;
+  post_processing_ms?: number;
 }
 
 // Provenance information
