@@ -44,11 +44,22 @@ async def generate_component(
     - CSS variables and Tailwind classes
     - ARIA attributes and semantic HTML
     
+    LLM-first pipeline includes:
+    - LLM code generation with structured output
+    - TypeScript and ESLint validation with auto-fix loop
+    - Quality scoring and metrics
+    
     Args:
         request: GenerationRequest with pattern_id, tokens, requirements
         
     Returns:
-        JSON response with generated code and metadata
+        JSON response with:
+        - code: Generated component and stories code
+        - metadata: Pattern, tokens, requirements info
+        - timing: Latency breakdown by stage
+        - validation_results: TypeScript/ESLint validation details (if available)
+        - quality_scores: Code quality metrics (if available)
+        - provenance: Generation metadata for tracking
         
     Raises:
         HTTPException: For validation or generation errors
@@ -112,7 +123,7 @@ async def generate_component(
         )
         
         # Return successful response matching frontend GenerationResponse type
-        return {
+        response = {
             "code": {
                 "component": result.component_code,
                 "stories": result.stories_code,
@@ -126,8 +137,8 @@ async def generate_component(
                 "requirements_implemented": result.metadata.requirements_implemented,
                 "lines_of_code": result.metadata.lines_of_code,
                 "imports_count": 0,  # TODO: Calculate from code
-                "has_typescript_errors": False,
-                "has_accessibility_warnings": False
+                "has_typescript_errors": result.metadata.has_typescript_errors,
+                "has_accessibility_warnings": result.metadata.has_accessibility_warnings
             },
             "timing": {
                 "total_ms": result.metadata.latency_ms,
@@ -135,7 +146,11 @@ async def generate_component(
                 "injection_ms": result.metadata.stage_latencies.get("injecting", 0),
                 "generation_ms": result.metadata.stage_latencies.get("generating", 0),
                 "assembly_ms": result.metadata.stage_latencies.get("assembling", 0),
-                "formatting_ms": result.metadata.stage_latencies.get("formatting", 0)
+                "formatting_ms": result.metadata.stage_latencies.get("formatting", 0),
+                # New LLM-first stages
+                "llm_generating_ms": result.metadata.stage_latencies.get("llm_generating", 0),
+                "validating_ms": result.metadata.stage_latencies.get("validating", 0),
+                "post_processing_ms": result.metadata.stage_latencies.get("post_processing", 0)
             },
             "provenance": {
                 "pattern_id": request.pattern_id,
@@ -146,6 +161,39 @@ async def generate_component(
             },
             "status": "completed"
         }
+        
+        # Add validation results if available (LLM-first pipeline)
+        if result.validation_results:
+            response["validation_results"] = {
+                "attempts": result.validation_results.attempts,
+                "final_status": result.validation_results.final_status,
+                "typescript": {
+                    "passed": result.validation_results.typescript_passed,
+                    "errors": [error.dict() for error in result.validation_results.typescript_errors],
+                    "warnings": [error.dict() for error in result.validation_results.typescript_warnings]
+                },
+                "eslint": {
+                    "passed": result.validation_results.eslint_passed,
+                    "errors": [error.dict() for error in result.validation_results.eslint_errors],
+                    "warnings": [error.dict() for error in result.validation_results.eslint_warnings]
+                }
+            }
+            
+            # Add quality scores
+            response["quality_scores"] = {
+                "overall": result.validation_results.overall_score,
+                "linting": result.validation_results.linting_score,
+                "type_safety": result.validation_results.type_safety_score,
+                "compilation_success": result.validation_results.compilation_success,
+                "lint_success": result.validation_results.lint_success
+            }
+        
+        # Add LLM token usage if available
+        if result.metadata.llm_token_usage:
+            response["metadata"]["llm_token_usage"] = result.metadata.llm_token_usage
+            response["metadata"]["validation_attempts"] = result.metadata.validation_attempts
+        
+        return response
     
     except HTTPException:
         # Record failure metric
