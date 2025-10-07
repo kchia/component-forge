@@ -11,6 +11,7 @@ from typing import Dict, Any
 from pathlib import Path
 
 from .types import CodeParts
+from .import_resolver import ImportResolver
 
 
 class CodeAssembler:
@@ -23,6 +24,9 @@ class CodeAssembler:
         # Find format_code.js script
         backend_dir = Path(__file__).parent.parent.parent
         self.format_script = backend_dir / "scripts" / "format_code.js"
+        
+        # Initialize import resolver
+        self.import_resolver = ImportResolver()
     
     async def assemble(self, parts: CodeParts) -> Dict[str, str]:
         """
@@ -44,9 +48,15 @@ class CodeAssembler:
         if parts.provenance_header:
             component_sections.append(parts.provenance_header)
         
-        # Add imports
+        # Resolve and order imports
         if parts.imports:
-            component_sections.append("\n".join(parts.imports))
+            # Infer component type from name for missing imports
+            component_type = parts.component_name.lower() if parts.component_name else "button"
+            ordered_imports = self.import_resolver.resolve_and_order(
+                parts.imports,
+                component_type
+            )
+            component_sections.append("\n".join(ordered_imports))
         
         # Add type definitions
         if parts.type_definitions:
