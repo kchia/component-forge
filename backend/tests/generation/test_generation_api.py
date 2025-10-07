@@ -118,11 +118,11 @@ class TestGenerationAPI:
         assert hasattr(service, 'get_current_stage')
         assert hasattr(service, 'get_stage_latencies')
         
-        # Verify service components initialized
+        # Verify service components initialized (Epic 4.5 - LLM-first components)
         assert service.pattern_parser is not None
-        assert service.token_injector is not None
-        assert service.tailwind_generator is not None
-        assert service.requirement_implementer is not None
+        assert service.llm_generator is not None
+        assert service.code_validator is not None
+        assert service.prompt_builder is not None
         assert service.code_assembler is not None
     
     def test_api_endpoint_paths(self):
