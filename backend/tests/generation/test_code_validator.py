@@ -204,6 +204,26 @@ class TestCodeValidator:
         
         assert score == 0.0  # Clamped to minimum
     
+    def test_calculate_typescript_quality_score(self, validator):
+        """Test TypeScript-specific quality score calculation."""
+        ts_errors = [ValidationError(1, 1, "Error", "rule1", "error")]
+        ts_warnings = [ValidationError(2, 1, "Warning", "rule2", "warning")]
+        
+        score = validator._calculate_typescript_quality_score(ts_errors, ts_warnings)
+        
+        # 1 error * 0.2 + 1 warning * 0.05 = -0.25, so score should be 0.75
+        assert score == 0.75
+    
+    def test_calculate_eslint_quality_score(self, validator):
+        """Test ESLint-specific quality score calculation."""
+        eslint_errors = [ValidationError(1, 1, "Error", "no-var", "error")]
+        eslint_warnings = []
+        
+        score = validator._calculate_eslint_quality_score(eslint_errors, eslint_warnings)
+        
+        # 1 error * 0.2 = -0.2, so score should be 0.8
+        assert score == 0.8
+    
     @pytest.mark.asyncio
     async def test_validate_and_fix_valid_code(self, validator):
         """Test validation with code that passes immediately."""
@@ -215,7 +235,9 @@ class TestCodeValidator:
         assert result.attempts == 1
         assert result.compilation_success is True
         assert result.lint_success is True
-        assert result.quality_score > 0.8  # Should be high quality
+        assert result.overall_quality_score > 0.8  # Should be high quality
+        assert result.typescript_quality_score > 0.8
+        assert result.eslint_quality_score > 0.8
     
     @pytest.mark.asyncio
     async def test_validate_and_fix_result_structure(self, validator):
@@ -232,7 +254,9 @@ class TestCodeValidator:
         assert hasattr(result, "eslint_errors")
         assert hasattr(result, "typescript_warnings")
         assert hasattr(result, "eslint_warnings")
-        assert hasattr(result, "quality_score")
+        assert hasattr(result, "typescript_quality_score")
+        assert hasattr(result, "eslint_quality_score")
+        assert hasattr(result, "overall_quality_score")
         assert hasattr(result, "compilation_success")
         assert hasattr(result, "lint_success")
     

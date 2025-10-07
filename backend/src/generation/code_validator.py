@@ -46,7 +46,9 @@ class ValidationResult:
     eslint_errors: List[ValidationError]
     typescript_warnings: List[ValidationError]
     eslint_warnings: List[ValidationError]
-    quality_score: float  # 0.0 - 1.0
+    typescript_quality_score: float  # TypeScript-specific quality score (0.0 - 1.0)
+    eslint_quality_score: float  # ESLint-specific quality score (0.0 - 1.0)
+    overall_quality_score: float  # Overall quality score (0.0 - 1.0)
     compilation_success: bool
     lint_success: bool
 
@@ -132,8 +134,16 @@ class CodeValidator:
             valid = compilation_success and lint_success
             
             if valid:
-                # Success! Calculate quality score
-                quality_score = self._calculate_quality_score(
+                # Success! Calculate quality scores
+                ts_quality_score = self._calculate_typescript_quality_score(
+                    ts_error_list,
+                    ts_warning_list,
+                )
+                eslint_quality_score = self._calculate_eslint_quality_score(
+                    eslint_error_list,
+                    eslint_warning_list,
+                )
+                overall_quality_score = self._calculate_quality_score(
                     ts_error_list,
                     eslint_error_list,
                     ts_warning_list,
@@ -148,7 +158,9 @@ class CodeValidator:
                     eslint_errors=eslint_error_list,
                     typescript_warnings=ts_warning_list,
                     eslint_warnings=eslint_warning_list,
-                    quality_score=quality_score,
+                    typescript_quality_score=ts_quality_score,
+                    eslint_quality_score=eslint_quality_score,
+                    overall_quality_score=overall_quality_score,
                     compilation_success=True,
                     lint_success=True,
                 )
@@ -168,7 +180,15 @@ class CodeValidator:
                         pass
         
         # Max retries reached without success
-        quality_score = self._calculate_quality_score(
+        ts_quality_score = self._calculate_typescript_quality_score(
+            ts_error_list,
+            ts_warning_list,
+        )
+        eslint_quality_score = self._calculate_eslint_quality_score(
+            eslint_error_list,
+            eslint_warning_list,
+        )
+        overall_quality_score = self._calculate_quality_score(
             ts_error_list,
             eslint_error_list,
             ts_warning_list,
@@ -183,7 +203,9 @@ class CodeValidator:
             eslint_errors=eslint_error_list,
             typescript_warnings=ts_warning_list,
             eslint_warnings=eslint_warning_list,
-            quality_score=quality_score,
+            typescript_quality_score=ts_quality_score,
+            eslint_quality_score=eslint_quality_score,
+            overall_quality_score=overall_quality_score,
             compilation_success=compilation_success,
             lint_success=lint_success,
         )
@@ -383,7 +405,7 @@ Return the complete fixed code."""
         eslint_warnings: List[ValidationError],
     ) -> float:
         """
-        Calculate quality score based on validation results.
+        Calculate overall quality score based on validation results.
         
         Score factors:
         - No errors: base 1.0
@@ -404,4 +426,36 @@ Return the complete fixed code."""
         score -= warning_count * 0.05
         
         # Clamp to [0.0, 1.0]
+        return max(0.0, min(1.0, score))
+    
+    def _calculate_typescript_quality_score(
+        self,
+        ts_errors: List[ValidationError],
+        ts_warnings: List[ValidationError],
+    ) -> float:
+        """
+        Calculate TypeScript-specific quality score.
+        
+        Returns:
+            Quality score from 0.0 to 1.0
+        """
+        score = 1.0
+        score -= len(ts_errors) * 0.2
+        score -= len(ts_warnings) * 0.05
+        return max(0.0, min(1.0, score))
+    
+    def _calculate_eslint_quality_score(
+        self,
+        eslint_errors: List[ValidationError],
+        eslint_warnings: List[ValidationError],
+    ) -> float:
+        """
+        Calculate ESLint-specific quality score.
+        
+        Returns:
+            Quality score from 0.0 to 1.0
+        """
+        score = 1.0
+        score -= len(eslint_errors) * 0.2
+        score -= len(eslint_warnings) * 0.05
         return max(0.0, min(1.0, score))
