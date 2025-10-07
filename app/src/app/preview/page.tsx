@@ -153,17 +153,15 @@ export default function PreviewPage() {
   // Current implementation uses mock timing for MVP demo purposes
   const currentStage = useMemo(() => {
     if (!isGenerating) {
-      return isComplete ? GenerationStage.COMPLETE : GenerationStage.PARSING;
+      return isComplete ? GenerationStage.COMPLETE : GenerationStage.LLM_GENERATING;
     }
     
     // Mock stage progression (temporary until backend integration)
-    // Progress percentage of 60s target
-    const progress = (elapsedMs / 60000) * 100;
-    if (progress < 20) return GenerationStage.PARSING;
-    if (progress < 40) return GenerationStage.INJECTING;
-    if (progress < 60) return GenerationStage.GENERATING;
-    if (progress < 80) return GenerationStage.ASSEMBLING;
-    return GenerationStage.FORMATTING;
+    // Progress percentage of 30s target (Epic 4.5: 3-stage pipeline)
+    const progress = (elapsedMs / 30000) * 100;
+    if (progress < 50) return GenerationStage.LLM_GENERATING;
+    if (progress < 80) return GenerationStage.VALIDATING;
+    return GenerationStage.POST_PROCESSING;
   }, [isGenerating, isComplete, elapsedMs]);
 
   // Handle download action

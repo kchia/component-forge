@@ -65,7 +65,7 @@ export function ValidationErrorsDisplay({
           </span>
         </div>
         {(error.code || error.ruleId) && (
-          <Badge variant="outline" className="text-xs">
+          <Badge variant="neutral" className="text-xs">
             {error.code || error.ruleId}
           </Badge>
         )}
