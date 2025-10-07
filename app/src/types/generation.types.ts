@@ -8,13 +8,11 @@
 import { DesignTokens } from './api.types';
 import { RequirementProposal } from './requirement.types';
 
-// Generation pipeline stages
+// Generation pipeline stages (Epic 4.5: LLM-First - 3 stages)
 export enum GenerationStage {
-  PARSING = 'parsing',
-  INJECTING = 'injecting',
-  GENERATING = 'generating',
-  ASSEMBLING = 'assembling',
-  FORMATTING = 'formatting',
+  GENERATING = 'generating',      // LLM generation (~15-20s)
+  VALIDATING = 'validating',      // TypeScript + ESLint validation (~3-5s)
+  POST_PROCESSING = 'post_processing', // Import resolution, provenance, formatting (~2-3s)
   COMPLETE = 'complete',
 }
 
@@ -41,7 +39,35 @@ export interface GeneratedCode {
   requirements_json?: string; // requirements.json content (optional)
 }
 
-// Generation metadata and metrics
+// Validation error detail
+export interface ValidationError {
+  line: number;
+  column: number;
+  message: string;
+  code?: string;      // e.g., "TS2322" or ESLint rule ID
+  ruleId?: string;    // ESLint rule ID
+}
+
+// Validation results from code validator
+export interface ValidationResults {
+  attempts: number;                    // Number of fix attempts (0 = perfect first try)
+  final_status: 'passed' | 'failed' | 'skipped';
+  typescript_passed: boolean;
+  typescript_errors: ValidationError[];
+  eslint_passed: boolean;
+  eslint_errors: ValidationError[];
+  eslint_warnings: ValidationError[];
+}
+
+// Quality scores for generated code
+export interface QualityScores {
+  compilation: boolean;    // TypeScript compilation success
+  linting: number;        // 0-100 based on lint errors/warnings
+  type_safety: number;    // 0-100 based on type coverage
+  overall: number;        // 0-100 composite score
+}
+
+// Generation metadata and metrics (updated for Epic 4.5)
 export interface GenerationMetadata {
   pattern_used: string;
   pattern_version: string;
@@ -51,6 +77,10 @@ export interface GenerationMetadata {
   imports_count: number;
   has_typescript_errors: boolean;
   has_accessibility_warnings: boolean;
+  // Epic 4.5: New validation and quality fields
+  validation_results?: ValidationResults;
+  quality_scores?: QualityScores;
+  fix_attempts?: number;  // Alias for validation_results.attempts for convenience
 }
 
 // Generation timing breakdown
@@ -118,11 +148,9 @@ export interface QualityMetrics {
  */
 export function getStageDisplayName(stage: GenerationStage): string {
   const displayNames: Record<GenerationStage, string> = {
-    [GenerationStage.PARSING]: 'Parsing Pattern',
-    [GenerationStage.INJECTING]: 'Injecting Tokens',
-    [GenerationStage.GENERATING]: 'Generating Code',
-    [GenerationStage.ASSEMBLING]: 'Assembling Components',
-    [GenerationStage.FORMATTING]: 'Formatting Code',
+    [GenerationStage.GENERATING]: 'Generating with LLM',
+    [GenerationStage.VALIDATING]: 'Validating Code',
+    [GenerationStage.POST_PROCESSING]: 'Post-Processing',
     [GenerationStage.COMPLETE]: 'Complete',
   };
   return displayNames[stage];
@@ -136,14 +164,28 @@ export function getStageDisplayName(stage: GenerationStage): string {
  */
 export function getStageProgress(stage: GenerationStage): number {
   const progressMap: Record<GenerationStage, number> = {
-    [GenerationStage.PARSING]: 20,
-    [GenerationStage.INJECTING]: 40,
-    [GenerationStage.GENERATING]: 60,
-    [GenerationStage.ASSEMBLING]: 80,
-    [GenerationStage.FORMATTING]: 90,
+    [GenerationStage.GENERATING]: 50,         // LLM generation is the heavy part
+    [GenerationStage.VALIDATING]: 80,         // Validation is quick
+    [GenerationStage.POST_PROCESSING]: 95,    // Final touches
     [GenerationStage.COMPLETE]: 100,
   };
   return progressMap[stage];
+}
+
+/**
+ * Helper function to get fix attempts display text.
+ * 
+ * @param attempts - Number of fix attempts
+ * @returns Human-readable fix attempts message
+ */
+export function getFixAttemptsMessage(attempts: number): string {
+  if (attempts === 0) {
+    return '✓ Generated perfectly on first try';
+  } else if (attempts === 1) {
+    return '🔧 Fixed 1 issue automatically';
+  } else {
+    return `🔧 Fixed ${attempts} issues after validation`;
+  }
 }
 
 /**
