@@ -10,15 +10,17 @@ import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { GenerationProgress } from "@/components/composite/GenerationProgress";
+import { ComponentPreview } from "@/components/preview/ComponentPreview";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { useGenerateComponent, useGenerationStatus } from "@/hooks/useGenerateComponent";
 import { downloadGeneratedCode } from "@/lib/api";
-import { 
+import { copyToClipboard, openInCodeSandbox } from "@/lib/utils";
+import {
   WorkflowStep,
   GenerationStage,
 } from "@/types";
-import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle, RefreshCw } from "lucide-react";
+import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle, RefreshCw, Copy, ExternalLink, Check } from "lucide-react";
 
 export default function PreviewPage() {
   const router = useRouter();
@@ -35,7 +37,12 @@ export default function PreviewPage() {
   const tokens = useTokenStore((state) => state.tokens);
 
   // Local state to persist generated code across re-renders
-  const [generatedCode, setGeneratedCode] = useState<any>(null);
+  const [generatedCode, setGeneratedCode] = useState<{
+    code: { component: string; stories?: string };
+    metadata?: any;
+    timing?: any;
+  } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   // Generation mutation
   const generation = useGenerateComponent({
@@ -172,7 +179,7 @@ export default function PreviewPage() {
     setStartTime(Date.now());
     hasTriggeredRef.current = false; // Reset trigger flag for retry
     generation.reset();
-    
+
     // Retry generation
     const approvedRequirements = getApprovedProposals();
     const allRequirements = [
@@ -183,12 +190,37 @@ export default function PreviewPage() {
     ];
     // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
     const patternId = (componentType?.toLowerCase() || 'button') + '-001';
-    
+
     generation.mutate({
       pattern_id: patternId,
       tokens: tokens!,
       requirements: allRequirements,
     });
+  };
+
+  // Handle copy to clipboard
+  const handleCopy = async () => {
+    const codeToDownload = generation.data?.code || generatedCode?.code;
+    if (codeToDownload?.component) {
+      const success = await copyToClipboard(codeToDownload.component);
+      if (success) {
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000); // Reset after 2 seconds
+      }
+    }
+  };
+
+  // Handle open in CodeSandbox
+  const handleOpenInCodeSandbox = () => {
+    const codeToDownload = generation.data?.code || generatedCode?.code;
+    if (codeToDownload?.component) {
+      const componentName = componentType || 'Component';
+      openInCodeSandbox(
+        codeToDownload.component,
+        componentName,
+        codeToDownload.stories
+      );
+    }
   };
 
   // Get generated code or placeholders (use local state as fallback)
@@ -295,14 +327,67 @@ export default function PreviewPage() {
               <CardHeader>
                 <CardTitle>Component Preview</CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="border rounded-lg p-8 bg-muted/20">
-                  <p className="text-center text-muted-foreground">
-                    Live preview will be available in a future update.
-                  </p>
-                  <p className="text-xs text-center text-muted-foreground mt-2">
-                    For now, copy the code to test your component.
-                  </p>
+              <CardContent className="space-y-6">
+                {/* Quick Preview */}
+                <ComponentPreview
+                  code={componentCode}
+                  componentName={componentType || 'Component'}
+                />
+
+                {/* Divider */}
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Test with full features
+                    </span>
+                  </div>
+                </div>
+
+                {/* Full Testing Options */}
+                <div className="space-y-4">
+                  <div className="flex flex-col sm:flex-row gap-3">
+                    <Button
+                      onClick={handleOpenInCodeSandbox}
+                      variant="default"
+                      className="flex-1"
+                      size="lg"
+                    >
+                      <ExternalLink className="mr-2 h-5 w-5" />
+                      Open in StackBlitz
+                    </Button>
+                    <Button
+                      onClick={handleCopy}
+                      variant="outline"
+                      className="flex-1"
+                      size="lg"
+                    >
+                      {copied ? (
+                        <>
+                          <Check className="mr-2 h-5 w-5" />
+                          Copied!
+                        </>
+                      ) : (
+                        <>
+                          <Copy className="mr-2 h-5 w-5" />
+                          Copy Code
+                        </>
+                      )}
+                    </Button>
+                  </div>
+
+                  <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+                    <p className="text-sm font-medium">Why use StackBlitz?</p>
+                    <ul className="text-xs text-muted-foreground space-y-1 list-disc list-inside">
+                      <li>Full React + TypeScript + Tailwind environment</li>
+                      <li>Interactive testing with hot reload</li>
+                      <li>Test all component variants and props</li>
+                      <li>Console debugging and error messages</li>
+                      <li>Share with team members</li>
+                    </ul>
+                  </div>
                 </div>
               </CardContent>
             </Card>
@@ -311,8 +396,25 @@ export default function PreviewPage() {
           {/* Code Tab */}
           <TabsContent value="code">
             <Card>
-              <CardHeader>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle>Generated Code</CardTitle>
+                <Button
+                  onClick={handleCopy}
+                  variant="outline"
+                  size="sm"
+                >
+                  {copied ? (
+                    <>
+                      <Check className="mr-2 h-3 w-3" />
+                      Copied
+                    </>
+                  ) : (
+                    <>
+                      <Copy className="mr-2 h-3 w-3" />
+                      Copy
+                    </>
+                  )}
+                </Button>
               </CardHeader>
               <CardContent>
                 <DynamicCodeBlock language="tsx" code={componentCode} />

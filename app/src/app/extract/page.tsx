@@ -495,7 +495,7 @@ export default function TokenExtractionPage() {
                   <div className="ml-2">
                     <p className="font-medium">No Design Tokens Extracted</p>
                     <p className="text-sm">
-                      We couldn't identify any design tokens in this image. Try uploading a screenshot that clearly shows colors, typography, or spacing information.
+                      We couldn&apos;t identify any design tokens in this image. Try uploading a screenshot that clearly shows colors, typography, or spacing information.
                     </p>
                   </div>
                 </Alert>
