@@ -8,6 +8,12 @@ import pytest
 from fastapi.testclient import TestClient
 from unittest.mock import Mock, patch, AsyncMock
 
+from src.generation.llm_generator import LLMComponentGenerator, MockLLMGenerator
+from src.generation.code_validator import CodeValidator
+from src.generation.prompt_builder import PromptBuilder
+from src.generation.pattern_parser import PatternParser
+from src.generation.code_assembler import CodeAssembler
+
 # Note: These tests are designed to verify the structure
 # Full integration tests will run when the backend is fully operational
 
@@ -120,10 +126,23 @@ class TestGenerationAPI:
         
         # Verify service components initialized (Epic 4.5 - LLM-first components)
         assert service.pattern_parser is not None
+        assert isinstance(service.pattern_parser, PatternParser)
+        
         assert service.llm_generator is not None
+        assert isinstance(service.llm_generator, (LLMComponentGenerator, MockLLMGenerator))
+        assert hasattr(service.llm_generator, 'generate')
+        
         assert service.code_validator is not None
+        assert isinstance(service.code_validator, CodeValidator)
+        assert hasattr(service.code_validator, 'validate')
+        
         assert service.prompt_builder is not None
+        assert isinstance(service.prompt_builder, PromptBuilder)
+        assert hasattr(service.prompt_builder, 'build_prompt')
+        
         assert service.code_assembler is not None
+        assert isinstance(service.code_assembler, CodeAssembler)
+        assert hasattr(service.code_assembler, 'assemble')
     
     def test_api_endpoint_paths(self):
         """Test that API endpoints are correctly defined."""

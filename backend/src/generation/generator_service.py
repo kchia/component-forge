@@ -124,7 +124,6 @@ class GeneratorService:
 
         return result
 
-    @traceable(run_type="chain", name="generate_component")
     @traceable(run_type="chain", name="generate_component_llm_first")
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """

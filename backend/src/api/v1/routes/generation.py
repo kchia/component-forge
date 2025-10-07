@@ -81,7 +81,7 @@ async def generate_component(
         
         if not request.tokens:
             logger.warning("No tokens provided, using fallback tokens")
-            # Could use fallback tokens (deprecated old modules removed in Epic 4.5)
+            # Fallback tokens could be generated from defaults if needed
         
         if not request.requirements:
             logger.warning("No requirements provided, using pattern defaults")
