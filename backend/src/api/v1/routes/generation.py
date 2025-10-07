@@ -16,6 +16,20 @@ router = APIRouter(prefix="/generation", tags=["generation"])
 # Initialize generator service (singleton)
 generator_service = GeneratorService()
 
+# Prometheus metrics (optional - only if prometheus_client is available)
+try:
+    from prometheus_client import Histogram
+    
+    generation_latency_seconds = Histogram(
+        "generation_latency_seconds",
+        "Code generation latency in seconds",
+        ["pattern_id", "success"]
+    )
+    METRICS_ENABLED = True
+except ImportError:
+    METRICS_ENABLED = False
+    logger.warning("Prometheus metrics not available for generation endpoint")
+
 
 @router.post("/generate")
 async def generate_component(
@@ -44,6 +58,7 @@ async def generate_component(
     )
     
     start_time = time.time()
+    success = False
     
     try:
         # Validate request
@@ -75,6 +90,14 @@ async def generate_component(
         
         # Calculate total latency
         total_latency_ms = int((time.time() - start_time) * 1000)
+        success = True
+        
+        # Record Prometheus metric
+        if METRICS_ENABLED:
+            generation_latency_seconds.labels(
+                pattern_id=request.pattern_id,
+                success="true"
+            ).observe((time.time() - start_time))
         
         logger.info(
             f"Generation completed successfully in {total_latency_ms}ms",
@@ -107,10 +130,22 @@ async def generate_component(
         }
     
     except HTTPException:
+        # Record failure metric
+        if METRICS_ENABLED:
+            generation_latency_seconds.labels(
+                pattern_id=request.pattern_id,
+                success="false"
+            ).observe((time.time() - start_time))
         # Re-raise HTTP exceptions
         raise
     
     except FileNotFoundError as e:
+        # Record failure metric
+        if METRICS_ENABLED:
+            generation_latency_seconds.labels(
+                pattern_id=request.pattern_id,
+                success="false"
+            ).observe((time.time() - start_time))
         logger.error(f"Pattern not found: {e}")
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
@@ -118,6 +153,12 @@ async def generate_component(
         )
     
     except ValueError as e:
+        # Record failure metric
+        if METRICS_ENABLED:
+            generation_latency_seconds.labels(
+                pattern_id=request.pattern_id,
+                success="false"
+            ).observe((time.time() - start_time))
         logger.error(f"Validation error: {e}")
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -125,6 +166,12 @@ async def generate_component(
         )
     
     except Exception as e:
+        # Record failure metric
+        if METRICS_ENABLED:
+            generation_latency_seconds.labels(
+                pattern_id=request.pattern_id,
+                success="false"
+            ).observe((time.time() - start_time))
         logger.error(f"Unexpected error during generation: {e}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
