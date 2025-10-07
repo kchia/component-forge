@@ -62,18 +62,37 @@ CRITICAL REQUIREMENTS:
 
 Example of correct className usage with design tokens:
 ```typescript
+// Button example - Complete styling with proper defaults
 className={cn(
-  "border border-gray-200 p-4",
-  rounded && "rounded-lg",
-  shadow && "shadow-md",
-  // Use Tailwind arbitrary values with extracted token colors directly
+  // Base styles: layout, spacing, borders, transitions (REQUIRED)
+  "inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-medium transition-colors",
+  // Border for outline variant
+  "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2",
+  // Color variants using extracted design tokens
   variant === "primary" && "bg-[#3B82F6] text-white hover:bg-[#2563EB]",
   variant === "secondary" && "bg-[#6B7280] text-white hover:bg-[#4B5563]",
-  onClick && "cursor-pointer",
-  hoverEffect && "transition-transform hover:scale-105",
+  variant === "outline" && "border border-[#E5E7EB] bg-transparent hover:bg-[#F3F4F6]",
+  // State modifiers
+  disabled && "opacity-50 cursor-not-allowed",
+  className
+)}
+
+// Card example - Complete card styling
+className={cn(
+  // Base styles: MUST include border, padding, rounded corners
+  "border border-[#E5E7EB] rounded-lg p-6 bg-white",
+  // Optional enhancements
+  shadow && "shadow-md",
+  interactive && "hover:shadow-lg transition-shadow cursor-pointer",
+  variant === "primary" && "border-[#3B82F6] bg-[#EFF6FF]",
   className
 )}
 ```
+
+**CRITICAL**: Every component MUST have complete functional styling by default:
+- Cards MUST have: `border`, `border-[color]`, `rounded-lg`, `p-4` or `p-6`, background
+- Buttons MUST have: `px-4 py-2`, `rounded-md`, `font-medium`, background, hover states
+- Inputs MUST have: `border`, padding, `rounded-md`, focus states
 
 **IMPORTANT**: When design tokens specify colors, use the EXACT color values provided:
 - If tokens specify `primary: #3B82F6`, use `bg-[#3B82F6]` (not `bg-blue-500`)
@@ -103,6 +122,27 @@ Apply these design tokens to the component using CSS variables.
 
 {design_tokens}
 
+## Component Base Styling Requirements
+
+Based on the component type **{component_type}**, ensure these base styles are included:
+
+**Card components:**
+- Base: `border border-[extracted-color] rounded-lg p-6 bg-white`
+- Must be visually distinct as a container with clear boundaries
+- Include proper spacing between content
+
+**Button components:**
+- Base: `inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors`
+- Must have visible background and hover states
+- Include focus-visible styles for accessibility
+
+**Input/Form components:**
+- Base: `border border-[extracted-color] rounded-md px-3 py-2 w-full`
+- Must have visible border and focus states
+- Include proper spacing for text content
+
+**If component type doesn't match above, use appropriate spacing, borders, and visual hierarchy for the component type.**
+
 ## Requirements
 
 ### Props
@@ -122,6 +162,10 @@ Apply these design tokens to the component using CSS variables.
 - **MUST use cn() for className** - NEVER use template literals for dynamic classes
 - **Static Tailwind classes only** - No `bg-${{variant}}`, use conditionals instead
 - **MUST use EXACT extracted token values** - Use `bg-[#3B82F6]` with the exact color from design tokens
+- **MUST include complete base styling** - Every component needs padding, borders, rounded corners, etc.
+- **Cards MUST have**: `border border-[color] rounded-lg p-6 bg-white` as base styles
+- **Buttons MUST have**: `px-4 py-2 rounded-md font-medium` plus background/hover states
+- **Inputs MUST have**: `border border-[color] rounded-md px-3 py-2` plus focus states
 - Match colors EXACTLY to the design tokens provided (don't approximate with Tailwind color names)
 - TypeScript strict mode (no 'any' types allowed, including 'as any')
 - All props must have explicit types
@@ -261,7 +305,6 @@ Generate complete, working code that meets all requirements."""
             color_lines = []
             for name, value in colors.items():
                 # Show token name, value, and how to use it
-                css_var = name.replace("_", "-").replace(" ", "-").lower()
                 color_lines.append(f"  - {name}: `{value}` → Use as `bg-[{value}]` or `text-[{value}]`")
             sections.append("**Colors:**\n" + "\n".join(color_lines))
         
