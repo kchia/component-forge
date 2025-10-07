@@ -1,8 +1,11 @@
 """
-Code Assembler - Assemble and format final component code.
+Code Assembler - Format and finalize component code.
 
-This module combines all code parts (imports, CSS variables, types, component)
-and formats the result using Prettier.
+Simplified for LLM-first generation. The LLM generates complete component code,
+so this module only needs to:
+- Add provenance header
+- Resolve and organize imports  
+- Format code with Prettier
 """
 
 import asyncio
@@ -13,6 +16,7 @@ from pathlib import Path
 
 from .types import CodeParts
 from .import_resolver import ImportResolver
+from .provenance import ProvenanceGenerator
 
 # Configure logger
 logger = logging.getLogger(__name__)
@@ -20,7 +24,12 @@ logger = logging.getLogger(__name__)
 
 class CodeAssembler:
     """
-    Assemble final component code from parts and format with Prettier.
+    Finalize and format component code.
+    
+    Simplified for LLM-first generation:
+    - Adds provenance header
+    - Resolves and organizes imports
+    - Formats code with Prettier
     """
     
     def __init__(self):
@@ -29,55 +38,50 @@ class CodeAssembler:
         backend_dir = Path(__file__).parent.parent.parent
         self.format_script = backend_dir / "scripts" / "format_code.js"
         
-        # Initialize import resolver
+        # Initialize specialized modules
         self.import_resolver = ImportResolver()
+        self.provenance_generator = ProvenanceGenerator()
     
     async def assemble(self, parts: CodeParts) -> Dict[str, str]:
         """
-        Assemble final component code from parts.
+        Finalize component code with provenance, imports, and formatting.
+        
+        In LLM-first generation, the LLM provides complete code. This method:
+        1. Adds provenance header (if not present)
+        2. Resolves and organizes imports (if provided separately)
+        3. Formats code with Prettier
         
         Args:
-            parts: CodeParts with all component code sections
+            parts: CodeParts with complete component and stories code
         
         Returns:
-            Dictionary with assembled and formatted files:
+            Dictionary with formatted files:
                 - component: Formatted component.tsx code
-                - stories: Formatted stories.tsx code
+                - stories: Formatted stories.tsx code  
                 - files: Map of filename to content
         """
-        # Build component file
-        component_sections = []
+        # Start with complete component code from LLM
+        component_code = parts.component_code or ""
         
-        # Add provenance header if present
-        if parts.provenance_header:
-            component_sections.append(parts.provenance_header)
+        # Add provenance header if not already present
+        if parts.provenance_header and not component_code.startswith("/*"):
+            component_code = parts.provenance_header + "\n\n" + component_code
         
-        # Resolve and order imports
-        if parts.imports:
-            # Infer component type from name for missing imports
+        # If imports are provided separately (legacy support), resolve and prepend
+        if parts.imports and component_code and not component_code.strip().startswith("import"):
             component_type = parts.component_name.lower() if parts.component_name else "button"
             ordered_imports = self.import_resolver.resolve_and_order(
                 parts.imports,
                 component_type
             )
-            component_sections.append("\n".join(ordered_imports))
-        
-        # Add type definitions
-        if parts.type_definitions:
-            component_sections.append(parts.type_definitions)
-        
-        # Add component code
-        if parts.component_code:
-            component_sections.append(parts.component_code)
-        
-        # Combine with double newlines
-        component_code = "\n\n".join(component_sections)
+            imports_section = "\n".join(ordered_imports)
+            component_code = imports_section + "\n\n" + component_code
         
         # Format component code
         formatted_component = await self._format_code(component_code)
         
-        # Build and format stories file
-        stories_code = parts.storybook_stories
+        # Format stories code if provided
+        stories_code = parts.storybook_stories or ""
         formatted_stories = ""
         if stories_code:
             formatted_stories = await self._format_code(stories_code)
@@ -92,10 +96,6 @@ class CodeAssembler:
         
         if formatted_stories:
             files[f"{component_name}.stories.tsx"] = formatted_stories
-        
-        # Add CSS variables as a separate file
-        if parts.css_variables:
-            files[f"{component_name}.tokens.css"] = parts.css_variables
         
         return {
             "component": formatted_component,
