@@ -9,12 +9,19 @@ from pydantic import BaseModel, Field
 
 class GenerationStage(str, Enum):
     """Stages of the code generation pipeline."""
+    # Legacy 8-stage pipeline (deprecated)
     PARSING = "parsing"
     INJECTING = "injecting"
     GENERATING = "generating"
     IMPLEMENTING = "implementing"
     ASSEMBLING = "assembling"
     FORMATTING = "formatting"
+    
+    # New 3-stage LLM-first pipeline
+    LLM_GENERATING = "llm_generating"  # LLM generates component
+    VALIDATING = "validating"  # TypeScript/ESLint validation + fixes
+    POST_PROCESSING = "post_processing"  # Imports, provenance, formatting
+    
     COMPLETE = "complete"
 
 
@@ -63,6 +70,23 @@ class GenerationMetadata(BaseModel):
     token_count: int = Field(default=0, description="Number of tokens injected")
     lines_of_code: int = Field(default=0, description="Total lines of generated code")
     requirements_implemented: int = Field(default=0, description="Number of requirements implemented")
+    
+    # New LLM-first metadata
+    llm_token_usage: Optional[Dict[str, int]] = Field(None, description="LLM token usage")
+    validation_attempts: int = Field(default=0, description="Number of validation attempts")
+    quality_score: float = Field(default=0.0, description="Code quality score (0.0-1.0)")
+
+
+class ValidationMetadata(BaseModel):
+    """Metadata about code validation and fixing."""
+    attempts: int = Field(..., description="Number of validation/fix attempts")
+    typescript_errors: int = Field(default=0)
+    eslint_errors: int = Field(default=0)
+    typescript_warnings: int = Field(default=0)
+    eslint_warnings: int = Field(default=0)
+    quality_score: float = Field(..., description="Quality score (0.0-1.0)")
+    compilation_success: bool = Field(..., description="TypeScript compilation success")
+    lint_success: bool = Field(..., description="ESLint validation success")
 
 
 class GenerationResult(BaseModel):
@@ -73,3 +97,6 @@ class GenerationResult(BaseModel):
     metadata: GenerationMetadata = Field(..., description="Generation metadata")
     success: bool = Field(default=True)
     error: Optional[str] = Field(None, description="Error message if failed")
+    
+    # New LLM-first fields
+    validation_results: Optional[ValidationMetadata] = Field(None, description="Validation results")

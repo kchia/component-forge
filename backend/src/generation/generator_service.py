@@ -3,9 +3,12 @@ Generator Service - Orchestrate the full code generation pipeline.
 
 This module coordinates all generation steps from pattern parsing through
 code assembly, with LangSmith tracing for observability.
+
+REFACTORED (Epic 4.5): Now uses LLM-first 3-stage pipeline instead of 8-stage template-based approach.
 """
 
 import time
+import os
 from typing import Dict, Any, Optional, List
 from pathlib import Path
 
@@ -26,43 +29,68 @@ from .types import (
     GenerationResult,
     GenerationStage,
     GenerationMetadata,
+    ValidationMetadata,
     CodeParts
 )
 from .pattern_parser import PatternParser
-from .token_injector import TokenInjector
-from .tailwind_generator import TailwindGenerator
-from .requirement_implementer import RequirementImplementer
 from .code_assembler import CodeAssembler
 from .provenance import ProvenanceGenerator
-from .a11y_enhancer import A11yEnhancer
-from .type_generator import TypeGenerator
-from .storybook_generator import StorybookGenerator
+
+# New LLM-first components
+from .prompt_builder import PromptBuilder
+from .llm_generator import LLMComponentGenerator, MockLLMGenerator
+from .code_validator import CodeValidator
+from .exemplar_loader import ExemplarLoader
 
 
 class GeneratorService:
     """
     Orchestrate the full code generation pipeline with tracing.
+    
+    NEW (Epic 4.5): 3-stage LLM-first pipeline:
+    1. LLM Generation - Single pass with full context
+    2. Validation - TypeScript/ESLint with LLM fixes
+    3. Post-Processing - Imports, provenance, formatting
     """
     
-    def __init__(self, patterns_dir: Optional[Path] = None):
+    def __init__(
+        self,
+        patterns_dir: Optional[Path] = None,
+        use_llm: bool = True,
+        api_key: Optional[str] = None,
+    ):
         """
         Initialize generator service.
         
         Args:
             patterns_dir: Optional custom patterns directory
+            use_llm: Whether to use LLM generation (True) or mock (False)
+            api_key: Optional OpenAI API key
         """
+        # Core components
         self.pattern_parser = PatternParser(patterns_dir)
-        self.token_injector = TokenInjector()
-        self.tailwind_generator = TailwindGenerator()
-        self.requirement_implementer = RequirementImplementer()
         self.code_assembler = CodeAssembler()
         self.provenance_generator = ProvenanceGenerator()
-        self.a11y_enhancer = A11yEnhancer()
-        self.type_generator = TypeGenerator()
-        self.storybook_generator = StorybookGenerator()
+        
+        # New LLM-first components
+        self.prompt_builder = PromptBuilder()
+        self.exemplar_loader = ExemplarLoader()
+        
+        # Initialize LLM generator
+        if use_llm and (api_key or os.getenv("OPENAI_API_KEY")):
+            try:
+                self.llm_generator = LLMComponentGenerator(api_key=api_key)
+            except Exception:
+                # Fall back to mock if LLM initialization fails
+                self.llm_generator = MockLLMGenerator()
+        else:
+            self.llm_generator = MockLLMGenerator()
+        
+        # Initialize code validator with LLM generator
+        self.code_validator = CodeValidator(llm_generator=self.llm_generator)
         
         # Track current stage for progress updates
-        self.current_stage = GenerationStage.PARSING
+        self.current_stage = GenerationStage.LLM_GENERATING
         self.stage_latencies: Dict[GenerationStage, int] = {}
     
     def _normalize_requirements(self, requirements: List[Dict[str, Any]]) -> Dict[str, Any]:
@@ -399,6 +427,51 @@ export const Default: Story = {{
   }},
 }};
 """
+    
+    # ====== NEW LLM-FIRST HELPER METHODS ======
+    
+    async def _parse_pattern_for_reference(self, pattern_id: str):
+        """Load pattern as reference (not for modification)."""
+        return self.pattern_parser.parse(pattern_id)
+    
+    def _build_generation_prompt(
+        self,
+        pattern_code: str,
+        component_name: str,
+        component_type: str,
+        tokens: Dict[str, Any],
+        requirements: Dict[str, Any],
+    ) -> Dict[str, str]:
+        """
+        Build comprehensive generation prompt using PromptBuilder.
+        
+        Returns:
+            Dict with 'system' and 'user' prompts
+        """
+        return self.prompt_builder.build_prompt(
+            pattern_code=pattern_code,
+            component_name=component_name,
+            component_type=component_type,
+            tokens=tokens,
+            requirements=requirements,
+        )
+    
+    def _add_provenance(
+        self,
+        code: str,
+        component_name: str,
+        pattern_id: str,
+        tokens: Dict[str, Any],
+        requirements: Dict[str, Any],
+    ) -> str:
+        """Add provenance header to generated code."""
+        header = self.provenance_generator.generate_header(
+            component_name=component_name,
+            pattern_id=pattern_id,
+            tokens=tokens,
+            requirements=requirements,
+        )
+        return f"{header}\n\n{code}"
     
     def _infer_component_type(self, pattern_id: str) -> str:
         """Infer component type from pattern ID."""
