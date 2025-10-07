@@ -9,6 +9,18 @@ import time
 from typing import Dict, Any, Optional
 from pathlib import Path
 
+# Try to import LangSmith for tracing (optional dependency)
+try:
+    from langsmith import traceable
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    # Create a no-op decorator if LangSmith is not available
+    def traceable(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    LANGSMITH_AVAILABLE = False
+
 from .types import (
     GenerationRequest,
     GenerationResult,
@@ -45,6 +57,7 @@ class GeneratorService:
         self.current_stage = GenerationStage.PARSING
         self.stage_latencies: Dict[GenerationStage, int] = {}
     
+    @traceable(run_type="chain", name="generate_component")
     async def generate(self, request: GenerationRequest) -> GenerationResult:
         """
         Generate component code from pattern, tokens, and requirements.
@@ -133,6 +146,7 @@ class GeneratorService:
                 error=str(e)
             )
     
+    @traceable(run_type="tool", name="parse_pattern")
     async def _parse_pattern(self, pattern_id: str):
         """Parse pattern and track latency."""
         self.current_stage = GenerationStage.PARSING
@@ -146,6 +160,7 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
     
+    @traceable(run_type="tool", name="inject_tokens")
     async def _inject_tokens(self, pattern_code: str, tokens: Dict[str, Any], component_type: str):
         """Inject tokens and track latency."""
         self.current_stage = GenerationStage.INJECTING
@@ -159,6 +174,7 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
     
+    @traceable(run_type="tool", name="generate_tailwind")
     async def _generate_tailwind(self, tokens: Dict[str, Any], pattern_structure):
         """Generate Tailwind classes and track latency."""
         self.current_stage = GenerationStage.GENERATING
@@ -181,6 +197,7 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
     
+    @traceable(run_type="tool", name="implement_requirements")
     async def _implement_requirements(
         self,
         component_code: str,
@@ -203,6 +220,7 @@ class GeneratorService:
                 (time.time() - stage_start) * 1000
             )
     
+    @traceable(run_type="tool", name="assemble_code")
     async def _assemble_code(self, code_parts: CodeParts):
         """Assemble and format code, track latency."""
         self.current_stage = GenerationStage.ASSEMBLING

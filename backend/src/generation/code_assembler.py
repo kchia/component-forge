@@ -48,12 +48,6 @@ class CodeAssembler:
         if parts.imports:
             component_sections.append("\n".join(parts.imports))
         
-        # Add CSS variables if present
-        if parts.css_variables:
-            # Wrap in style comment or separate file reference
-            # For now, add as comment for reference
-            component_sections.append(f"/* CSS Variables:\n{parts.css_variables}\n*/")
-        
         # Add type definitions
         if parts.type_definitions:
             component_sections.append(parts.type_definitions)
@@ -84,6 +78,10 @@ class CodeAssembler:
         
         if formatted_stories:
             files[f"{component_name}.stories.tsx"] = formatted_stories
+        
+        # Add CSS variables as a separate file
+        if parts.css_variables:
+            files[f"{component_name}.tokens.css"] = parts.css_variables
         
         return {
             "component": formatted_component,
@@ -135,35 +133,6 @@ class CodeAssembler:
         except Exception as e:
             # Formatting failed, return unformatted code with warning
             print(f"Warning: Code formatting failed: {e}")
-            return code
-    
-    def _format_code_sync(self, code: str) -> str:
-        """
-        Synchronous version of format_code using subprocess.
-        
-        Args:
-            code: Unformatted code string
-        
-        Returns:
-            Formatted code string
-        """
-        try:
-            if not self.format_script.exists():
-                return code
-            
-            result = subprocess.run(
-                ['node', str(self.format_script)],
-                input=code.encode('utf-8'),
-                capture_output=True,
-                timeout=10
-            )
-            
-            if result.returncode != 0:
-                return code
-            
-            return result.stdout.decode('utf-8')
-        
-        except Exception:
             return code
     
     def validate_typescript(self, code: str) -> Dict[str, Any]:

@@ -155,20 +155,41 @@ class TestTokenInjector:
         
         result = injector.inject(pattern_code, sample_tokens, "button")
         
-        # Count expected vs actual tokens
-        expected_color_count = len(sample_tokens["colors"])
-        expected_typography_count = len(sample_tokens["typography"])
-        expected_spacing_count = len(sample_tokens["spacing"])
+        # Count expected tokens
+        expected_color_count = len(sample_tokens["colors"])  # 4 colors
+        expected_typography_count = len(sample_tokens["typography"])  # 4 typography
+        expected_spacing_count = len(sample_tokens["spacing"])  # 3 spacing
+        expected_border_radius = 1  # 1 border radius
+        total_expected_tokens = (
+            expected_color_count + 
+            expected_typography_count + 
+            expected_spacing_count + 
+            expected_border_radius
+        )  # 12 total
         
-        # CSS variables should contain all tokens
+        # Count actual tokens in CSS variables
         css_vars = result.css_variables
         
-        # Count occurrences of token categories
+        # Count occurrences of each token category
         color_occurrences = css_vars.count("--color-")
-        typography_occurrences = css_vars.count("--font-")
+        font_occurrences = css_vars.count("--font-")
         spacing_occurrences = css_vars.count("--spacing-")
+        radius_occurrences = css_vars.count("--radius")
         
-        # At least some tokens should be injected
-        assert color_occurrences > 0
-        assert typography_occurrences > 0
-        assert spacing_occurrences > 0
+        total_injected_tokens = (
+            color_occurrences + 
+            font_occurrences + 
+            spacing_occurrences + 
+            radius_occurrences
+        )
+        
+        # Calculate accuracy
+        accuracy = total_injected_tokens / total_expected_tokens if total_expected_tokens > 0 else 0
+        
+        # Assert ≥95% accuracy
+        assert accuracy >= 0.95, f"Token injection accuracy {accuracy:.2%} is below 95% threshold"
+        
+        # Also verify individual categories are injected
+        assert color_occurrences > 0, "No color tokens injected"
+        assert font_occurrences > 0, "No typography tokens injected"
+        assert spacing_occurrences > 0, "No spacing tokens injected"

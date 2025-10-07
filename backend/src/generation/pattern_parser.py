@@ -6,6 +6,7 @@ props, variants, and modification points for code generation.
 """
 
 import json
+import os
 import re
 from typing import Dict, List, Any, Optional
 from pathlib import Path
@@ -26,12 +27,17 @@ class PatternParser:
         
         Args:
             patterns_dir: Directory containing pattern JSON files.
-                         Defaults to backend/data/patterns/
+                         Defaults to PATTERNS_DIR env var or backend/data/patterns/
         """
         if patterns_dir is None:
-            # Default to backend/data/patterns
-            backend_dir = Path(__file__).parent.parent.parent
-            patterns_dir = backend_dir / "data" / "patterns"
+            # Check environment variable first
+            env_patterns_dir = os.getenv("PATTERNS_DIR")
+            if env_patterns_dir:
+                patterns_dir = Path(env_patterns_dir)
+            else:
+                # Default to backend/data/patterns
+                backend_dir = Path(__file__).parent.parent.parent
+                patterns_dir = backend_dir / "data" / "patterns"
         
         self.patterns_dir = Path(patterns_dir)
     
