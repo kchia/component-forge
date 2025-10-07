@@ -10,7 +10,9 @@
 
 ## Overview
 
-Build automated quality validation system that ensures every generated component meets accessibility standards, type safety requirements, code quality guidelines, and design token adherence. Includes auto-fix capabilities with retry logic and comprehensive quality reporting.
+Build automated quality validation system that ensures every generated component meets accessibility standards, type safety requirements, code quality guidelines, and design token adherence. Validation runs in the **frontend** using existing Next.js/TypeScript tooling, with backend API endpoints for validation orchestration and results storage. Includes auto-fix capabilities with retry logic and comprehensive quality reporting.
+
+**Architecture Note**: Validation leverages the frontend's existing TypeScript compiler, ESLint, Prettier, and axe-core setup. Backend provides validation orchestration API and stores results, but does NOT run Node.js tooling via subprocess.
 
 ---
 
@@ -167,109 +169,187 @@ open .claude/wireframes/component-preview-page.html
 
 ## Tasks
 
-### Task 1: TypeScript Compilation Check
+**IMPORTANT UPDATE (2025-01-XX)**: Tasks 1-3 have been updated with correct architecture. Tasks 4-9 still contain old Python-based code examples and need updates:
+
+**Tasks Requiring Updates:**
+- **Task 4**: Keyboard Navigation - Change from Python/Playwright to TypeScript/Playwright
+- **Task 5**: Focus Indicator - Change from Python to TypeScript, use Playwright getComputedStyle
+- **Task 6**: Color Contrast - Remove Python `colour` library, use TypeScript color math
+- **Task 7**: Token Adherence - Change to frontend TypeScript implementation
+- **Task 8**: Auto-Fix Logic - Update to use frontend validators (already partially in Tasks 1-3)
+- **Task 9**: Quality Report - Update to frontend report generation or backend API approach
+
+**Key Changes Needed:**
+- Replace `backend/src/validation/*.py` with `app/src/services/validation/*.ts`
+- Remove all `asyncio.create_subprocess_exec()` calls to `tsc`, `eslint`, `npx`
+- Remove Python `playwright.async_api` imports, use `@playwright/test`
+- Remove `colour` library (doesn't exist), use `colormath` or custom WCAG formulas
+- Update file paths from `backend/` to `app/src/`
+- Change all code examples from Python to TypeScript
+
+---
+
+### Task 1: TypeScript Compilation Check (✓ UPDATED)
 **Acceptance Criteria**:
-- [ ] Run `tsc --noEmit` on generated component
-- [ ] Use strict mode configuration:
+- [ ] Create frontend validation service at `app/src/services/validation/typescript-validator.ts`
+- [ ] Write generated component to temp file in `app/.tmp/` directory
+- [ ] Run TypeScript compiler programmatically using `ts.createProgram` API
+- [ ] Use strict mode configuration from existing `app/tsconfig.json`:
   - `strict: true`
   - `noImplicitAny: true`
   - `strictNullChecks: true`
   - `noUnusedLocals: true`
   - `noUnusedParameters: true`
-- [ ] Capture compilation errors with line numbers
+- [ ] Capture compilation diagnostics with line numbers and categories
 - [ ] Parse error messages for actionable feedback
 - [ ] Return detailed error report if compilation fails
-- [ ] Auto-fix: Remove unused imports, add missing type annotations
+- [ ] Auto-fix: Remove unused imports, add missing type annotations (using AST manipulation)
 - [ ] Retry compilation after auto-fix
 - [ ] Block component delivery if compilation fails after retry
+- [ ] Backend API: `POST /api/v1/validation/typescript` receives validation results
 
 **Files**:
-- `backend/src/validation/typescript_validator.py`
-- `backend/tsconfig.validation.json`
+- `app/src/services/validation/typescript-validator.ts` (NEW)
+- `app/src/services/validation/types.ts` (NEW - shared validation types)
+- `backend/src/api/v1/routes/validation.py` (NEW - validation result storage)
+- `app/tsconfig.json` (EXISTING - already has strict mode)
 
 **TypeScript Validation**:
-```python
-import asyncio
-import json
-from pathlib import Path
+```typescript
+// app/src/services/validation/typescript-validator.ts
+import * as ts from 'typescript';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { ValidationResult, TypeScriptDiagnostic } from './types';
 
-class TypeScriptValidator:
-    def __init__(self, tsconfig_path: str):
-        self.tsconfig_path = tsconfig_path
+export class TypeScriptValidator {
+  private configPath: string;
+  private compilerOptions: ts.CompilerOptions;
 
-    async def validate(self, code: str, file_path: str) -> dict:
-        """Validate TypeScript compilation."""
-        # Write code to temp file
-        temp_file = Path(f"/tmp/{file_path}")
-        temp_file.write_text(code)
+  constructor(configPath: string = './tsconfig.json') {
+    this.configPath = configPath;
 
-        # Run tsc
-        result = await self._run_tsc(temp_file)
+    // Load compiler options from tsconfig.json
+    const configFile = ts.readConfigFile(configPath, ts.sys.readFile);
+    const parsedConfig = ts.parseJsonConfigFileContent(
+      configFile.config,
+      ts.sys,
+      path.dirname(configPath)
+    );
+    this.compilerOptions = parsedConfig.options;
+  }
 
-        if result["success"]:
-            return {
-                "valid": True,
-                "errors": []
-            }
+  async validate(code: string, fileName: string = 'Component.tsx'): Promise<ValidationResult> {
+    // Write code to temporary file
+    const tmpDir = path.join(process.cwd(), '.tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
 
-        # Attempt auto-fix
-        fixed_code = await self._auto_fix(code, result["errors"])
-        if fixed_code:
-            retry_result = await self._run_tsc_on_code(fixed_code)
-            if retry_result["success"]:
-                return {
-                    "valid": True,
-                    "auto_fixed": True,
-                    "fixed_code": fixed_code
-                }
+    const tmpFilePath = path.join(tmpDir, fileName);
+    fs.writeFileSync(tmpFilePath, code, 'utf-8');
 
+    // Create program and get diagnostics
+    const program = ts.createProgram([tmpFilePath], this.compilerOptions);
+    const diagnostics = ts.getPreEmitDiagnostics(program);
+
+    if (diagnostics.length === 0) {
+      // Clean up
+      fs.unlinkSync(tmpFilePath);
+      return {
+        valid: true,
+        errors: [],
+        warnings: []
+      };
+    }
+
+    // Parse diagnostics
+    const errors = this.parseDiagnostics(diagnostics);
+
+    // Attempt auto-fix
+    const fixedCode = this.autoFix(code, errors);
+    if (fixedCode !== code) {
+      // Retry validation with fixed code
+      fs.writeFileSync(tmpFilePath, fixedCode, 'utf-8');
+      const retryProgram = ts.createProgram([tmpFilePath], this.compilerOptions);
+      const retryDiagnostics = ts.getPreEmitDiagnostics(retryProgram);
+
+      if (retryDiagnostics.length === 0) {
+        fs.unlinkSync(tmpFilePath);
         return {
-            "valid": False,
-            "errors": result["errors"],
-            "auto_fix_attempted": True
-        }
+          valid: true,
+          errors: [],
+          warnings: [],
+          autoFixed: true,
+          fixedCode
+        };
+      }
+    }
 
-    async def _run_tsc(self, file_path: Path) -> dict:
-        """Run TypeScript compiler."""
-        process = await asyncio.create_subprocess_exec(
-            'npx', 'tsc', '--noEmit',
-            '--project', self.tsconfig_path,
-            str(file_path),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
+    // Clean up
+    fs.unlinkSync(tmpFilePath);
 
-        if process.returncode == 0:
-            return {"success": True, "errors": []}
+    return {
+      valid: false,
+      errors,
+      warnings: [],
+      autoFixAttempted: true
+    };
+  }
 
-        errors = self._parse_tsc_errors(stderr.decode())
-        return {"success": False, "errors": errors}
+  private parseDiagnostics(diagnostics: readonly ts.Diagnostic[]): TypeScriptDiagnostic[] {
+    return diagnostics.map(diagnostic => {
+      const message = ts.flattenDiagnosticMessageText(diagnostic.messageText, '\n');
+      let line = 0;
+      let column = 0;
 
-    def _parse_tsc_errors(self, output: str) -> list[dict]:
-        """Parse TypeScript compiler errors."""
-        errors = []
-        for line in output.split('\n'):
-            if ': error TS' in line:
-                parts = line.split(':')
-                errors.append({
-                    "line": parts[1].strip() if len(parts) > 1 else None,
-                    "code": self._extract_error_code(line),
-                    "message": self._extract_error_message(line)
-                })
-        return errors
+      if (diagnostic.file && diagnostic.start !== undefined) {
+        const { line: lineNum, character } = diagnostic.file.getLineAndCharacterOfPosition(
+          diagnostic.start
+        );
+        line = lineNum + 1;
+        column = character + 1;
+      }
 
-    async def _auto_fix(self, code: str, errors: list[dict]) -> str | None:
-        """Attempt to auto-fix common TypeScript errors."""
-        # Remove unused imports
-        if any('is declared but never used' in e['message'] for e in errors):
-            code = self._remove_unused_imports(code)
+      return {
+        code: `TS${diagnostic.code}`,
+        message,
+        line,
+        column,
+        category: ts.DiagnosticCategory[diagnostic.category].toLowerCase() as 'error' | 'warning'
+      };
+    });
+  }
 
-        # Add missing type annotations
-        if any('implicitly has an' in e['message'] for e in errors):
-            code = self._add_type_annotations(code)
+  private autoFix(code: string, errors: TypeScriptDiagnostic[]): string {
+    let fixedCode = code;
 
-        return code
+    // Remove unused imports
+    if (errors.some(e => e.message.includes('is declared but never used'))) {
+      fixedCode = this.removeUnusedImports(fixedCode);
+    }
+
+    // Add missing React import for JSX
+    if (errors.some(e => e.message.includes("'React' refers to a UMD global"))) {
+      if (!fixedCode.includes("import React from 'react'")) {
+        fixedCode = "import React from 'react';\n" + fixedCode;
+      }
+    }
+
+    return fixedCode;
+  }
+
+  private removeUnusedImports(code: string): string {
+    // Simple regex-based removal (can be enhanced with AST manipulation)
+    const lines = code.split('\n');
+    return lines.filter(line => {
+      // Keep non-import lines
+      if (!line.trim().startsWith('import')) return true;
+      // This is simplified - real implementation should use TS AST
+      return true;
+    }).join('\n');
+  }
+}
 ```
 
 **Tests**:
@@ -281,106 +361,134 @@ class TypeScriptValidator:
 
 ---
 
-### Task 2: ESLint & Prettier Validation
+### Task 2: ESLint & Prettier Validation (✓ UPDATED)
 **Acceptance Criteria**:
-- [ ] Run ESLint with TypeScript parser
-- [ ] Use recommended rulesets:
-  - `eslint:recommended`
-  - `plugin:@typescript-eslint/recommended`
-  - `plugin:react/recommended`
-  - `plugin:react-hooks/recommended`
-- [ ] Check code formatting with Prettier
+- [ ] Create frontend validation service at `app/src/services/validation/eslint-validator.ts`
+- [ ] Use ESLint programmatically via `eslint` package (already in `app/package.json`)
+- [ ] Use existing ESLint config from `app/eslint.config.mjs`
+- [ ] Check code formatting with Prettier programmatically
 - [ ] Report errors by severity (error, warning)
-- [ ] Auto-fix: Run `eslint --fix` and `prettier --write`
+- [ ] Auto-fix: Apply ESLint fixes and Prettier formatting
 - [ ] Retry validation after auto-fix
 - [ ] Allow warnings but block on errors
 - [ ] Generate formatted code output
 
 **Files**:
-- `backend/src/validation/eslint_validator.py`
-- `backend/.eslintrc.json`
-- `backend/.prettierrc.json`
+- `app/src/services/validation/eslint-validator.ts` (NEW)
+- `app/eslint.config.mjs` (EXISTING - already has Next.js config)
+- `app/.prettierrc` (EXISTING or create if needed)
 
 **ESLint Validation**:
-```python
-class ESLintValidator:
-    async def validate(self, code: str, file_path: str) -> dict:
-        """Validate code with ESLint and Prettier."""
-        # Write to temp file
-        temp_file = Path(f"/tmp/{file_path}")
-        temp_file.write_text(code)
+```typescript
+// app/src/services/validation/eslint-validator.ts
+import { ESLint } from 'eslint';
+import prettier from 'prettier';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { ValidationResult, LintMessage } from './types';
 
-        # Run ESLint
-        eslint_result = await self._run_eslint(temp_file)
+export class ESLintValidator {
+  private eslint: ESLint;
 
-        if not eslint_result["valid"]:
-            # Attempt auto-fix
-            await self._run_eslint_fix(temp_file)
-            fixed_code = temp_file.read_text()
+  constructor() {
+    this.eslint = new ESLint({
+      fix: false, // We'll handle fixes separately
+      useEslintrc: true, // Use project's eslint.config.mjs
+    });
+  }
 
-            # Retry validation
-            retry_result = await self._run_eslint(temp_file)
-            eslint_result = retry_result
-            eslint_result["fixed_code"] = fixed_code
+  async validate(code: string, fileName: string = 'Component.tsx'): Promise<ValidationResult> {
+    // Write code to temp file
+    const tmpDir = path.join(process.cwd(), '.tmp');
+    if (!fs.existsSync(tmpDir)) {
+      fs.mkdirSync(tmpDir, { recursive: true });
+    }
 
-        # Run Prettier
-        prettier_result = await self._run_prettier(temp_file)
+    const tmpFilePath = path.join(tmpDir, fileName);
+    fs.writeFileSync(tmpFilePath, code, 'utf-8');
 
-        return {
-            "eslint": eslint_result,
-            "prettier": prettier_result
+    try {
+      // Run ESLint
+      const results = await this.eslint.lintFiles([tmpFilePath]);
+      const result = results[0];
+
+      if (!result) {
+        return { valid: true, errors: [], warnings: [] };
+      }
+
+      const errors = result.messages.filter(m => m.severity === 2);
+      const warnings = result.messages.filter(m => m.severity === 1);
+
+      // If there are errors, attempt auto-fix
+      if (errors.length > 0) {
+        const fixedCode = await this.autoFix(code, tmpFilePath);
+
+        if (fixedCode !== code) {
+          // Retry validation with fixed code
+          fs.writeFileSync(tmpFilePath, fixedCode, 'utf-8');
+          const retryResults = await this.eslint.lintFiles([tmpFilePath]);
+          const retryResult = retryResults[0];
+
+          const retryErrors = retryResult.messages.filter(m => m.severity === 2);
+          const retryWarnings = retryResult.messages.filter(m => m.severity === 1);
+
+          if (retryErrors.length === 0) {
+            return {
+              valid: true,
+              errors: [],
+              warnings: retryWarnings.map(this.formatMessage),
+              autoFixed: true,
+              fixedCode
+            };
+          }
+
+          return {
+            valid: false,
+            errors: retryErrors.map(this.formatMessage),
+            warnings: retryWarnings.map(this.formatMessage),
+            autoFixAttempted: true
+          };
         }
+      }
 
-    async def _run_eslint(self, file_path: Path) -> dict:
-        """Run ESLint on file."""
-        process = await asyncio.create_subprocess_exec(
-            'npx', 'eslint',
-            '--format', 'json',
-            str(file_path),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        stdout, stderr = await process.communicate()
+      return {
+        valid: errors.length === 0,
+        errors: errors.map(this.formatMessage),
+        warnings: warnings.map(this.formatMessage)
+      };
+    } finally {
+      // Clean up
+      if (fs.existsSync(tmpFilePath)) {
+        fs.unlinkSync(tmpFilePath);
+      }
+    }
+  }
 
-        if process.returncode == 0:
-            return {"valid": True, "errors": [], "warnings": []}
+  private async autoFix(code: string, filePath: string): Promise<string> {
+    // Apply ESLint fixes
+    const eslintWithFix = new ESLint({ fix: true, useEslintrc: true });
+    const results = await eslintWithFix.lintFiles([filePath]);
+    await ESLint.outputFixes(results);
 
-        results = json.loads(stdout.decode())
-        errors = [m for m in results[0]['messages']
-                 if m['severity'] == 2]
-        warnings = [m for m in results[0]['messages']
-                   if m['severity'] == 1]
+    // Apply Prettier formatting
+    const formatted = await prettier.format(code, {
+      parser: 'typescript',
+      filepath: filePath
+    });
 
-        return {
-            "valid": len(errors) == 0,
-            "errors": errors,
-            "warnings": warnings
-        }
+    return formatted;
+  }
 
-    async def _run_eslint_fix(self, file_path: Path):
-        """Run ESLint with --fix."""
-        await asyncio.create_subprocess_exec(
-            'npx', 'eslint', '--fix', str(file_path)
-        )
-
-    async def _run_prettier(self, file_path: Path) -> dict:
-        """Check Prettier formatting."""
-        process = await asyncio.create_subprocess_exec(
-            'npx', 'prettier', '--check', str(file_path),
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
-        )
-        await process.communicate()
-
-        if process.returncode == 0:
-            return {"valid": True}
-
-        # Auto-fix: format with Prettier
-        await asyncio.create_subprocess_exec(
-            'npx', 'prettier', '--write', str(file_path)
-        )
-
-        return {"valid": True, "auto_fixed": True}
+  private formatMessage(message: any): LintMessage {
+    return {
+      line: message.line,
+      column: message.column,
+      message: message.message,
+      ruleId: message.ruleId || '',
+      severity: message.severity === 2 ? 'error' : 'warning'
+    };
+  }
+}
 ```
 
 **Tests**:
@@ -391,9 +499,11 @@ class ESLintValidator:
 
 ---
 
-### Task 3: axe-core Accessibility Testing
+### Task 3: axe-core Accessibility Testing (✓ UPDATED)
 **Acceptance Criteria**:
-- [ ] Render component in headless browser (Playwright)
+- [ ] Create `app/src/services/validation/a11y-validator.ts` using Playwright (already in `app/package.json`)
+- [ ] Leverage existing `@axe-core/react` (already in `app/package.json`)
+- [ ] Render component in headless browser using Playwright
 - [ ] Run axe-core accessibility audit
 - [ ] Test all component variants and states
 - [ ] Report violations by severity:
@@ -405,100 +515,151 @@ class ESLintValidator:
   - Rule ID (e.g., `button-name`, `color-contrast`)
   - Impact level
   - Element selector
-  - Fix suggestions
+  - Fix suggestions from axe
 - [ ] Block component delivery on critical/serious violations
-- [ ] Generate accessibility report
+- [ ] Generate accessibility report with remediation steps
 
 **Files**:
-- `backend/src/validation/a11y_validator.py`
+- `app/src/services/validation/a11y-validator.ts` (NEW)
+- `app/package.json` (EXISTING - has @axe-core/react, @playwright/test)
 
 **axe-core Validation**:
-```python
-from playwright.async_api import async_playwright
-import json
+```typescript
+// app/src/services/validation/a11y-validator.ts
+import { chromium, Browser, Page } from 'playwright';
+import type { Result as AxeResults } from 'axe-core';
+import type { ValidationResult, A11yViolation } from './types';
 
-class A11yValidator:
-    async def validate(self, component_code: str,
-                      component_name: str) -> dict:
-        """Run axe-core accessibility tests."""
-        async with async_playwright() as p:
-            browser = await p.chromium.launch()
-            page = await browser.new_page()
+export class A11yValidator {
+  private browser: Browser | null = null;
 
-            # Create test page with component
-            html = self._create_test_page(component_code, component_name)
-            await page.set_content(html)
+  async validate(
+    componentCode: string,
+    componentName: string,
+    variants: string[] = ['default']
+  ): Promise<ValidationResult> {
+    try {
+      this.browser = await chromium.launch({ headless: true });
+      const page = await this.browser.newPage();
 
-            # Inject axe-core
-            await page.add_script_tag(
-                url='https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.7.0/axe.min.js'
-            )
+      // Create test page with component
+      const html = this.createTestPage(componentCode, componentName, variants);
+      await page.setContent(html);
 
-            # Run axe
-            results = await page.evaluate('axe.run()')
+      // Wait for React to render
+      await page.waitForSelector('#root > *', { timeout: 5000 });
 
-            await browser.close()
+      // Inject axe-core
+      await page.addScriptTag({
+        url: 'https://cdnjs.cloudflare.com/ajax/libs/axe-core/4.10.0/axe.min.js'
+      });
 
-            return self._process_results(results)
+      // Run axe accessibility tests
+      const results = await page.evaluate(() => {
+        return (window as any).axe.run();
+      }) as AxeResults;
 
-    def _create_test_page(self, component_code: str,
-                         component_name: str) -> str:
-        """Create HTML page for testing."""
-        return f"""
+      await this.browser.close();
+      this.browser = null;
+
+      return this.processResults(results);
+    } catch (error) {
+      if (this.browser) {
+        await this.browser.close();
+      }
+      throw error;
+    }
+  }
+
+  private createTestPage(
+    componentCode: string,
+    componentName: string,
+    variants: string[]
+  ): string {
+    return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>A11y Test</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>A11y Test - ${componentName}</title>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
 </head>
 <body>
   <div id="root"></div>
   <script type="module">
-    {component_code}
+    ${componentCode}
 
-    // Render all variants
-    import React from 'react';
-    import ReactDOM from 'react-dom';
-    import {{ {component_name} }} from './component';
+    // Render component variants for testing
+    const container = document.getElementById('root');
+    const root = ReactDOM.createRoot(container);
 
-    ReactDOM.render(
-      <div>
-        <{component_name} variant="primary">Primary</{component_name}>
-        <{component_name} variant="secondary">Secondary</{component_name}>
-        <{component_name} disabled>Disabled</{component_name}>
-      </div>,
-      document.getElementById('root')
+    root.render(
+      React.createElement('div', null, [
+        ${variants.map(variant => `
+          React.createElement(${componentName}, {
+            key: '${variant}',
+            variant: '${variant}',
+            children: '${variant} variant'
+          })
+        `).join(',\n')}
+      ])
     );
   </script>
 </body>
 </html>
-"""
+    `;
+  }
 
-    def _process_results(self, results: dict) -> dict:
-        """Process axe-core results."""
-        violations = results.get('violations', [])
+  private processResults(results: AxeResults): ValidationResult {
+    const violations = results.violations || [];
 
-        critical = [v for v in violations if v['impact'] == 'critical']
-        serious = [v for v in violations if v['impact'] == 'serious']
-        moderate = [v for v in violations if v['impact'] == 'moderate']
-        minor = [v for v in violations if v['impact'] == 'minor']
+    const critical = violations.filter(v => v.impact === 'critical');
+    const serious = violations.filter(v => v.impact === 'serious');
+    const moderate = violations.filter(v => v.impact === 'moderate');
+    const minor = violations.filter(v => v.impact === 'minor');
 
-        return {
-            "valid": len(critical) == 0 and len(serious) == 0,
-            "violations": {
-                "critical": critical,
-                "serious": serious,
-                "moderate": moderate,
-                "minor": minor
-            },
-            "summary": {
-                "critical_count": len(critical),
-                "serious_count": len(serious),
-                "moderate_count": len(moderate),
-                "minor_count": len(minor),
-                "total_count": len(violations)
-            }
-        }
+    const errors: A11yViolation[] = [
+      ...this.formatViolations(critical, 'critical'),
+      ...this.formatViolations(serious, 'serious')
+    ];
+
+    const warnings: A11yViolation[] = [
+      ...this.formatViolations(moderate, 'moderate'),
+      ...this.formatViolations(minor, 'minor')
+    ];
+
+    return {
+      valid: errors.length === 0, // Block on critical/serious only
+      errors,
+      warnings,
+      summary: {
+        critical: critical.length,
+        serious: serious.length,
+        moderate: moderate.length,
+        minor: minor.length,
+        total: violations.length
+      }
+    };
+  }
+
+  private formatViolations(violations: any[], severity: string): A11yViolation[] {
+    return violations.map(v => ({
+      id: v.id,
+      impact: v.impact,
+      description: v.description,
+      help: v.help,
+      helpUrl: v.helpUrl,
+      nodes: v.nodes.map((n: any) => ({
+        html: n.html,
+        target: n.target,
+        failureSummary: n.failureSummary
+      })),
+      severity
+    }));
+  }
+}
 ```
 
 **Tests**:
@@ -1083,45 +1244,82 @@ class QualityReportGenerator:
 
 ## Technical Architecture
 
-### Validation Pipeline
+### Validation Pipeline (Updated Architecture)
 
 ```
-Generated Component Code
+Epic 4: Code Generation (Backend)
          ↓
-┌─────────────────────┐
-│ TypeScript Check    │ → Auto-fix → Retry
-└─────────────────────┘
+   Generated Code
          ↓
-┌─────────────────────┐
-│ ESLint/Prettier     │ → Auto-fix → Retry
-└─────────────────────┘
+┌─────────────────────────────────────────────────┐
+│       Frontend Validation Service               │
+│    (app/src/services/validation/)               │
+│                                                  │
+│  ┌──────────────────────────────────────┐      │
+│  │ TypeScript Compiler API              │ ✓    │
+│  │ (ts.createProgram)                   │      │
+│  └──────────────────────────────────────┘      │
+│           ↓                                      │
+│  ┌──────────────────────────────────────┐      │
+│  │ ESLint API + Prettier                │ ✓    │
+│  │ (existing app/eslint.config.mjs)     │      │
+│  └──────────────────────────────────────┘      │
+│           ↓                                      │
+│  ┌──────────────────────────────────────┐      │
+│  │ Playwright + axe-core                │ ✓    │
+│  │ (existing @playwright/test)          │      │
+│  └──────────────────────────────────────┘      │
+│           ↓                                      │
+│  ┌──────────────────────────────────────┐      │
+│  │ Keyboard Navigation Tests            │      │
+│  │ (Playwright page.keyboard)           │      │
+│  └──────────────────────────────────────┘      │
+│           ↓                                      │
+│  ┌──────────────────────────────────────┐      │
+│  │ Focus & Contrast Validators          │      │
+│  │ (getComputedStyle + WCAG formulas)   │      │
+│  └──────────────────────────────────────┘      │
+│           ↓                                      │
+│  ┌──────────────────────────────────────┐      │
+│  │ Token Adherence Calculator           │      │
+│  │ (AST parsing + color math)           │      │
+│  └──────────────────────────────────────┘      │
+└─────────────────────────────────────────────────┘
          ↓
-┌─────────────────────┐
-│ axe-core A11y Test  │ → Auto-fix → Retry
-└─────────────────────┘
+┌─────────────────────────────────────────────────┐
+│  Backend Validation API (Optional)               │
+│  POST /api/v1/validation/results                 │
+│  - Store validation results                      │
+│  - Generate quality reports                      │
+│  - Track metrics over time                       │
+└─────────────────────────────────────────────────┘
          ↓
-┌─────────────────────┐
-│ Keyboard Nav Test   │
-└─────────────────────┘
-         ↓
-┌─────────────────────┐
-│ Focus Indicator     │
-└─────────────────────┘
-         ↓
-┌─────────────────────┐
-│ Color Contrast      │ → Auto-fix → Retry
-└─────────────────────┘
-         ↓
-┌─────────────────────┐
-│ Token Adherence     │
-└─────────────────────┘
-         ↓
-┌─────────────────────┐
-│ Generate Report     │
-└─────────────────────┘
-         ↓
-    Pass / Fail
+┌─────────────────────────────────────────────────┐
+│  Frontend Validation Results UI                  │
+│  - Quality scorecard display                     │
+│  - Detailed validation tabs                      │
+│  - Download reports (JSON/HTML)                  │
+│  - Accept/Reject component                       │
+└─────────────────────────────────────────────────┘
 ```
+
+**Key Architectural Decisions:**
+
+1. **Frontend-First Validation**: All validation runs in the frontend using existing Node.js tooling (TypeScript, ESLint, Prettier, Playwright). No Python subprocess calls to `tsc`/`npx`.
+
+2. **Existing Dependencies**: Leverages packages already in `app/package.json`:
+   - `typescript` (5.9.3)
+   - `eslint` (^9)
+   - `@playwright/test` (^1.55.1)
+   - `@axe-core/react` (^4.10.2)
+
+3. **Backend Role**: Backend provides:
+   - Validation result storage API
+   - Quality report generation
+   - Historical metrics tracking
+   - S3 upload for reports (Epic 6)
+
+4. **No Python-to-Node.js Bridge**: Validation does not require backend to spawn Node.js processes.
 
 ---
 
@@ -1182,3 +1380,84 @@ Generated Component Code
 **Auto-Fix**: Focus on high-impact, low-risk fixes. Don't break working code trying to fix minor issues.
 
 **Performance**: 10s validation target is tight. Parallelize checks where possible.
+
+---
+
+## Implementation Summary (2025-01-XX Update)
+
+### What Changed
+Epic 5 has been **architecturally updated** to align with the actual codebase after completing Epics 1-4:
+
+**Original Plan (Incorrect)**:
+- ❌ Backend Python validators in `backend/src/validation/`
+- ❌ Python subprocess calls to `tsc`, `eslint`, `prettier`, `npx`
+- ❌ Python Playwright (`playwright.async_api`)
+- ❌ Non-existent `colour` library
+- ❌ Backend running Node.js tooling
+
+**Updated Plan (Correct)**:
+- ✅ Frontend TypeScript validators in `app/src/services/validation/`
+- ✅ Use existing `typescript`, `eslint`, `@playwright/test` packages
+- ✅ TypeScript Playwright API
+- ✅ Proper color math libraries (`colormath` or custom WCAG formulas)
+- ✅ Backend provides API endpoints for results storage only
+
+### What's Completed
+- ✅ Overview and architecture updated
+- ✅ Task 1 (TypeScript validation) rewritten in TypeScript
+- ✅ Task 2 (ESLint/Prettier validation) rewritten in TypeScript
+- ✅ Task 3 (axe-core accessibility) rewritten in TypeScript
+- ✅ Technical architecture diagram updated
+- ✅ Key architectural decisions documented
+
+### What Needs Completion
+**Tasks 4-9 still contain Python code examples** and need similar updates:
+
+1. **Task 4**: Keyboard Navigation Testing
+   - Convert from Python to TypeScript
+   - Use `@playwright/test` instead of `playwright.async_api`
+
+2. **Task 5**: Focus Indicator Validation
+   - Convert from Python to TypeScript
+   - Use Playwright's `page.evaluate()` with `getComputedStyle`
+
+3. **Task 6**: Color Contrast Validation
+   - Remove Python `colour` library references
+   - Implement WCAG contrast formulas in TypeScript
+   - Use proper color parsing library
+
+4. **Task 7**: Token Adherence Meter
+   - Convert from Python to TypeScript
+   - Frontend AST parsing or regex-based extraction
+   - Color difference calculations (ΔE)
+
+5. **Task 8**: Auto-Fix & Retry Logic
+   - Partially done in Tasks 1-3
+   - Consolidate auto-fix patterns
+   - Add coordinator service
+
+6. **Task 9**: Quality Report Generation
+   - Choose between frontend or backend report generation
+   - If frontend: Use React components
+   - If backend: Create API endpoint for report storage
+   - HTML template generation
+
+### Dependencies Status
+**No new dependencies needed!** All required packages are already in `app/package.json`:
+- ✅ `typescript` (5.9.3)
+- ✅ `eslint` (^9)
+- ✅ `@playwright/test` (^1.55.1)
+- ✅ `@axe-core/react` (^4.10.2)
+- ✅ `prettier` (via eslint config)
+
+**Optional additions for Tasks 6-7**:
+- Color math library (e.g., `chroma-js`, `color`, or custom WCAG formulas)
+- AST parsing (if needed beyond TypeScript Compiler API)
+
+### Next Steps for Implementation
+1. Complete remaining task code examples (Tasks 4-9)
+2. Create shared types file: `app/src/services/validation/types.ts`
+3. Create validation orchestrator service
+4. Build frontend validation results UI
+5. Add backend validation storage API (optional)
+6. Integrate with Epic 4 generation flow
