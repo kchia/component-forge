@@ -90,14 +90,18 @@ async def generate_component(
         logger.info(f"Starting generation for pattern: {request.pattern_id}")
         
         result: GenerationResult = await generator_service.generate(request)
-        
-        # Check if generation succeeded
-        if not result.success:
+
+        # Check if generation catastrophically failed (no code at all)
+        if not result.success and not result.component_code:
             logger.error(f"Generation failed: {result.error}")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail=f"Code generation failed: {result.error}"
             )
+
+        # If we have code but validation failed, continue and return it with validation errors
+        if not result.success:
+            logger.warning(f"Code generated but validation failed: {result.error}")
         
         # Calculate total latency
         total_latency_ms = int((time.time() - start_time) * 1000)
@@ -159,7 +163,7 @@ async def generate_component(
                 "tokens_hash": "placeholder",  # TODO: Calculate hash
                 "requirements_hash": "placeholder"  # TODO: Calculate hash
             },
-            "status": "completed"
+            "status": "completed" if result.success else "completed_with_errors"
         }
         
         # Add validation results if available (LLM-first pipeline)

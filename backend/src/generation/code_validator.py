@@ -324,17 +324,17 @@ class CodeValidator:
                 line=error.get("line", 0),
                 column=error.get("column", 0),
                 message=error.get("message", ""),
-                rule_id=error.get("ruleId", error.get("code", "unknown")),
+                rule_id=str(error.get("ruleId") or error.get("code") or "unknown"),
                 severity="error",
             ))
-        
+
         # Parse warnings
         for warning in result.get("warnings", []):
             errors.append(ValidationError(
                 line=warning.get("line", 0),
                 column=warning.get("column", 0),
                 message=warning.get("message", ""),
-                rule_id=warning.get("ruleId", warning.get("code", "unknown")),
+                rule_id=str(warning.get("ruleId") or warning.get("code") or "unknown"),
                 severity="warning",
             ))
         

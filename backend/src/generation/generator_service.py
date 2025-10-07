@@ -268,6 +268,22 @@ class GeneratorService:
                 quality_score=validation_result.overall_quality_score,
             )
             
+            # Log validation details if failed
+            if not validation_result.valid:
+                from ..core.logging import get_logger
+                logger = get_logger(__name__)
+                logger.error(
+                    f"Validation failed after {validation_result.attempts} attempts",
+                    extra={
+                        "extra": {
+                            "typescript_errors": len(ts_errors),
+                            "eslint_errors": len(eslint_errors),
+                            "first_ts_error": ts_errors[0].message if ts_errors else None,
+                            "first_eslint_error": eslint_errors[0].message if eslint_errors else None,
+                        }
+                    }
+                )
+
             return GenerationResult(
                 component_code=final_component_code,
                 stories_code=final_stories_code,
