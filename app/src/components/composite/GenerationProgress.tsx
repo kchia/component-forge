@@ -81,7 +81,7 @@ export function GenerationProgress({
 
   // Get all stages in order (Epic 4.5: 3 stages)
   const stages = [
-    GenerationStage.GENERATING,
+    GenerationStage.LLM_GENERATING,
     GenerationStage.VALIDATING,
     GenerationStage.POST_PROCESSING,
   ]

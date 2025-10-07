@@ -10,8 +10,8 @@ import { RequirementProposal } from './requirement.types';
 
 // Generation pipeline stages (Epic 4.5: LLM-First - 3 stages)
 export enum GenerationStage {
-  GENERATING = 'generating',      // LLM generation (~15-20s)
-  VALIDATING = 'validating',      // TypeScript + ESLint validation (~3-5s)
+  LLM_GENERATING = 'llm_generating',  // LLM generation (~15-20s)
+  VALIDATING = 'validating',          // TypeScript + ESLint validation (~3-5s)
   POST_PROCESSING = 'post_processing', // Import resolution, provenance, formatting (~2-3s)
   COMPLETE = 'complete',
 }
@@ -148,7 +148,7 @@ export interface QualityMetrics {
  */
 export function getStageDisplayName(stage: GenerationStage): string {
   const displayNames: Record<GenerationStage, string> = {
-    [GenerationStage.GENERATING]: 'Generating with LLM',
+    [GenerationStage.LLM_GENERATING]: 'Generating with LLM',
     [GenerationStage.VALIDATING]: 'Validating Code',
     [GenerationStage.POST_PROCESSING]: 'Post-Processing',
     [GenerationStage.COMPLETE]: 'Complete',
@@ -164,7 +164,7 @@ export function getStageDisplayName(stage: GenerationStage): string {
  */
 export function getStageProgress(stage: GenerationStage): number {
   const progressMap: Record<GenerationStage, number> = {
-    [GenerationStage.GENERATING]: 50,         // LLM generation is the heavy part
+    [GenerationStage.LLM_GENERATING]: 50,     // LLM generation is the heavy part
     [GenerationStage.VALIDATING]: 80,         // Validation is quick
     [GenerationStage.POST_PROCESSING]: 95,    // Final touches
     [GenerationStage.COMPLETE]: 100,
