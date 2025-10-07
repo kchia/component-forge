@@ -6,7 +6,7 @@ code assembly, with LangSmith tracing for observability.
 """
 
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from pathlib import Path
 
 # Try to import LangSmith for tracing (optional dependency)
@@ -35,6 +35,8 @@ from .requirement_implementer import RequirementImplementer
 from .code_assembler import CodeAssembler
 from .provenance import ProvenanceGenerator
 from .a11y_enhancer import A11yEnhancer
+from .type_generator import TypeGenerator
+from .storybook_generator import StorybookGenerator
 
 
 class GeneratorService:
@@ -56,6 +58,8 @@ class GeneratorService:
         self.code_assembler = CodeAssembler()
         self.provenance_generator = ProvenanceGenerator()
         self.a11y_enhancer = A11yEnhancer()
+        self.type_generator = TypeGenerator()
+        self.storybook_generator = StorybookGenerator()
         
         # Track current stage for progress updates
         self.current_stage = GenerationStage.PARSING
@@ -107,6 +111,21 @@ class GeneratorService:
                 pattern_structure.component_name
             )
             
+            # Stage 4.6: Generate TypeScript Types
+            typed_code = self._generate_types(
+                enhanced_code,
+                pattern_structure.component_name,
+                request.requirements.get("props", [])
+            )
+            
+            # Stage 4.7: Generate Storybook Stories
+            stories = self._generate_storybook_stories(
+                pattern_structure.component_name,
+                pattern_structure.variants,
+                request.requirements.get("props", []),
+                self._infer_component_type(request.pattern_id)
+            )
+            
             # Stage 5: Assemble Code
             code_parts = self._build_code_parts(
                 pattern_structure,
@@ -116,7 +135,8 @@ class GeneratorService:
                 request.pattern_id,
                 request.tokens,
                 request.requirements,
-                enhanced_code
+                typed_code,
+                stories
             )
             
             result_files = await self._assemble_code(code_parts)
@@ -259,7 +279,8 @@ class GeneratorService:
         pattern_id: str,
         tokens: Dict[str, Any],
         requirements: Dict[str, Any],
-        enhanced_code: str
+        enhanced_code: str,
+        stories: str
     ) -> CodeParts:
         """Build CodeParts from all generated components."""
         component_name = custom_component_name or pattern_structure.component_name
@@ -277,8 +298,8 @@ class GeneratorService:
             imports=pattern_structure.imports,
             css_variables=token_mapping.css_variables,
             type_definitions=requirement_impl["props_interface"],
-            component_code=enhanced_code,  # Use accessibility-enhanced code
-            storybook_stories=self._generate_basic_story(component_name),
+            component_code=enhanced_code,  # Use typed, accessibility-enhanced code
+            storybook_stories=stories,  # Use generated Storybook stories
             component_name=component_name
         )
     
@@ -305,6 +326,34 @@ class GeneratorService:
             component_code,
             component_type,
             component_name
+        )
+    
+    def _generate_types(
+        self,
+        component_code: str,
+        component_name: str,
+        props: List[Dict[str, Any]]
+    ) -> str:
+        """Generate TypeScript types for component."""
+        return self.type_generator.generate_types(
+            component_code,
+            component_name,
+            props
+        )
+    
+    def _generate_storybook_stories(
+        self,
+        component_name: str,
+        variants: List[str],
+        props: List[Dict[str, Any]],
+        component_type: str
+    ) -> str:
+        """Generate Storybook stories for component."""
+        return self.storybook_generator.generate_stories(
+            component_name,
+            variants,
+            props,
+            component_type
         )
     
     def _generate_basic_story(self, component_name: str) -> str:
