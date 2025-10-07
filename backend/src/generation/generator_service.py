@@ -33,6 +33,7 @@ from .token_injector import TokenInjector
 from .tailwind_generator import TailwindGenerator
 from .requirement_implementer import RequirementImplementer
 from .code_assembler import CodeAssembler
+from .provenance import ProvenanceGenerator
 
 
 class GeneratorService:
@@ -52,6 +53,7 @@ class GeneratorService:
         self.tailwind_generator = TailwindGenerator()
         self.requirement_implementer = RequirementImplementer()
         self.code_assembler = CodeAssembler()
+        self.provenance_generator = ProvenanceGenerator()
         
         # Track current stage for progress updates
         self.current_stage = GenerationStage.PARSING
@@ -101,7 +103,10 @@ class GeneratorService:
                 pattern_structure,
                 token_mapping,
                 requirement_impl,
-                request.component_name
+                request.component_name,
+                request.pattern_id,
+                request.tokens,
+                request.requirements
             )
             
             result_files = await self._assemble_code(code_parts)
@@ -240,13 +245,24 @@ class GeneratorService:
         pattern_structure,
         token_mapping,
         requirement_impl,
-        custom_component_name: Optional[str]
+        custom_component_name: Optional[str],
+        pattern_id: str,
+        tokens: Dict[str, Any],
+        requirements: Dict[str, Any]
     ) -> CodeParts:
         """Build CodeParts from all generated components."""
         component_name = custom_component_name or pattern_structure.component_name
         
+        # Generate provenance header with full metadata
+        provenance_header = self.provenance_generator.generate_header(
+            pattern_id=pattern_id,
+            tokens=tokens,
+            requirements=requirements,
+            component_name=component_name
+        )
+        
         return CodeParts(
-            provenance_header=self._generate_provenance_header(),
+            provenance_header=provenance_header,
             imports=pattern_structure.imports,
             css_variables=token_mapping.css_variables,
             type_definitions=requirement_impl["props_interface"],
