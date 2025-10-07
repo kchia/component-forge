@@ -10,3 +10,6 @@ export * from './token.types';
 
 // Component types
 export * from './component.types';
+
+// Generation types (Epic 4)
+export * from './generation.types';
