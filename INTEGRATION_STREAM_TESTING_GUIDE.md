@@ -2,6 +2,25 @@
 
 This guide covers running the Integration Stream tests for Epic 4: Code Generation & Adaptation.
 
+## ⚠️ Critical Prerequisites
+
+**Backend Stream (B1-B15) must be complete before running these tests.**
+
+Required backend modules that must exist:
+- `backend/src/generation/generator_service.py` - Main generation orchestrator
+- `backend/src/generation/types.py` - Type definitions
+- `backend/src/generation/pattern_parser.py` - Pattern parsing
+- `backend/src/generation/token_injector.py` - Token injection
+- `backend/src/generation/tailwind_generator.py` - Tailwind generation
+- `backend/src/generation/requirement_implementer.py` - Requirements implementation
+- `backend/src/generation/code_assembler.py` - Code assembly
+
+**If backend is not ready**, tests will be skipped with clear messages indicating missing dependencies.
+
+See `.claude/epics/04-commit-strategy.md` for proper merge order.
+
+---
+
 ## Overview
 
 The Integration Stream validates the complete code generation workflow from end-to-end:

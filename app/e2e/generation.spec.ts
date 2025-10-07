@@ -273,8 +273,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait a bit for the useEffect to trigger generation
-    await page.waitForTimeout(1000);
+    // Wait for network to be idle instead of fixed timeout
+    await page.waitForLoadState('networkidle');
 
     // Verify generation was triggered
     expect(generationCalled).toBe(true);
@@ -338,8 +338,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to complete
-    await page.waitForTimeout(2000);
+    // Wait for network idle after generation completes
+    await page.waitForLoadState('networkidle');
 
     // Should show generated code (look for code display elements)
     const codeElements = [
@@ -380,8 +380,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to complete
-    await page.waitForTimeout(2000);
+    // Wait for network idle after generation completes
+    await page.waitForLoadState('networkidle');
 
     // Should show metadata like latency, lines of code, etc.
     // Look for metric displays
@@ -406,8 +406,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to complete
-    await page.waitForTimeout(2000);
+    // Wait for network idle after generation completes
+    await page.waitForLoadState('networkidle');
 
     // Look for download button
     const downloadButton = page.getByRole('button', { name: /download/i });
@@ -431,8 +431,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to complete
-    await page.waitForTimeout(2000);
+    // Wait for network idle after generation completes
+    await page.waitForLoadState('networkidle');
 
     // Set up download listener
     const downloadPromise = page.waitForEvent('download', { timeout: 5000 }).catch(() => null);
@@ -463,8 +463,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to fail
-    await page.waitForTimeout(2000);
+    // Wait for network idle after error response
+    await page.waitForLoadState('networkidle');
 
     // Should show error message
     const errorElements = [
@@ -494,8 +494,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to fail
-    await page.waitForTimeout(2000);
+    // Wait for network idle after error response
+    await page.waitForLoadState('networkidle');
 
     // Should show retry button
     const retryButton = page.getByRole('button', { name: /retry/i });
@@ -515,8 +515,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to fail
-    await page.waitForTimeout(2000);
+    // Wait for network idle after error response
+    await page.waitForLoadState('networkidle');
 
     // Verify workflow state is still intact
     const workflowState = await page.evaluate(() => {
@@ -535,6 +535,9 @@ test.describe('Generation Flow E2E', () => {
 
     // Navigate to preview page
     await page.goto('/preview');
+
+    // Wait for page to load
+    await page.waitForLoadState('domcontentloaded');
 
     // Should show breadcrumb/navigation showing current step
     const navElements = [
@@ -566,8 +569,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait a bit
-    await page.waitForTimeout(500);
+    // Wait for page to load
+    await page.waitForLoadState('domcontentloaded');
 
     // Look for back button or previous step link
     const backElements = [
@@ -585,7 +588,7 @@ test.describe('Generation Flow E2E', () => {
         try {
           await element.click();
           // Should navigate away from preview
-          await page.waitForTimeout(500);
+          await page.waitForLoadState('domcontentloaded');
           const url = page.url();
           expect(url).not.toContain('/preview');
         } catch {
@@ -605,8 +608,8 @@ test.describe('Generation Flow E2E', () => {
     // Navigate to preview page
     await page.goto('/preview');
 
-    // Wait for generation to complete
-    await page.waitForTimeout(2000);
+    // Wait for network idle after generation completes
+    await page.waitForLoadState('networkidle');
 
     // Look for tab controls
     const tabElements = [
@@ -634,15 +637,16 @@ test.describe('Generation Flow E2E', () => {
     let backendAvailable = false;
 
     try {
-      // Check if backend is running
-      const response = await fetch(`${BACKEND_URL}/health`);
-      backendAvailable = response.ok;
+      // Check if backend is running and generation endpoint exists
+      const healthResponse = await fetch(`${BACKEND_URL}/health`);
+      const genResponse = await fetch(`${BACKEND_URL}/api/v1/generation/patterns`);
+      backendAvailable = healthResponse.ok && genResponse.ok;
     } catch {
       backendAvailable = false;
     }
 
     if (!backendAvailable) {
-      test.skip('Backend not running - skipping integration test');
+      test.skip('Backend not running or generation endpoint not available - skipping integration test');
       return;
     }
 

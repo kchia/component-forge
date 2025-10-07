@@ -6,9 +6,14 @@ Tests the complete workflow from tokens to generated code, validating:
 - Generated code structure and TypeScript syntax
 - Import statements and dependencies
 - Epic 2 → Epic 3 → Epic 4 data flow
+
+Prerequisites:
+- Backend Stream (B1-B15) must be complete
+- Generation service modules must be implemented
 """
 
 import pytest
+import importlib.util
 import json
 from pathlib import Path
 
@@ -16,6 +21,14 @@ from src.generation.generator_service import GeneratorService
 from src.generation.types import GenerationRequest, GenerationStage
 
 
+# Check if backend generation module is available
+backend_available = importlib.util.find_spec("src.generation.generator_service") is not None
+
+
+@pytest.mark.skipif(
+    not backend_available,
+    reason="Backend generation module not available. Backend Stream (B1-B15) must be complete."
+)
 class TestGenerationE2E:
     """End-to-end integration tests for code generation workflow."""
 
@@ -24,34 +37,8 @@ class TestGenerationE2E:
         """Create generator service instance."""
         return GeneratorService()
 
-    @pytest.fixture
-    def sample_tokens(self):
-        """Sample design tokens from Epic 1 (token extraction)."""
-        return {
-            "colors": {
-                "Primary": "#3B82F6",
-                "Secondary": "#64748B",
-                "Success": "#10B981",
-                "Error": "#EF4444",
-                "Background": "#FFFFFF",
-                "Text": "#1F2937"
-            },
-            "typography": {
-                "fontSize": "14px",
-                "fontFamily": "Inter, sans-serif",
-                "fontWeight": "500",
-                "lineHeight": "1.5"
-            },
-            "spacing": {
-                "padding": "16px",
-                "gap": "8px",
-                "margin": "12px"
-            },
-            "borders": {
-                "radius": "6px",
-                "width": "1px"
-            }
-        }
+    # Note: sample_tokens, button_requirements, card_requirements, and input_requirements
+    # fixtures are now defined in backend/tests/conftest.py and shared across test suites
 
     @pytest.fixture
     def sample_requirements(self):

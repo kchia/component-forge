@@ -1,5 +1,18 @@
 # Integration Stream (I1-I5) - Complete Implementation ✅
 
+## ⚠️ Prerequisites
+
+**This Integration Stream (I1-I5) requires Backend Stream (B1-B15) to be complete.**
+
+Tests will fail if the following backend modules are not implemented:
+- `backend/src/generation/generator_service.py`
+- `backend/src/generation/types.py`
+- All generation pipeline modules (pattern parser, token injector, etc.)
+
+See `.claude/epics/04-commit-strategy.md` for merge order. Backend Stream must be merged before Integration Stream tests can run successfully.
+
+---
+
 ## Quick Summary
 
 **All 5 Integration Stream tasks for Epic 4 have been successfully implemented.**

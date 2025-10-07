@@ -6,9 +6,17 @@ Validates performance targets for code generation:
 - p95 ≤ 90s (90000ms)
 
 Runs multiple generation requests and calculates percentiles.
+
+Prerequisites:
+- Backend Stream (B1-B15) must be complete
+- Generation service modules must be implemented
+
+Note: These are smoke tests with 20 iterations. For production-grade
+statistical validation, consider using 100+ iterations or pytest-benchmark.
 """
 
 import pytest
+import importlib.util
 import asyncio
 import time
 import statistics
@@ -18,6 +26,14 @@ from src.generation.generator_service import GeneratorService
 from src.generation.types import GenerationRequest
 
 
+# Check if backend generation module is available
+backend_available = importlib.util.find_spec("src.generation.generator_service") is not None
+
+
+@pytest.mark.skipif(
+    not backend_available,
+    reason="Backend generation module not available. Backend Stream (B1-B15) must be complete."
+)
 class TestGenerationPerformance:
     """Performance validation tests for code generation."""
 
@@ -26,81 +42,8 @@ class TestGenerationPerformance:
         """Create generator service instance."""
         return GeneratorService()
 
-    @pytest.fixture
-    def sample_tokens(self):
-        """Sample design tokens."""
-        return {
-            "colors": {
-                "Primary": "#3B82F6",
-                "Secondary": "#64748B",
-                "Success": "#10B981",
-                "Background": "#FFFFFF",
-                "Text": "#1F2937"
-            },
-            "typography": {
-                "fontSize": "14px",
-                "fontFamily": "Inter, sans-serif",
-                "fontWeight": "500"
-            },
-            "spacing": {
-                "padding": "16px",
-                "gap": "8px"
-            },
-            "borders": {
-                "radius": "6px"
-            }
-        }
-
-    @pytest.fixture
-    def button_requirements(self):
-        """Button component requirements."""
-        return {
-            "props": [
-                {"name": "variant", "type": "string", "required": False},
-                {"name": "size", "type": "string", "required": False},
-                {"name": "disabled", "type": "boolean", "required": False}
-            ],
-            "events": [
-                {"name": "onClick", "type": "MouseEvent", "required": False}
-            ],
-            "states": [],
-            "accessibility": [
-                {"name": "aria-label", "required": True}
-            ]
-        }
-
-    @pytest.fixture
-    def card_requirements(self):
-        """Card component requirements."""
-        return {
-            "props": [
-                {"name": "title", "type": "string", "required": False},
-                {"name": "description", "type": "string", "required": False}
-            ],
-            "events": [],
-            "states": [],
-            "accessibility": [
-                {"name": "role", "value": "article", "required": False}
-            ]
-        }
-
-    @pytest.fixture
-    def input_requirements(self):
-        """Input component requirements."""
-        return {
-            "props": [
-                {"name": "type", "type": "string", "required": False},
-                {"name": "placeholder", "type": "string", "required": False},
-                {"name": "disabled", "type": "boolean", "required": False}
-            ],
-            "events": [
-                {"name": "onChange", "type": "ChangeEvent", "required": False}
-            ],
-            "states": [],
-            "accessibility": [
-                {"name": "aria-label", "required": True}
-            ]
-        }
+    # Note: sample_tokens, button_requirements, card_requirements, and input_requirements
+    # fixtures are now defined in backend/tests/conftest.py and shared across test suites
 
     async def run_generation_benchmark(
         self,

@@ -8,12 +8,19 @@ Validates that all generation stages are properly traced in LangSmith:
 - Ensure 100% LangSmith trace coverage
 
 Usage:
-    python backend/scripts/validate_traces.py
+    # From backend directory with virtual environment activated:
+    cd backend
+    source venv/bin/activate
+    python scripts/validate_traces.py
+    
+    # Or use relative imports (recommended):
+    python -m scripts.validate_traces
     
 Requirements:
     - LANGCHAIN_TRACING_V2=true
     - LANGCHAIN_API_KEY set
     - LANGCHAIN_PROJECT set (default: componentforge-dev)
+    - Virtual environment activated with backend dependencies installed
 """
 
 import os
@@ -23,13 +30,28 @@ from pathlib import Path
 from typing import Dict, List, Any, Optional
 from datetime import datetime, timedelta
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+# Add backend directory to path for proper imports
+# This script should be run from the backend directory with venv activated
+backend_dir = Path(__file__).parent.parent
+if str(backend_dir) not in sys.path:
+    sys.path.insert(0, str(backend_dir))
 
-from core.tracing import get_tracing_config, init_tracing
-from core.logging import get_logger
-from generation.generator_service import GeneratorService
-from generation.types import GenerationRequest
+try:
+    from src.core.tracing import get_tracing_config, init_tracing
+    from src.core.logging import get_logger
+    from src.generation.generator_service import GeneratorService
+    from src.generation.types import GenerationRequest
+except ImportError as e:
+    print(f"❌ ERROR: Failed to import backend modules: {e}")
+    print("\nThis script must be run with:")
+    print("  1. From the backend directory")
+    print("  2. With virtual environment activated")
+    print("  3. After installing backend dependencies (pip install -r requirements.txt)")
+    print("\nExample:")
+    print("  cd backend")
+    print("  source venv/bin/activate")
+    print("  python scripts/validate_traces.py")
+    sys.exit(1)
 
 logger = get_logger(__name__)
 
