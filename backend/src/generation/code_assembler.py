@@ -6,12 +6,16 @@ and formats the result using Prettier.
 """
 
 import asyncio
+import logging
 import subprocess
 from typing import Dict, Any
 from pathlib import Path
 
 from .types import CodeParts
 from .import_resolver import ImportResolver
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 
 class CodeAssembler:
@@ -139,10 +143,11 @@ class CodeAssembler:
         
         except FileNotFoundError:
             # Node.js not available, return unformatted code
+            logger.warning("Node.js not available for code formatting")
             return code
         except Exception as e:
             # Formatting failed, return unformatted code with warning
-            print(f"Warning: Code formatting failed: {e}")
+            logger.warning(f"Code formatting failed: {e}")
             return code
     
     def validate_typescript(self, code: str) -> Dict[str, Any]:

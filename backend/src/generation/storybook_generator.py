@@ -38,8 +38,11 @@ class StorybookGenerator:
         Returns:
             Complete Storybook stories file in CSF 3.0 format
         """
+        # Determine if we need play function imports
+        needs_play_imports = component_type in ["button"]
+        
         # Build imports
-        imports = self._generate_imports(component_name)
+        imports = self._generate_imports(component_name, needs_play_imports)
         
         # Build meta object
         meta = self._generate_meta(component_name, props)
@@ -68,10 +71,27 @@ class StorybookGenerator:
         
         return full_stories
     
-    def _generate_imports(self, component_name: str) -> str:
-        """Generate import statements."""
-        return f"""import type {{ Meta, StoryObj }} from '@storybook/react';
-import {{ {component_name} }} from './{component_name}';"""
+    def _generate_imports(self, component_name: str, include_play_imports: bool = False) -> str:
+        """
+        Generate import statements.
+        
+        Args:
+            component_name: Name of the component
+            include_play_imports: Whether to include imports for play functions
+        
+        Returns:
+            Import statements string
+        """
+        imports = [
+            f"import type {{ Meta, StoryObj }} from '@storybook/react';",
+            f"import {{ {component_name} }} from './{component_name}';"
+        ]
+        
+        if include_play_imports:
+            imports.append("import { within } from '@storybook/testing-library';")
+            imports.append("import { userEvent } from '@storybook/testing-library';")
+        
+        return "\n".join(imports)
     
     def _generate_meta(
         self,
