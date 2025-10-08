@@ -91,6 +91,19 @@ cp app/.env.local.example app/.env.local
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **Storybook**: http://localhost:6006 (see below for setup)
 
+## 📚 Documentation
+
+Comprehensive documentation is available in the [`docs/`](./docs) directory:
+
+- **[Getting Started](./docs/getting-started/README.md)** - Installation, FAQ, and contributing guide
+- **[Architecture](./docs/architecture/overview.md)** - System design and technical decisions
+- **[API Reference](./docs/api/overview.md)** - Endpoints, authentication, and error codes
+- **[Features](./docs/features/README.md)** - Token extraction, Figma integration, observability
+- **[Testing](./docs/testing/README.md)** - Integration tests, manual testing, and test reference
+- **[Deployment](./docs/deployment/README.md)** - Production deployment and security guidelines
+- **[Development](./docs/development/README.md)** - Setup guides and best practices
+- **[Backend Docs](./backend/docs/README.md)** - Backend-specific documentation
+
 ## 🏗️ AI Pipeline Architecture
 
 ```
@@ -203,10 +216,19 @@ component-forge/
 │   │   ├── rag/              # Retrieval and vector operations
 │   │   ├── monitoring/       # LangSmith observability
 │   │   └── main.py          # FastAPI application
+│   ├── docs/                 # Backend technical documentation
 │   ├── .env.example          # Backend environment template
 │   ├── requirements.txt      # AI dependencies (LangGraph, LangSmith, Pillow)
 │   └── venv/                # Python virtual environment
-├── docs/                       # Architecture documentation
+├── docs/                       # Comprehensive documentation
+│   ├── getting-started/      # Installation and FAQ
+│   ├── architecture/         # System design
+│   ├── api/                  # API reference
+│   ├── features/             # Feature documentation
+│   ├── testing/              # Testing guides
+│   ├── deployment/           # Production deployment
+│   ├── development/          # Development guides
+│   └── project-history/      # Historical documentation
 ├── docker-compose.yml         # Services (PostgreSQL, Qdrant, Redis)
 ├── Makefile                   # Development commands
 └── README.md                 # This file
