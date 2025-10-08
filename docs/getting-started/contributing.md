@@ -363,11 +363,11 @@ When suggesting features:
 
 ## 📚 Additional Resources
 
-- [Project Architecture](docs/ARCHITECTURE.md)
-- [API Documentation](docs/API.md)
-- [LangGraph Multi-Agent System](docs/AGENTS.md)
-- [Security Guidelines](docs/SECURITY.md)
-- [Deployment Guide](docs/DEPLOYMENT.md)
+- [Project Architecture](../architecture/overview.md)
+- [API Documentation](../api/overview.md)
+- [LangGraph Multi-Agent System](../architecture/ai-pipeline.md)
+- [Security Guidelines](../deployment/security.md)
+- [Deployment Guide](../deployment/overview.md)
 
 ## 🆘 Getting Help
 
