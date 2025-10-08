@@ -10,54 +10,55 @@ Welcome to the ComponentForge documentation! This guide will help you understand
 - [Contributing Guide](./getting-started/contributing.md)
 
 ### Architecture
-- [System Architecture](./architecture/overview.md)
-- [AI Pipeline & Agents](./architecture/ai-pipeline.md)
-- [Tech Stack](./architecture/tech-stack.md)
+- [System Architecture Overview](./architecture/README.md)
+- [Backend Architecture](./backend/architecture.md)
+- [AI Pipeline & Multi-Agent System](./backend/ai-pipeline.md)
+- [Database Schema](./backend/database-schema.md)
 
 ### API Reference
+- [API Documentation](./api/README.md)
 - [API Overview](./api/overview.md)
 - [Authentication](./api/authentication.md)
-- [Endpoints](./api/endpoints.md)
 
 ### Features
+- [Features Overview](./features/README.md)
 - [Token Extraction](./features/token-extraction.md)
 - [Figma Integration](./features/figma-integration.md)
 - [Pattern Retrieval](./features/pattern-retrieval.md)
 - [Code Generation](./features/code-generation.md)
-- [Observability](./features/observability.md)
+- [Quality Validation](./features/quality-validation.md)
 - [Accessibility](./features/accessibility.md)
+- [Observability](./features/observability.md)
+
+### Backend Documentation
+- [Backend Overview](./backend/README.md)
+- [Generation Service](./backend/generation-service.md)
+- [Prompting Guide](./backend/prompting-guide.md)
+- [Monitoring](./backend/monitoring.md)
+- [Troubleshooting](./backend/troubleshooting.md)
 
 ### Testing
-- [Testing Overview](./testing/overview.md)
+- [Testing Overview](./testing/README.md)
 - [Integration Testing](./testing/integration-testing.md)
-- [E2E Testing](./testing/e2e-testing.md)
 - [Manual Testing](./testing/manual-testing.md)
 - [Testing Reference](./testing/reference.md)
 
-### Deployment
-- [Deployment Overview](./deployment/overview.md)
-- [Docker Setup](./deployment/docker.md)
-- [Production Deployment](./deployment/production.md)
-- [Security](./deployment/security.md)
-- [Monitoring](./deployment/monitoring.md)
-
-### Development
-- [Development Setup](./development/setup.md)
-- [Backend Setup Guide](./development/backend-setup.md)
+### Deployment & Development
+- [Deployment Guide](./deployment.md)
+- [Development Workflow](./development-workflow.md)
+- [Deployment Security](./deployment/security.md)
 - [Notebook Development Guide](./development/notebook-guide.md)
-- [Debugging Guide](./development/debugging.md)
 
 ### Project History
+- [Project History Overview](./project-history/README.md)
 - [Epic Implementations](./project-history/epic-implementations.md)
-- [Sprint Summaries](./project-history/sprint-summaries.md)
-- [Contextual Navigation](./project-history/contextual-navigation.md)
-- [Integration Stream](./project-history/integration-stream.md)
+- [Epic 0 Resolution](./project-history/epic-0-resolution.md)
 
 ---
 
 ## 🚀 Quick Links
 
-- [Main README](../README.md)
+- [Main Project README](../README.md)
 - [Architecture Decision Records](./adr/README.md)
-- [Backend Documentation](../backend/docs/README.md)
+- [Backend Documentation](./backend/README.md)
 - [Frontend Documentation](../app/README.md)
