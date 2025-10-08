@@ -8,8 +8,9 @@ Feature-specific documentation for ComponentForge capabilities.
 - [Figma Integration](./figma-integration.md) - Direct Figma file integration
 - [Pattern Retrieval](./pattern-retrieval.md) - Semantic search for component patterns
 - [Code Generation](./code-generation.md) - AI-powered code generation
-- [Observability](./observability.md) - LangSmith tracing and monitoring
+- [Quality Validation](./quality-validation.md) - TypeScript, ESLint, and accessibility validation
 - [Accessibility](./accessibility.md) - WCAG compliance and a11y testing
+- [Observability](./observability.md) - LangSmith tracing and monitoring
 
 ## Core Features
 
