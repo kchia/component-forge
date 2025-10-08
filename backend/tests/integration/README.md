@@ -185,7 +185,9 @@ def reset_state(self):
 
 ## Related Documentation
 
-- [EPIC_3_INTEGRATION_TESTING.md](../../EPIC_3_INTEGRATION_TESTING.md) - Complete integration testing guide
+- [Integration Testing Guide](../../docs/testing/integration-testing.md) - Complete integration testing guide
+- [Manual Testing Checklist](../../docs/testing/manual-testing.md) - Manual test procedures
+- [Quick Test Reference](../../docs/testing/reference.md) - Quick command reference
 - [03-pattern-retrieval-tasks.md](../../.claude/epics/03-pattern-retrieval-tasks.md) - Task breakdown
 - [pytest documentation](https://docs.pytest.org/)
 - [FastAPI testing](https://fastapi.tiangolo.com/tutorial/testing/)
