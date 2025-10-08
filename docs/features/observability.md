@@ -337,7 +337,7 @@ annotations:
 
 ```yaml
 alert: SlowAIGeneration
-expr: histogram_quantile(0.95, rate(ai_generation_duration_seconds_bucket[5m])) > 30
+expr: histogram_quantile(0.95, rate(ai_generation_duration_seconds_bucket[5m])) > 60
 for: 10m
 labels:
   severity: warning
