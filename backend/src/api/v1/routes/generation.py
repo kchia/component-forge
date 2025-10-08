@@ -142,7 +142,7 @@ async def generate_component(
                 "tokens_applied": result.metadata.token_count,
                 "requirements_implemented": result.metadata.requirements_implemented,
                 "lines_of_code": result.metadata.lines_of_code,
-                "imports_count": 0,  # TODO: Calculate from code
+                "imports_count": result.metadata.imports_count,
                 "has_typescript_errors": result.metadata.has_typescript_errors,
                 "has_accessibility_warnings": result.metadata.has_accessibility_warnings
             },

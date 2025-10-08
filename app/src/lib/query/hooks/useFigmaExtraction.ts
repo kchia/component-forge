@@ -28,10 +28,6 @@ export function useFigmaExtraction() {
         fallbacks_used: data.fallbacks_used,
         review_needed: data.review_needed,
       });
-
-      if (data.cached) {
-        console.log('[useFigmaExtraction] Response from cache (5 min TTL)');
-      }
     },
     onError: (error) => {
       console.error('[useFigmaExtraction] Error:', error.message);

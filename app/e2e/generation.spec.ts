@@ -646,7 +646,7 @@ test.describe('Generation Flow E2E', () => {
     }
 
     if (!backendAvailable) {
-      test.skip('Backend not running or generation endpoint not available - skipping integration test');
+      test.skip();
       return;
     }
 

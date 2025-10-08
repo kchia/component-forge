@@ -76,6 +76,7 @@ Component Generation Request
 View traces at: `https://smith.langchain.com/projects/component-forge`
 
 **Key Metrics:**
+
 - Average latency per agent
 - Token usage per request
 - Error rate by operation type
@@ -153,6 +154,7 @@ token_usage.labels(model='gpt-4o').inc(response.usage.total_tokens)
 Import dashboard JSON from `backend/monitoring/grafana_dashboard.json`:
 
 **Panels:**
+
 - Request rate and latency
 - AI generation performance
 - Token usage and costs
@@ -320,6 +322,7 @@ Checks if the application is running (doesn't verify dependencies).
 ### Alert Rules
 
 **High Error Rate:**
+
 ```yaml
 alert: HighErrorRate
 expr: rate(http_requests_total{status=~"5.."}[5m]) > 0.05
@@ -331,6 +334,7 @@ annotations:
 ```
 
 **Slow AI Generation:**
+
 ```yaml
 alert: SlowAIGeneration
 expr: histogram_quantile(0.95, rate(ai_generation_duration_seconds_bucket[5m])) > 30
@@ -338,10 +342,11 @@ for: 10m
 labels:
   severity: warning
 annotations:
-  summary: "AI generation taking longer than 30s"
+  summary: "AI generation taking longer than 60s"
 ```
 
 **High Token Usage:**
+
 ```yaml
 alert: HighTokenUsage
 expr: rate(ai_token_usage_total[1h]) > 1000000
@@ -357,16 +362,19 @@ annotations:
 ### Key Metrics to Track
 
 **Response Time:**
+
 - P50: < 1s
 - P95: < 5s
 - P99: < 10s
 
 **AI Operations:**
+
 - Token extraction: < 3s
 - Pattern search: < 500ms
 - Code generation: < 5s
 
 **Error Rates:**
+
 - Overall: < 1%
 - AI operations: < 2%
 - Database: < 0.1%
@@ -420,6 +428,7 @@ LANGCHAIN_PROJECT=component-forge-prod
 ### Log Aggregation
 
 **Recommended:**
+
 - **Datadog** - Full-stack observability
 - **New Relic** - APM and logging
 - **Elastic Stack** - Self-hosted logging
@@ -437,6 +446,7 @@ async def generate_component(image: bytes):
 ```
 
 View cost breakdown:
+
 - Per user
 - Per model (GPT-4 vs GPT-4V)
 - Per operation type

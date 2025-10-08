@@ -36,7 +36,7 @@ interface PatternSelectionStore {
 
 export const usePatternSelection = create<PatternSelectionStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       selectedPattern: null,
       comparisonPatterns: [],
 
@@ -70,7 +70,8 @@ export const usePatternSelection = create<PatternSelectionStore>()(
       // Only persist selected pattern, not comparison (comparison is session-only)
       partialize: (state) => ({
         selectedPattern: state.selectedPattern
-      })
+      }),
+      skipHydration: false,
     }
   )
 );

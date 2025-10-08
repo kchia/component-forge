@@ -39,16 +39,19 @@ export function PatternList({
 
   return (
     <div className="space-y-4">
-      {patterns.map((pattern, index) => (
-        <DetailedPatternCard
-          key={pattern.pattern_id}
-          pattern={pattern}
-          rank={index + 1}
-          selected={selectedPatternId === pattern.pattern_id}
-          onSelect={() => onSelectPattern?.(pattern)}
-          onPreview={() => onPreviewPattern?.(pattern)}
-        />
-      ))}
+      {patterns.map((pattern, index) => {
+        const patternId = pattern.pattern_id || (pattern as any).id;
+        return (
+          <DetailedPatternCard
+            key={patternId}
+            pattern={pattern}
+            rank={index + 1}
+            selected={!!selectedPatternId && selectedPatternId === patternId}
+            onSelect={() => onSelectPattern?.(pattern)}
+            onPreview={() => onPreviewPattern?.(pattern)}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -14,7 +14,8 @@ export interface RetrievalRequest {
 }
 
 export interface PatternMatch {
-  pattern_id: string;
+  pattern_id?: string; // Internal field name
+  id?: string; // API field name (backend returns 'id')
   name: string;
   source: string;
   version: string;

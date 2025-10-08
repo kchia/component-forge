@@ -369,7 +369,36 @@ Your task is to fix ONLY the specific errors listed below while preserving all w
 **CRITICAL**: Return ALL THREE code files in JSON format:
 {"component_code": "...", "stories_code": "...", "showcase_code": "...", "imports": [], "exports": [], "explanation": "..."}
 
-**IMPORTANT**: You MUST include showcase_code even when fixing errors. Do not drop it!"""
+**IMPORTANT**: You MUST include showcase_code even when fixing errors. Do not drop it!
+
+**TYPESCRIPT FIX PATTERNS**:
+Common fixes for TypeScript errors:
+
+1. **Missing React import**: Add `import * as React from "react";`
+2. **forwardRef types**: Use `React.forwardRef<HTMLButtonElement, ButtonProps>(...)`
+3. **Props interface**: Extend React HTML attributes: `interface Props extends React.ButtonHTMLAttributes<HTMLButtonElement>`
+4. **Variant types**: Define explicit unions: `type Variant = "primary" | "secondary";`
+5. **Children prop**: Add `children?: React.ReactNode;` to props interface
+6. **Spread props**: Ensure props interface extends the correct HTML element type
+
+Example of CORRECT TypeScript pattern:
+```typescript
+import * as React from "react";
+
+type Variant = "primary" | "secondary";
+
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: Variant;
+  children?: React.ReactNode;
+}
+
+const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
+  ({ variant = "primary", className, children, ...props }, ref) => {
+    return <button ref={ref} className={className} {...props}>{children}</button>;
+  }
+);
+Button.displayName = "Button";
+```"""
         
         # Format errors
         error_lines = []

@@ -10,9 +10,7 @@ export function useFigmaAuth() {
   return useMutation<FigmaAuthResponse, Error, string>({
     mutationFn: authenticateFigma,
     onSuccess: (data) => {
-      if (data.valid) {
-        console.log('[useFigmaAuth] Authentication successful:', data.user_email);
-      } else {
+      if (!data.valid) {
         console.warn('[useFigmaAuth] Authentication failed:', data.message);
       }
     },

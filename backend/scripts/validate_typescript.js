@@ -36,6 +36,8 @@ const compilerOptions = {
   isolatedModules: true,
   noEmit: true,
   allowJs: true,
+  types: ['react', 'node'],
+  typeRoots: [path.join(__dirname, 'node_modules/@types')],
 };
 
 /**

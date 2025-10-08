@@ -1,34 +1,8 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import { Button } from "./button"
 import { Copy, Check } from "lucide-react"
-import "prismjs/themes/prism-tomorrow.css"
-
-// Dynamically import Prism to avoid SSR issues
-let Prism: any = null
-let languagesLoaded = false
-
-async function loadPrism() {
-  if (typeof window === "undefined") return null
-  if (Prism && languagesLoaded) return Prism
-
-  try {
-    Prism = (await import("prismjs")).default
-    // Load languages in correct dependency order
-    await import("prismjs/components/prism-javascript")
-    await import("prismjs/components/prism-typescript")
-    await import("prismjs/components/prism-json")
-    await import("prismjs/components/prism-css")
-    // TSX extends TypeScript, load it last
-    await import("prismjs/components/prism-tsx")
-    languagesLoaded = true
-    return Prism
-  } catch (error) {
-    console.error("Failed to load Prism:", error)
-    return null
-  }
-}
 
 export interface CodeBlockProps {
   code: string
@@ -46,29 +20,19 @@ export function CodeBlock({
   className = "",
 }: CodeBlockProps) {
   const [copied, setCopied] = useState(false)
-  const [highlightedCode, setHighlightedCode] = useState(code)
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
 
+  // Ensure scroll position is at top when code changes
   useEffect(() => {
-    // Load Prism and highlight code
-    async function highlight() {
-      try {
-        const prism = await loadPrism()
-        if (prism && prism.languages && prism.languages[language]) {
-          const highlighted = prism.highlight(code, prism.languages[language], language)
-          setHighlightedCode(highlighted)
-        } else {
-          // Fallback to plain text if Prism or language not available
-          setHighlightedCode(code)
-        }
-      } catch (error) {
-        // If highlighting fails, just show plain code
-        console.warn(`Prism highlighting failed for language '${language}':`, error)
-        setHighlightedCode(code)
+    // Use setTimeout to ensure DOM has updated
+    const timer = setTimeout(() => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = 0
       }
-    }
+    }, 0)
 
-    highlight()
-  }, [code, language])
+    return () => clearTimeout(timer)
+  }, [code])
 
   const handleCopy = async () => {
     try {
@@ -113,30 +77,27 @@ export function CodeBlock({
       </div>
 
       {/* Code content */}
-      <div className="overflow-auto" style={{ maxHeight }}>
+      <div ref={scrollContainerRef} className="overflow-auto" style={{ maxHeight }}>
         <pre className="p-4 text-sm font-mono leading-relaxed text-gray-100">
           {showLineNumbers ? (
             <code className="block">
               {lines.map((line, index) => {
                 const lineNumber = index + 1
-                const highlightedLines = highlightedCode.split("\n")
-                const highlightedLine = highlightedLines[index] || line
 
                 return (
                   <div key={index} className="table-row">
                     <span className="table-cell pr-4 text-gray-500 select-none text-right">
                       {lineNumber}
                     </span>
-                    <span
-                      className="table-cell text-gray-100"
-                      dangerouslySetInnerHTML={{ __html: highlightedLine }}
-                    />
+                    <span className="table-cell text-gray-100">
+                      {line}
+                    </span>
                   </div>
                 )
               })}
             </code>
           ) : (
-            <code className="text-gray-100" dangerouslySetInnerHTML={{ __html: highlightedCode }} />
+            <code className="text-gray-100">{code}</code>
           )}
         </pre>
       </div>

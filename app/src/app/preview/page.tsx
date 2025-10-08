@@ -14,46 +14,61 @@ import { ValidationErrorsDisplay } from "@/components/preview/ValidationErrorsDi
 import { QualityScoresDisplay } from "@/components/preview/QualityScoresDisplay";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
-import { useGenerateComponent, useGenerationStatus } from "@/hooks/useGenerateComponent";
+import { usePatternSelection } from "@/store/patternSelectionStore";
+import {
+  useGenerateComponent,
+  useGenerationStatus
+} from "@/hooks/useGenerateComponent";
 import { downloadGeneratedCode } from "@/lib/api";
 import { copyToClipboard, openInCodeSandbox } from "@/lib/utils";
+import { WorkflowStep, GenerationStage, GenerationResponse } from "@/types";
 import {
-  WorkflowStep,
-  GenerationStage,
-} from "@/types";
-import { ArrowLeft, Download, CheckCircle2, Clock, AlertTriangle, RefreshCw, Copy, ExternalLink, Check } from "lucide-react";
+  ArrowLeft,
+  Download,
+  CheckCircle2,
+  Clock,
+  AlertTriangle,
+  RefreshCw,
+  Copy,
+  ExternalLink,
+  Check,
+  RotateCcw
+} from "lucide-react";
 
 export default function PreviewPage() {
   const router = useRouter();
   const [elapsedMs, setElapsedMs] = useState(0);
   const [startTime, setStartTime] = useState<number | null>(null);
   const hasTriggeredRef = useRef(false);
-  
+
   // Store state
   const completedSteps = useWorkflowStore((state) => state.completedSteps);
   const completeStep = useWorkflowStore((state) => state.completeStep);
   const componentType = useWorkflowStore((state) => state.componentType);
-  const getApprovedProposals = useWorkflowStore((state) => state.getApprovedProposals);
+  const getApprovedProposals = useWorkflowStore(
+    (state) => state.getApprovedProposals
+  );
   const hasHydrated = useWorkflowStore((state) => state._hasHydrated);
+  const resetWorkflow = useWorkflowStore((state) => state.resetWorkflow);
   const tokens = useTokenStore((state) => state.tokens);
+  const clearTokens = useTokenStore((state) => state.clearTokens);
+  const clearSelection = usePatternSelection((state) => state.clearSelection);
+  const clearComparison = usePatternSelection((state) => state.clearComparison);
 
   // Local state to persist generated code across re-renders
-  const [generatedCode, setGeneratedCode] = useState<{
-    code: { component: string; stories?: string; showcase?: string };
-    metadata?: Record<string, unknown>;
-    timing?: Record<string, unknown>;
-  } | null>(null);
+  const [generatedCode, setGeneratedCode] = useState<GenerationResponse | null>(
+    null
+  );
   const [copied, setCopied] = useState(false);
+  const [codeKey, setCodeKey] = useState(Date.now());
 
   // Generation mutation
   const generation = useGenerateComponent({
     onSuccess: (data) => {
-      console.log('[Preview] Generation SUCCESS!', data);
-      console.log('[Preview] Code:', data.code);
-      console.log('[Preview] Status:', data.status);
-
       // Persist the generated code in local state
       setGeneratedCode(data);
+      // Force code block to remount with new key
+      setCodeKey(Date.now());
 
       // Mark preview step as completed on successful generation
       completeStep(WorkflowStep.PREVIEW);
@@ -61,10 +76,10 @@ export default function PreviewPage() {
       setStartTime(null);
     },
     onError: (error) => {
-      console.error('[Preview] Generation FAILED:', error);
+      console.error("[Preview] Generation FAILED:", error);
       // Stop timer
       setStartTime(null);
-    },
+    }
   });
 
   const generationStatus = useGenerationStatus(generation);
@@ -72,35 +87,16 @@ export default function PreviewPage() {
   const isComplete = generation.isSuccess || !!generatedCode; // Use local state as fallback
   const hasFailed = generation.isError;
 
-  // Debug logging
-  useEffect(() => {
-    console.log('[Preview] Generation state:', {
-      isPending: generation.isPending,
-      isSuccess: generation.isSuccess,
-      isError: generation.isError,
-      hasData: !!generation.data,
-      data: generation.data
-    });
-  }, [generation.isPending, generation.isSuccess, generation.isError, generation.data]);
-
   // Route guard: redirect if patterns not completed
   // Wait for hydration before checking route guard to avoid false redirects
   useEffect(() => {
     // Skip route guard check until store is hydrated
     if (!hasHydrated) {
-      console.log('[Preview] Waiting for store hydration...');
       return;
     }
 
-    console.log('[Preview] Route guard check (after hydration)');
-    console.log('[Preview] Completed steps:', completedSteps);
-    console.log('[Preview] Has PATTERNS step:', completedSteps.includes(WorkflowStep.PATTERNS));
-
     if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
-      console.log('[Preview] Redirecting back to /patterns - PATTERNS step not completed');
-      router.push('/patterns');
-    } else {
-      console.log('[Preview] Route guard passed - rendering preview page');
+      router.push("/patterns");
     }
   }, [completedSteps, router, hasHydrated]);
 
@@ -121,18 +117,18 @@ export default function PreviewPage() {
         ...approvedRequirements.props,
         ...approvedRequirements.events,
         ...approvedRequirements.states,
-        ...approvedRequirements.accessibility,
+        ...approvedRequirements.accessibility
       ];
 
       // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
-      const patternId = componentType.toLowerCase() + '-001';
+      const patternId = componentType.toLowerCase() + "-001";
 
       // Start generation
       setStartTime(Date.now());
       generation.mutate({
         pattern_id: patternId,
         tokens,
-        requirements: allRequirements,
+        requirements: allRequirements
       });
     }
   }, [componentType, tokens, generation.data, isGenerating, hasFailed]); // Removed getApprovedProposals to prevent unnecessary re-renders
@@ -152,12 +148,14 @@ export default function PreviewPage() {
   // Current implementation uses mock timing for MVP demo purposes
   const currentStage = useMemo(() => {
     if (!isGenerating) {
-      return isComplete ? GenerationStage.COMPLETE : GenerationStage.LLM_GENERATING;
+      return isComplete
+        ? GenerationStage.COMPLETE
+        : GenerationStage.LLM_GENERATING;
     }
-    
+
     // Mock stage progression (temporary until backend integration)
-    // Progress percentage of 30s target (Epic 4.5: 3-stage pipeline)
-    const progress = (elapsedMs / 30000) * 100;
+    // Progress percentage of 60s target (Epic 4.5: 3-stage pipeline)
+    const progress = (elapsedMs / 60000) * 100;
     if (progress < 50) return GenerationStage.LLM_GENERATING;
     if (progress < 80) return GenerationStage.VALIDATING;
     return GenerationStage.POST_PROCESSING;
@@ -167,7 +165,7 @@ export default function PreviewPage() {
   const handleDownload = () => {
     const codeToDownload = generation.data?.code || generatedCode?.code;
     if (codeToDownload) {
-      const componentName = componentType || 'Component';
+      const componentName = componentType || "Component";
       downloadGeneratedCode(codeToDownload, componentName);
     }
   };
@@ -185,15 +183,15 @@ export default function PreviewPage() {
       ...approvedRequirements.props,
       ...approvedRequirements.events,
       ...approvedRequirements.states,
-      ...approvedRequirements.accessibility,
+      ...approvedRequirements.accessibility
     ];
     // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
-    const patternId = (componentType?.toLowerCase() || 'button') + '-001';
+    const patternId = (componentType?.toLowerCase() || "button") + "-001";
 
     generation.mutate({
       pattern_id: patternId,
       tokens: tokens!,
-      requirements: allRequirements,
+      requirements: allRequirements
     });
   };
 
@@ -213,7 +211,7 @@ export default function PreviewPage() {
   const handleOpenInCodeSandbox = () => {
     const codeToDownload = generation.data?.code || generatedCode?.code;
     if (codeToDownload?.component) {
-      const componentName = componentType || 'Component';
+      const componentName = componentType || "Component";
       openInCodeSandbox(
         codeToDownload.component,
         componentName,
@@ -224,13 +222,24 @@ export default function PreviewPage() {
     }
   };
 
+  // Handle start over - reset all workflow state
+  const handleStartOver = () => {
+    // Clear all stores
+    resetWorkflow();
+    clearTokens();
+    clearSelection();
+    clearComparison();
+    // Redirect to dashboard
+    router.push("/");
+  };
+
   // Get generated code or placeholders (use local state as fallback)
   const actualData = generation.data || generatedCode;
-  const componentCode = actualData?.code.component || '';
-  const storiesCode = actualData?.code.stories || '';
+  const componentCode = actualData?.code.component || "";
+  const storiesCode = actualData?.code.stories || "";
   const metadata = actualData?.metadata;
   const timing = actualData?.timing;
-  
+
   // Epic 4.5: Extract validation results and quality scores
   const validationResults = metadata?.validation_results;
   const qualityScores = metadata?.quality_scores;
@@ -242,9 +251,7 @@ export default function PreviewPage() {
 
       {/* Page Header */}
       <div className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Component Preview
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight">Component Preview</h1>
         <p className="text-muted-foreground">
           {isGenerating && "Generating your component..."}
           {isComplete && "Review and download your generated component"}
@@ -272,7 +279,8 @@ export default function PreviewPage() {
               <div>
                 <h3 className="font-semibold text-lg">Generation Failed</h3>
                 <p className="text-sm text-muted-foreground mt-2">
-                  {generation.error?.message || "An error occurred during code generation."}
+                  {generation.error?.message ||
+                    "An error occurred during code generation."}
                 </p>
               </div>
               <div className="flex gap-4">
@@ -298,7 +306,9 @@ export default function PreviewPage() {
           <MetricCard
             title="Accessibility"
             value={metadata.has_accessibility_warnings ? "Warnings" : "✓ Pass"}
-            icon={metadata.has_accessibility_warnings ? AlertTriangle : CheckCircle2}
+            icon={
+              metadata.has_accessibility_warnings ? AlertTriangle : CheckCircle2
+            }
           />
           <MetricCard
             title="Type Safety"
@@ -387,11 +397,7 @@ export default function PreviewPage() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
                 <CardTitle>Generated Code</CardTitle>
-                <Button
-                  onClick={handleCopy}
-                  variant="outline"
-                  size="sm"
-                >
+                <Button onClick={handleCopy} variant="outline" size="sm">
                   {copied ? (
                     <>
                       <Check className="mr-2 h-3 w-3" />
@@ -406,7 +412,12 @@ export default function PreviewPage() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <DynamicCodeBlock language="tsx" code={componentCode} />
+                <DynamicCodeBlock
+                  key={codeKey}
+                  language="tsx"
+                  code={componentCode}
+                  maxHeight="600px"
+                />
               </CardContent>
             </Card>
           </TabsContent>
@@ -419,7 +430,12 @@ export default function PreviewPage() {
               </CardHeader>
               <CardContent>
                 {storiesCode ? (
-                  <DynamicCodeBlock language="tsx" code={storiesCode} />
+                  <DynamicCodeBlock
+                    key={`stories-${codeKey}`}
+                    language="tsx"
+                    code={storiesCode}
+                    maxHeight="600px"
+                  />
                 ) : (
                   <p className="text-sm text-muted-foreground">
                     Storybook stories not available.
@@ -439,7 +455,9 @@ export default function PreviewPage() {
 
               {/* Epic 4.5: Validation Errors Display */}
               {validationResults && (
-                <ValidationErrorsDisplay validationResults={validationResults} />
+                <ValidationErrorsDisplay
+                  validationResults={validationResults}
+                />
               )}
 
               {/* Legacy quality info (keep for backwards compatibility) */}
@@ -453,19 +471,27 @@ export default function PreviewPage() {
                       <h3 className="font-medium">Generation Metrics</h3>
                       <div className="text-sm space-y-1">
                         <p>
-                          <span className="text-muted-foreground">Pattern used:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Pattern used:
+                          </span>{" "}
                           {metadata?.pattern_used} v{metadata?.pattern_version}
                         </p>
                         <p>
-                          <span className="text-muted-foreground">Tokens applied:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Tokens applied:
+                          </span>{" "}
                           {metadata?.tokens_applied}
                         </p>
                         <p>
-                          <span className="text-muted-foreground">Requirements implemented:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Requirements implemented:
+                          </span>{" "}
                           {metadata?.requirements_implemented}
                         </p>
                         <p>
-                          <span className="text-muted-foreground">Imports:</span>{" "}
+                          <span className="text-muted-foreground">
+                            Imports:
+                          </span>{" "}
                           {metadata?.imports_count}
                         </p>
                       </div>
@@ -474,11 +500,25 @@ export default function PreviewPage() {
                     <div className="space-y-2">
                       <h3 className="font-medium">Code Quality</h3>
                       <div className="text-sm space-y-1">
-                        <p className={metadata?.has_typescript_errors ? "text-destructive" : "text-success"}>
-                          {metadata?.has_typescript_errors ? "✗" : "✓"} TypeScript compilation
+                        <p
+                          className={
+                            metadata?.has_typescript_errors
+                              ? "text-destructive"
+                              : "text-success"
+                          }
+                        >
+                          {metadata?.has_typescript_errors ? "✗" : "✓"}{" "}
+                          TypeScript compilation
                         </p>
-                        <p className={metadata?.has_accessibility_warnings ? "text-warning" : "text-success"}>
-                          {metadata?.has_accessibility_warnings ? "⚠" : "✓"} Accessibility
+                        <p
+                          className={
+                            metadata?.has_accessibility_warnings
+                              ? "text-warning"
+                              : "text-success"
+                          }
+                        >
+                          {metadata?.has_accessibility_warnings ? "⚠" : "✓"}{" "}
+                          Accessibility
                         </p>
                       </div>
                     </div>
@@ -488,14 +528,28 @@ export default function PreviewPage() {
                         <h3 className="font-medium">Performance</h3>
                         <div className="text-sm space-y-1">
                           <p>
-                            <span className="text-muted-foreground">Total:</span>{" "}
+                            <span className="text-muted-foreground">
+                              Total:
+                            </span>{" "}
                             {(timing.total_ms / 1000).toFixed(2)}s
                           </p>
                           <p className="text-xs text-muted-foreground">
-                            {timing.parsing_ms && `Parsing: ${(timing.parsing_ms / 1000).toFixed(2)}s • `}
-                            {timing.injection_ms && `Injection: ${(timing.injection_ms / 1000).toFixed(2)}s • `}
-                            {timing.generation_ms && `Generation: ${(timing.generation_ms / 1000).toFixed(2)}s • `}
-                            {timing.assembly_ms && `Assembly: ${(timing.assembly_ms / 1000).toFixed(2)}s`}
+                            {timing.parsing_ms &&
+                              `Parsing: ${(timing.parsing_ms / 1000).toFixed(
+                                2
+                              )}s • `}
+                            {timing.injection_ms &&
+                              `Injection: ${(
+                                timing.injection_ms / 1000
+                              ).toFixed(2)}s • `}
+                            {timing.generation_ms &&
+                              `Generation: ${(
+                                timing.generation_ms / 1000
+                              ).toFixed(2)}s • `}
+                            {timing.assembly_ms &&
+                              `Assembly: ${(timing.assembly_ms / 1000).toFixed(
+                                2
+                              )}s`}
                           </p>
                         </div>
                       </div>
@@ -514,19 +568,29 @@ export default function PreviewPage() {
                     <div className="grid grid-cols-2 gap-4 text-sm">
                       <div>
                         <span className="text-muted-foreground">Pattern:</span>
-                        <p className="font-mono">{metadata.pattern_used} v{metadata.pattern_version}</p>
+                        <p className="font-mono">
+                          {metadata.pattern_used} v{metadata.pattern_version}
+                        </p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Lines of Code:</span>
+                        <span className="text-muted-foreground">
+                          Lines of Code:
+                        </span>
                         <p className="font-mono">{metadata.lines_of_code}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Tokens Applied:</span>
+                        <span className="text-muted-foreground">
+                          Tokens Applied:
+                        </span>
                         <p className="font-mono">{metadata.tokens_applied}</p>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Requirements:</span>
-                        <p className="font-mono">{metadata.requirements_implemented}</p>
+                        <span className="text-muted-foreground">
+                          Requirements:
+                        </span>
+                        <p className="font-mono">
+                          {metadata.requirements_implemented}
+                        </p>
                       </div>
                       <div>
                         <span className="text-muted-foreground">Imports:</span>
@@ -534,7 +598,9 @@ export default function PreviewPage() {
                       </div>
                       {metadata.fix_attempts !== undefined && (
                         <div>
-                          <span className="text-muted-foreground">Fix Attempts:</span>
+                          <span className="text-muted-foreground">
+                            Fix Attempts:
+                          </span>
                           <p className="font-mono">{metadata.fix_attempts}</p>
                         </div>
                       )}
@@ -542,11 +608,17 @@ export default function PreviewPage() {
 
                     {timing && (
                       <div className="pt-4 border-t">
-                        <h4 className="text-sm font-medium mb-2">Performance Timing</h4>
+                        <h4 className="text-sm font-medium mb-2">
+                          Performance Timing
+                        </h4>
                         <div className="text-sm space-y-1">
                           <p>
-                            <span className="text-muted-foreground">Total:</span>{" "}
-                            <span className="font-mono">{(timing.total_ms / 1000).toFixed(2)}s</span>
+                            <span className="text-muted-foreground">
+                              Total:
+                            </span>{" "}
+                            <span className="font-mono">
+                              {(timing.total_ms / 1000).toFixed(2)}s
+                            </span>
                           </p>
                         </div>
                       </div>
@@ -564,7 +636,8 @@ export default function PreviewPage() {
         <Card>
           <CardContent className="py-12">
             <p className="text-center text-muted-foreground">
-              Generating your component... This typically takes less than 60 seconds.
+              Generating your component... This typically takes less than 60
+              seconds.
             </p>
           </CardContent>
         </Card>
@@ -572,12 +645,18 @@ export default function PreviewPage() {
 
       {/* Actions */}
       <div className="flex flex-col sm:flex-row gap-4 justify-between">
-        <Button asChild variant="outline">
-          <Link href="/patterns">
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Patterns
-          </Link>
-        </Button>
+        <div className="flex gap-4">
+          <Button asChild variant="outline">
+            <Link href="/patterns">
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Patterns
+            </Link>
+          </Button>
+          <Button variant="outline" onClick={handleStartOver}>
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Start Over
+          </Button>
+        </div>
         {isComplete && (
           <div className="flex gap-4">
             <Button variant="outline" onClick={handleDownload}>

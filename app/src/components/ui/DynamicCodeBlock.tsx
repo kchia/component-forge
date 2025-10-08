@@ -5,9 +5,11 @@ import { useEffect, useState } from "react";
 interface DynamicCodeBlockProps {
   language: string;
   code: string;
+  maxHeight?: string;
+  showLineNumbers?: boolean;
 }
 
-export function DynamicCodeBlock({ language, code }: DynamicCodeBlockProps) {
+export function DynamicCodeBlock({ language, code, maxHeight, showLineNumbers }: DynamicCodeBlockProps) {
   const [CodeBlock, setCodeBlock] = useState<any>(null);
 
   useEffect(() => {
@@ -25,5 +27,5 @@ export function DynamicCodeBlock({ language, code }: DynamicCodeBlockProps) {
     );
   }
 
-  return <CodeBlock language={language} code={code} />;
+  return <CodeBlock language={language} code={code} maxHeight={maxHeight} showLineNumbers={showLineNumbers} />;
 }

@@ -154,10 +154,10 @@ class GeneratorService:
             # ====== STAGE 1: LLM GENERATION ======
             self.current_stage = GenerationStage.LLM_GENERATING
             stage1_start = time.time()
-            
+
             # Load pattern as reference
             pattern_structure = await self._parse_pattern_for_reference(request.pattern_id)
-            
+
             # Build comprehensive prompt with exemplars
             prompts = self._build_generation_prompt(
                 pattern_code=pattern_structure.code,
@@ -216,6 +216,9 @@ class GeneratorService:
 
             # Count imports in final code
             imports_count = len([line for line in final_component_code.split('\n') if line.strip().startswith('import')])
+
+            # Count tokens applied (from request.tokens) - count actual nested values, not just categories
+            token_count = self._count_nested_tokens(request.tokens) if request.tokens else 0
 
             self.stage_latencies[GenerationStage.POST_PROCESSING] = int(
                 (time.time() - stage3_start) * 1000
@@ -277,6 +280,7 @@ class GeneratorService:
                 requirements_implemented=len(request.requirements),
                 pattern_used=request.pattern_id,
                 pattern_version="1.0.0",
+                token_count=token_count,
                 imports_count=imports_count,
                 has_typescript_errors=len(ts_errors) > 0,
                 has_accessibility_warnings=False,  # TODO: Implement a11y detection
@@ -496,7 +500,33 @@ export default function App() {
     def _infer_component_type_from_name(self, component_name: str) -> str:
         """Infer component type from component name."""
         return component_name.lower()
-    
+
+    def _count_nested_tokens(self, tokens: Dict[str, Any]) -> int:
+        """
+        Count all populated nested token values across all categories.
+
+        Example:
+            tokens = {
+                "colors": {"primary": "#3B82F6", "background": "#FFF"},
+                "typography": {"fontFamily": "Inter"},
+                "spacing": {},
+                "borderRadius": {"md": "8px"}
+            }
+            Returns: 4 (primary + background + fontFamily + borderRadius.md)
+
+        Args:
+            tokens: Design tokens dictionary with nested categories
+
+        Returns:
+            Total count of non-None token values
+        """
+        count = 0
+        for category_value in tokens.values():
+            if isinstance(category_value, dict):
+                # Count non-None values in the nested dict
+                count += sum(1 for v in category_value.values() if v is not None)
+        return count
+
     def get_current_stage(self) -> GenerationStage:
         """Get current generation stage for progress tracking."""
         return self.current_stage

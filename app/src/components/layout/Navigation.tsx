@@ -1,14 +1,26 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
+import { useTokenStore } from "@/stores/useTokenStore";
+import { usePatternSelection } from "@/store/patternSelectionStore";
 import { useOnboardingStore } from "@/stores/useOnboardingStore";
 import { WorkflowStep } from "@/types";
-import { Home, Upload, Menu, X, HelpCircle } from "lucide-react";
+import { Home, Upload, Menu, X, HelpCircle, RotateCcw } from "lucide-react";
 import { useState } from "react";
 
 const allNavItems = [
@@ -17,15 +29,35 @@ const allNavItems = [
 ];
 
 export function Navigation() {
+  const router = useRouter();
   const pathname = usePathname();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const progress = useWorkflowStore((state) => state.progress);
   const getAvailableSteps = useWorkflowStore((state) => state.getAvailableSteps);
+  const resetWorkflow = useWorkflowStore((state) => state.resetWorkflow);
   const availableSteps = getAvailableSteps();
+  const clearTokens = useTokenStore((state) => state.clearTokens);
+  const clearSelection = usePatternSelection((state) => state.clearSelection);
+  const clearComparison = usePatternSelection((state) => state.clearComparison);
   const { resetOnboarding } = useOnboardingStore();
 
   // Filter navigation items to only show available steps
   const navItems = allNavItems.filter(item => availableSteps.includes(item.step));
+
+  // Handle start over - reset all workflow state
+  const handleStartOver = () => {
+    // Clear all stores
+    resetWorkflow();
+    clearTokens();
+    clearSelection();
+    clearComparison();
+    // Close dialog and mobile menu
+    setResetDialogOpen(false);
+    setMobileMenuOpen(false);
+    // Redirect to dashboard
+    router.push("/");
+  };
 
   return (
     <nav className="border-b bg-background">
@@ -71,6 +103,18 @@ export function Navigation() {
             >
               <HelpCircle className="h-4 w-4" />
               Help
+            </Button>
+
+            {/* Start Over Button */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setResetDialogOpen(true)}
+              className="gap-2"
+              aria-label="Reset workflow and start over"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Start Over
             </Button>
           </div>
 
@@ -144,9 +188,39 @@ export function Navigation() {
               <HelpCircle className="h-4 w-4" />
               Help
             </Button>
+
+            {/* Start Over Button in Mobile Menu */}
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setResetDialogOpen(true)}
+              className="w-full justify-start gap-2"
+              aria-label="Reset workflow and start over"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Start Over
+            </Button>
           </div>
         </div>
       )}
+
+      {/* Confirmation Dialog */}
+      <AlertDialog open={resetDialogOpen} onOpenChange={setResetDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Start Over?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will clear all your progress including extracted tokens, requirements, and patterns. You'll be redirected to the dashboard to begin a new component.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleStartOver}>
+              Yes, Start Over
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </nav>
   );
 }

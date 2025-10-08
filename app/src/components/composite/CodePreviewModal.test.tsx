@@ -61,34 +61,34 @@ describe('CodePreviewModal Component', () => {
     it('handles pattern without visual preview', () => {
       const { NoVisualPreview } = composedStories
       expect(NoVisualPreview.args?.pattern).toBeDefined()
-      expect(NoVisualPreview.args?.pattern.visualPreview).toBeUndefined()
+      expect(NoVisualPreview.args?.pattern?.visualPreview).toBeUndefined()
     })
 
     it('handles pattern without metadata', () => {
       const { NoMetadata } = composedStories
       expect(NoMetadata.args?.pattern).toBeDefined()
-      expect(NoMetadata.args?.pattern.metadata).toBeUndefined()
+      expect(NoMetadata.args?.pattern?.metadata).toBeUndefined()
     })
 
     it('handles minimal pattern with only required fields', () => {
       const { MinimalPattern } = composedStories
       expect(MinimalPattern.args?.pattern).toBeDefined()
-      expect(MinimalPattern.args?.pattern.id).toBeDefined()
-      expect(MinimalPattern.args?.pattern.name).toBeDefined()
-      expect(MinimalPattern.args?.pattern.version).toBeDefined()
-      expect(MinimalPattern.args?.pattern.code).toBeDefined()
+      expect(MinimalPattern.args?.pattern?.id).toBeDefined()
+      expect(MinimalPattern.args?.pattern?.name).toBeDefined()
+      expect(MinimalPattern.args?.pattern?.version).toBeDefined()
+      expect(MinimalPattern.args?.pattern?.code).toBeDefined()
     })
   })
 
   describe('Different Languages', () => {
     it('handles TypeScript code', () => {
       const { AlwaysOpen } = composedStories
-      expect(AlwaysOpen.args?.pattern.language).toBe('typescript')
+      expect(AlwaysOpen.args?.pattern?.language).toBe('typescript')
     })
 
     it('handles Python code', () => {
       const { PythonCode } = composedStories
-      expect(PythonCode.args?.pattern.language).toBe('python')
+      expect(PythonCode.args?.pattern?.language).toBe('python')
     })
   })
 })

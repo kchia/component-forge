@@ -25,11 +25,12 @@ import type { RequirementProposal } from "@/types/requirement.types";
 
 export default function PatternsPage() {
   const [previewPattern, setPreviewPattern] = useState<PatternMatch | null>(null);
+  const [mounted, setMounted] = useState(false);
   const router = useRouter();
-  
+
   // Get workflow state (requirements from Epic 2)
   const { componentType, proposals, completedSteps, completeStep } = useWorkflowStore();
-  
+
   // Route guard: redirect if requirements not completed
   useEffect(() => {
     if (!completedSteps.includes(WorkflowStep.REQUIREMENTS)) {
@@ -43,9 +44,14 @@ export default function PatternsPage() {
       router.push('/requirements');
     }
   }, [componentType, proposals, router]);
-  
+
   // Get pattern selection state
   const { selectedPattern, selectPattern } = usePatternSelection();
+
+  // Handle hydration for persisted store
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   
   // Build requirements for retrieval (memoized to prevent unnecessary refetches)
   const requirements = useMemo(() => ({
@@ -71,11 +77,10 @@ export default function PatternsPage() {
   } = useLibraryStats();
   
   const handleSelectPattern = (pattern: PatternMatch) => {
-    console.log('[Patterns] Selecting pattern:', pattern.name);
-
     // Convert PatternMatch to Pattern for store
+    // Note: API returns 'id' but we use 'pattern_id' internally
     const patternForStore: Pattern = {
-      pattern_id: pattern.pattern_id,
+      pattern_id: pattern.pattern_id || (pattern as any).id,
       name: pattern.name,
       confidence: pattern.confidence,
       source: pattern.source,
@@ -87,9 +92,6 @@ export default function PatternsPage() {
 
     // Mark patterns step as completed
     completeStep(WorkflowStep.PATTERNS);
-
-    console.log('[Patterns] Pattern selected and step completed');
-    console.log('[Patterns] Completed steps:', completedSteps);
   };
   
   const handlePreviewPattern = (pattern: PatternMatch) => {
@@ -128,8 +130,9 @@ export default function PatternsPage() {
             
             {data && data.patterns.length === 0 && <EmptyState />}
             
-            {data && data.patterns.length > 0 && (
+            {data && data.patterns.length > 0 && mounted && (
               <PatternList
+                key={selectedPattern?.pattern_id || 'none'}
                 patterns={data.patterns}
                 selectedPatternId={selectedPattern?.pattern_id}
                 onSelectPattern={handleSelectPattern}

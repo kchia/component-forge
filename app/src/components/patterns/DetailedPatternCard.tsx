@@ -117,6 +117,7 @@ export function DetailedPatternCard({
         )}
         {onSelect && (
           <Button
+            type="button"
             variant={selected ? 'outline' : 'default'}
             size="sm"
             onClick={onSelect}
