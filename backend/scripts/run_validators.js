@@ -145,8 +145,23 @@ async function runValidators() {
       });
     `;
     
-    // For now, return mock validation results
-    // In a real implementation, this would execute the validators
+    // TODO: MOCK IMPLEMENTATION - NOT FOR PRODUCTION USE
+    // 
+    // This script currently returns mock validation results for scaffolding purposes.
+    // The actual implementation requires:
+    // 
+    // 1. Compiling TypeScript validators to JavaScript
+    // 2. Importing the compiled validators from app/src/services/validation/
+    // 3. Launching Playwright browser instances for browser-based validators
+    // 4. Properly handling async validator execution
+    // 5. Aggregating results from all validators
+    // 
+    // This mock implementation is intentionally scaffolding to establish the 
+    // frontend-backend integration pattern. Full implementation will be done
+    // in a follow-up integration PR.
+    //
+    // See: EPIC_5_INTEGRATION_TESTING_COMPLETE.md "Known Limitations" section
+    
     const mockResults = {
       timestamp: new Date().toISOString(),
       component: componentName,

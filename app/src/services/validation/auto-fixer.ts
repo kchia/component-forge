@@ -125,18 +125,25 @@ export class ExtendedAutoFixer {
 
   /**
    * Fix button-name violation by adding aria-label
+   * 
+   * Note: This uses a simplified regex approach. For production use, consider
+   * using a proper JSX/TSX parser like @babel/parser or typescript compiler API
+   * to avoid edge cases with arrow functions and complex JSX expressions.
    */
   private fixButtonName(code: string): { fixed: boolean; code: string } {
-    // Pattern: <button without text or aria-label
-    const buttonPattern = /<button([^>]*?)(?<!aria-label=["'][^"']*["'])>/gi;
+    // Match <button> opening tags
+    // Known limitation: May incorrectly match > inside arrow functions in attributes
+    const buttonPattern = /<button\s+([^>]*?)>/gi;
     
     let fixed = false;
     const fixedCode = code.replace(buttonPattern, (match, attributes) => {
-      // Check if button has children (text content)
-      // This is a simplified check - in real implementation would parse JSX properly
+      // Only add aria-label if not already present
       if (!attributes.includes('aria-label')) {
         fixed = true;
-        return `<button${attributes} aria-label="Button">`;
+        // Ensure proper spacing before the new attribute
+        const trimmedAttrs = attributes.trim();
+        const space = trimmedAttrs ? ' ' : '';
+        return `<button ${trimmedAttrs}${space}aria-label="Button">`;
       }
       return match;
     });
@@ -146,15 +153,21 @@ export class ExtendedAutoFixer {
 
   /**
    * Fix link-name violation by adding aria-label
+   * 
+   * Note: Uses simplified regex. For production, use a proper JSX parser.
    */
   private fixLinkName(code: string): { fixed: boolean; code: string } {
-    const linkPattern = /<a([^>]*?)(?<!aria-label=["'][^"']*["'])>/gi;
+    // Match <a> opening tags
+    const linkPattern = /<a\s+([^>]*?)>/gi;
     
     let fixed = false;
     const fixedCode = code.replace(linkPattern, (match, attributes) => {
+      // Only add aria-label if not already present and no children prop
       if (!attributes.includes('aria-label') && !attributes.includes('children')) {
         fixed = true;
-        return `<a${attributes} aria-label="Link">`;
+        const trimmedAttrs = attributes.trim();
+        const space = trimmedAttrs ? ' ' : '';
+        return `<a ${trimmedAttrs}${space}aria-label="Link">`;
       }
       return match;
     });
@@ -164,18 +177,24 @@ export class ExtendedAutoFixer {
 
   /**
    * Fix image-alt violation by adding alt attribute
+   * 
+   * Note: Uses simplified regex. For production, use a proper JSX parser.
    */
   private fixImageAlt(code: string): { fixed: boolean; code: string } {
-    const imgPattern = /<img([^>]*?)(?<!alt=["'][^"']*["'])>/gi;
+    // Match <img> tags
+    const imgPattern = /<img\s+([^>]*?)>/gi;
     
     let fixed = false;
     const fixedCode = code.replace(imgPattern, (match, attributes) => {
+      // Only add alt if not already present
       if (!attributes.includes('alt')) {
         fixed = true;
         // Extract src if available for better alt text
         const srcMatch = attributes.match(/src=["']([^"']+)["']/);
         const altText = srcMatch ? `Image: ${srcMatch[1].split('/').pop()}` : 'Image';
-        return `<img${attributes} alt="${altText}">`;
+        const trimmedAttrs = attributes.trim();
+        const space = trimmedAttrs ? ' ' : '';
+        return `<img ${trimmedAttrs}${space}alt="${altText}">`;
       }
       return match;
     });
