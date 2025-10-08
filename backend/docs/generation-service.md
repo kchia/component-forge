@@ -580,7 +580,7 @@ export { Button }
 
 ## References
 
-- [Epic 4 Specification](/.claude/epics/04-code-generation.md)
-- [Epic 4 Commit Strategy](/.claude/epics/04-commit-strategy.md)
+- [Epic 4 Specification](../../.claude/epics/04-code-generation.md)
+- [Epic 4 Commit Strategy](../../.claude/epics/04-commit-strategy.md)
 - [Pattern Library](/backend/data/patterns/)
 - [LangSmith Documentation](https://docs.smith.langchain.com/)
