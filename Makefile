@@ -24,6 +24,8 @@ install:
 	cd backend && python3 -m venv venv && ./venv/bin/pip install --upgrade pip
 	@echo "Installing backend dependencies..."
 	cd backend && ./venv/bin/pip install -r requirements.txt
+	@echo "Installing backend validation scripts dependencies..."
+	cd backend/scripts && npm install
 	@echo "Setting up environment files..."
 	cp backend/.env.example backend/.env 2>/dev/null || true
 	cp app/.env.local.example app/.env.local 2>/dev/null || true
@@ -109,7 +111,7 @@ clean:
 	docker-compose down -v
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".next" -exec rm -rf {} + 2>/dev/null || true
-	rm -rf backend/venv app/node_modules
+	rm -rf backend/venv app/node_modules backend/scripts/node_modules
 
 template-setup:
 	@echo "🎯 Template Setup Guide"
