@@ -11,6 +11,7 @@ ComponentForge was built through a series of EPICs, each delivering specific fun
 - **Epic 2**: Requirement extraction and classification
 - **Epic 3**: Pattern retrieval and matching
 - **Epic 4**: Code generation and adaptation
+- **Epic 5**: Quality validation and reporting
 - **Epic 11**: Expanded design tokens and frontend integration
 
 ## Implementation Summaries
@@ -116,6 +117,31 @@ For current testing procedures, see [Testing Documentation](../testing/integrati
 
 ---
 
+### Epic 5: Quality Validation & Reporting
+
+**Status**: ✅ Complete (Task B1)
+
+**Summary**: Comprehensive quality validation system with automated reporting.
+
+#### Task B1: Quality Report Generator (Backend)
+
+**Key Features**:
+- Aggregates Epic 4.5 results (TypeScript, ESLint)
+- Aggregates Epic 5 results (Accessibility, Keyboard, Focus, Contrast, Token Adherence)
+- Generates comprehensive quality reports
+- Multiple export formats (JSON, HTML)
+- Beautiful HTML reports with visualizations
+- Status determination (PASS/FAIL)
+- Auto-fix tracking and recommendations
+
+**Core Module**: `backend/src/validation/report_generator.py`
+
+**Documentation**:
+- [Task B1 Complete](./archive/epic-implementations/epic-5-task-b1-complete.md) - Implementation summary
+- [Integration Guide](./archive/epic-implementations/epic-5-task-b1-integration-guide.md) - Integration instructions
+
+---
+
 ### Epic 11: Expanded Design Tokens
 
 **Status**: ✅ Complete
@@ -154,6 +180,7 @@ For current testing procedures, see [Testing Documentation](../testing/integrati
 | Epic 2 | Requirement Extraction | ✅ Complete | [Implementation Summary](./archive/epic-implementations/epic-2-implementation-summary.md) |
 | Epic 3 | Pattern Retrieval | ✅ Complete | [Frontend](./archive/epic-implementations/epic-3-frontend-implementation-summary.md), [Testing](./archive/epic-implementations/epic-3-integration-testing.md) |
 | Epic 4 | Code Generation | ✅ Complete | [Backend](./archive/epic-implementations/epic-4-backend-implementation.md), [Frontend](./archive/epic-implementations/epic-4.5-task-11-frontend-summary.md) |
+| Epic 5 | Quality Validation | ✅ Complete (Task B1) | [Task B1](./archive/epic-implementations/epic-5-task-b1-complete.md), [Integration](./archive/epic-implementations/epic-5-task-b1-integration-guide.md) |
 | Epic 11 | Expanded Tokens | ✅ Complete | [Tasks 12-13](./archive/epic-implementations/epic-11-tasks-12-13-complete.md) |
 
 ---
@@ -175,7 +202,10 @@ The EPICs together enable this complete workflow:
 4. [Epic 4] Generate Code
    └─ Pattern + Tokens + Requirements → Customized React component
 
-5. [Epic 11] Enhanced Token System
+5. [Epic 5] Validate Quality
+   └─ Generated Code → Comprehensive quality report (A11y, TypeScript, ESLint, Tokens)
+
+6. [Epic 11] Enhanced Token System
    └─ Confidence scoring, semantic naming, visual previews
 ```
 
