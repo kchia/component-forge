@@ -41,6 +41,9 @@ export { FocusValidator } from './focus-validator';
 export { ContrastValidator } from './contrast-validator';
 export { TokenValidator } from './token-validator';
 
+// Export auto-fixer (Task I1)
+export { ExtendedAutoFixer } from './auto-fixer';
+
 // Export performance utilities
 export {
   getSharedBrowser,

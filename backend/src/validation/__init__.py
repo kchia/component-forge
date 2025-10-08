@@ -7,5 +7,6 @@ token adherence validation results.
 """
 
 from .report_generator import QualityReportGenerator, QualityReport
+from .frontend_bridge import FrontendValidatorBridge
 
-__all__ = ["QualityReportGenerator", "QualityReport"]
+__all__ = ["QualityReportGenerator", "QualityReport", "FrontendValidatorBridge"]
