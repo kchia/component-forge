@@ -33,3 +33,6 @@ export {
 } from './utils';
 
 export type { RGBColor } from './utils';
+
+// Export validators
+export { A11yValidator } from './a11y-validator';
