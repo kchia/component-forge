@@ -92,7 +92,9 @@ export class TokenValidator {
    * Validate component token adherence
    * 
    * @param componentCode - React component code to validate
-   * @param componentStyles - Extracted styles from component (CSS-in-JS or computed styles)
+   * @param componentStyles - Optional: Computed styles from Playwright browser context.
+   *                          If provided, uses these instead of parsing code.
+   *                          Recommended for accurate style extraction.
    * @returns ValidationResult with token violations
    */
   async validate(
@@ -101,7 +103,8 @@ export class TokenValidator {
   ): Promise<ValidationResult> {
     const violations: TokenViolation[] = [];
 
-    // If styles not provided, extract from code
+    // Prefer provided computed styles over code parsing
+    // Computed styles from browser are more accurate than regex parsing
     const styles = componentStyles || this.extractStylesFromCode(componentCode);
 
     // Check color adherence
@@ -155,8 +158,17 @@ export class TokenValidator {
   }
 
   /**
-   * Extract styles from component code
-   * This is a simplified parser - in production, would use AST parsing
+   * Extract styles from component code using regex patterns
+   * 
+   * NOTE: This is a fallback method with limitations:
+   * - Only handles inline styles and Tailwind arbitrary values
+   * - Does not handle CSS modules, styled-components, or CSS-in-JS
+   * - May miss styles from className props or external stylesheets
+   * 
+   * RECOMMENDED: Pass computed styles from Playwright browser context
+   * for accurate style extraction instead of relying on this method.
+   * 
+   * @see https://playwright.dev/docs/api/class-page#page-eval-on-selector
    */
   private extractStylesFromCode(componentCode: string): Record<string, string> {
     const styles: Record<string, string> = {};

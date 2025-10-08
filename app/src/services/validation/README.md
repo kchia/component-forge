@@ -128,13 +128,19 @@ console.log(result.details.violations); // Contrast violations
 Measures design token adherence:
 
 ```typescript
-import { TokenValidator } from '@/services/validation';
+import { TokenValidator, extractComputedStyles } from '@/services/validation';
 
 const validator = new TokenValidator();
-const result = await validator.validate(componentCode);
 
-console.log(result.details.adherenceScore); // Overall adherence %
-console.log(result.details.byCategory); // Scores by category
+// Option 1: Use code parsing (less accurate, fallback)
+const result1 = await validator.validate(componentCode);
+
+// Option 2: Use computed styles from browser (RECOMMENDED - more accurate)
+const styles = await extractComputedStyles(componentCode, 'Button');
+const result2 = await validator.validate(componentCode, styles);
+
+console.log(result2.details.adherenceScore); // Overall adherence %
+console.log(result2.details.byCategory); // Scores by category
 ```
 
 **Measures:**
@@ -142,6 +148,10 @@ console.log(result.details.byCategory); // Scores by category
 - Typography adherence (fonts, sizes, weights)
 - Spacing adherence (padding, margin, gap)
 - Target: ≥90% overall adherence
+
+**Style Extraction:**
+- **Recommended**: Use `extractComputedStyles()` for accurate style extraction from rendered components
+- **Fallback**: Regex-based parsing from code (limited to inline styles and Tailwind arbitrary values)
 
 ## WCAG Utilities
 
@@ -259,6 +269,48 @@ Target validation times:
 - **All validators**: <10s
 - **Total (Epic 4.5 + Epic 5)**: <15s
 
+### Performance Optimization
+
+**Browser Reuse** (Recommended for multiple validations):
+
+```typescript
+import { 
+  runValidatorsInParallel,
+  A11yValidator,
+  KeyboardValidator,
+  FocusValidator,
+  ContrastValidator,
+  TokenValidator,
+} from '@/services/validation';
+
+// Run validators in parallel with shared browser instance
+const results = await runValidatorsInParallel([
+  () => new A11yValidator().validate(code, 'Button'),
+  () => new KeyboardValidator().validate(code, 'Button', 'button'),
+  () => new FocusValidator().validate(code, 'Button'),
+  () => new ContrastValidator().validate(code, 'Button'),
+  () => new TokenValidator().validate(code),
+]);
+
+// Browser is automatically cleaned up after all validators complete
+```
+
+**Manual Browser Management** (Advanced):
+
+```typescript
+import { getSharedBrowser, releaseSharedBrowser } from '@/services/validation';
+
+const browser = await getSharedBrowser();
+try {
+  // Use browser for multiple validations
+  const page = await browser.newPage();
+  // ... perform validations
+  await page.close();
+} finally {
+  await releaseSharedBrowser();
+}
+```
+
 ## Dependencies
 
 - `@playwright/test` - Browser automation
@@ -268,16 +320,47 @@ Target validation times:
 
 ## Testing
 
-Test utilities available in `__tests__/setup.ts`:
+Comprehensive test suites included:
+
+**Unit Tests** (`__tests__/utils.test.ts`):
+- Tests for all WCAG utility functions
+- Color parsing, contrast calculations
+- Delta E color difference
+- WCAG AA/AAA compliance checks
+
+**Integration Tests** (`__tests__/integration.test.ts`):
+- Tests all validators with real component code
+- Tests accessible and inaccessible components
+- Performance benchmarks (<15s target)
+- Parallel execution tests
+
+**Test Utilities** (`__tests__/setup.ts`):
 
 ```typescript
-import { SAMPLE_BUTTON_CODE, createMockBrowser } from './setup';
+import { 
+  SAMPLE_BUTTON_CODE, 
+  BUTTON_WITH_A11Y_ISSUES,
+  BUTTON_WITH_CONTRAST_ISSUES,
+  createMockBrowser 
+} from './setup';
 
 // Use sample components for testing
 const result = await validator.validate(SAMPLE_BUTTON_CODE, 'Button');
 
 // Mock Playwright for unit tests
 const { mockBrowser, mockPage } = createMockBrowser();
+```
+
+**Running Tests**:
+```bash
+# Run all validation tests
+npm test -- validation
+
+# Run specific test file
+npm test -- integration.test.ts
+
+# Run with coverage
+npm test -- --coverage validation
 ```
 
 ## Error Handling
@@ -291,11 +374,12 @@ All validators include:
 ## Future Enhancements
 
 Potential improvements:
-- [ ] Parallel validator execution
+- ✅ Browser instance reuse (implemented in `browser-pool.ts`)
+- ✅ Parallel validator execution (implemented with `runValidatorsInParallel`)
+- ✅ Improved style extraction (implemented with `extractComputedStyles`)
 - [ ] Caching validation results
 - [ ] Custom rule configuration
 - [ ] Visual regression testing
-- [ ] Performance benchmarking
 - [ ] Automated screenshot capture
 
 ## Related Documentation
