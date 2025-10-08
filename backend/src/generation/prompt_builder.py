@@ -138,8 +138,8 @@ className={cn(
 
 // Card example - Complete card styling
 className={cn(
-  // Base styles: MUST include border, padding, rounded corners
-  "border border-[#E5E7EB] rounded-lg p-6 bg-white",
+  // Base styles: MUST include border, padding, rounded corners, text color
+  "border border-[#E5E7EB] rounded-lg p-6 bg-white text-gray-900",
   // Optional enhancements
   shadow && "shadow-md",
   interactive && "hover:shadow-lg transition-shadow cursor-pointer",
@@ -149,9 +149,10 @@ className={cn(
 ```
 
 **CRITICAL**: Every component MUST have complete functional styling by default:
-- Cards MUST have: `border`, `border-[color]`, `rounded-lg`, `p-4` or `p-6`, background
-- Buttons MUST have: `px-4 py-2`, `rounded-md`, `font-medium`, background, hover states
-- Inputs MUST have: `border`, padding, `rounded-md`, focus states
+- Cards MUST have: `border`, `border-[color]`, `rounded-lg`, `p-4` or `p-6`, background, `text-gray-900`
+- Buttons MUST have: `px-4 py-2`, `rounded-md`, `font-medium`, background, text color, hover states
+- Inputs MUST have: `border`, padding, `rounded-md`, `text-gray-900`, focus states
+- ALL components MUST specify text color explicitly to ensure readability
 
 **IMPORTANT**: When design tokens specify colors, use the EXACT color values provided:
 - If tokens specify `primary: #3B82F6`, use `bg-[#3B82F6]` (not `bg-blue-500`)
@@ -186,9 +187,10 @@ Apply these design tokens to the component using CSS variables.
 Based on the component type **{component_type}**, ensure these base styles are included:
 
 **Card components:**
-- Base: `border border-[extracted-color] rounded-lg p-6 bg-white`
+- Base: `border border-[extracted-color] rounded-lg p-6 bg-white text-gray-900`
 - Must be visually distinct as a container with clear boundaries
 - Include proper spacing between content
+- MUST include default text color (e.g., `text-gray-900`) to ensure content is readable
 
 **Button components:**
 - Base: `inline-flex items-center justify-center px-4 py-2 rounded-md font-medium transition-colors`
@@ -222,9 +224,10 @@ Based on the component type **{component_type}**, ensure these base styles are i
 - **Static Tailwind classes only** - No `bg-${{variant}}`, use conditionals instead
 - **MUST use EXACT extracted token values** - Use `bg-[#3B82F6]` with the exact color from design tokens
 - **MUST include complete base styling** - Every component needs padding, borders, rounded corners, etc.
-- **Cards MUST have**: `border border-[color] rounded-lg p-6 bg-white` as base styles
-- **Buttons MUST have**: `px-4 py-2 rounded-md font-medium` plus background/hover states
-- **Inputs MUST have**: `border border-[color] rounded-md px-3 py-2` plus focus states
+- **MUST include text colors** - All components need explicit text colors (e.g., `text-gray-900`) to ensure readability
+- **Cards MUST have**: `border border-[color] rounded-lg p-6 bg-white text-gray-900` as base styles
+- **Buttons MUST have**: `px-4 py-2 rounded-md font-medium text-white` (or appropriate text color) plus background/hover states
+- **Inputs MUST have**: `border border-[color] rounded-md px-3 py-2 text-gray-900` plus focus states
 - Match colors EXACTLY to the design tokens provided (don't approximate with Tailwind color names)
 - TypeScript strict mode (no 'any' types allowed, including 'as any')
 - All props must have explicit types
@@ -275,7 +278,12 @@ export default function ComponentNameShowcase() {{{{
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-900">Basic ComponentName</h3>
           <div className="p-6 bg-white rounded-lg border border-gray-200">
-            <ComponentName>Example Content</ComponentName>
+            <ComponentName>
+              <div className="text-gray-900">
+                <h4 className="font-semibold mb-2">Card Title</h4>
+                <p className="text-gray-600">This is a basic card with border and padding. It has rounded corners (medium radius).</p>
+              </div>
+            </ComponentName>
           </div>
           <p className="text-sm text-gray-600">
             This is a basic component with border and padding. It has rounded corners (12px radius).
@@ -287,7 +295,12 @@ export default function ComponentNameShowcase() {{{{
         <div className="space-y-3">
           <h3 className="text-lg font-semibold text-gray-900">Elevated ComponentName</h3>
           <div className="p-6 bg-white rounded-lg border border-gray-200">
-            <ComponentName shadow{{{{/* or elevation prop if available */}}}}>Example Content</ComponentName>
+            <ComponentName shadow{{{{/* or elevation prop if available */}}}}>
+              <div className="text-gray-900">
+                <h4 className="font-semibold mb-2">Card Title</h4>
+                <p className="text-gray-600">This card has box-shadow for elevation effect. Padding: 20px. Shadow: 0 4px 12px rgba(0,0,0,0.1).</p>
+              </div>
+            </ComponentName>
           </div>
           <p className="text-sm text-gray-600">
             This component has box-shadow for elevation effect. Padding: 20px.
@@ -303,7 +316,10 @@ export default function ComponentNameShowcase() {{{{
               hoverEffect{{{{/* or interactive prop */}}}}
               onClick={{{{() => alert('Clicked!')}}}}
             >
-              Clickable Content
+              <div className="text-gray-900">
+                <h4 className="font-semibold mb-2">Clickable Card</h4>
+                <p className="text-gray-600">Border changes on hover. Hover: Pointer cursor. Transition: all 200ms. Transform: scale(1.05) on hover.</p>
+              </div>
             </ComponentName>
           </div>
           <p className="text-sm text-gray-600">
@@ -314,10 +330,12 @@ export default function ComponentNameShowcase() {{{{
 
         {{{{/* Variation 4: Feature combination (e.g., with header, different variant) */}}}}
         <div className="space-y-3">
-          <h3 className="text-lg font-semibold text-gray-900">Content ComponentName</h3>
+          <h3 className="text-lg font-semibold text-gray-900">Content ComponentName with Header</h3>
           <div className="p-6 bg-white rounded-lg border border-gray-200">
             <ComponentName header="Header Text"{{{{/* or variant="primary" */}}}}>
-              Body content goes here with proper spacing and typography hierarchy.
+              <div className="text-gray-900">
+                <p className="text-gray-600">Body content goes here with proper spacing and typography hierarchy.</p>
+              </div>
             </ComponentName>
           </div>
           <p className="text-sm text-gray-600">
