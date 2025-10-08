@@ -1,4 +1,28 @@
-# Token Extraction Flow Diagram
+# Design Token Extraction
+
+Comprehensive guide to ComponentForge's AI-powered design token extraction system.
+
+## Overview
+
+ComponentForge extracts design tokens from screenshots using GPT-4V vision capabilities. The system analyzes UI designs and automatically extracts:
+
+- **Colors** - Primary, background, foreground palettes
+- **Typography** - Font families, sizes, and weights
+- **Spacing** - Padding, margins, and gaps
+
+Each extracted token includes a **confidence score** (0-1) that determines automatic acceptance, manual review requirements, or fallback to shadcn/ui defaults.
+
+## Features
+
+- ✅ Screenshot upload (PNG, JPG, JPEG up to 10MB)
+- ✅ Image validation and preprocessing (resize, format conversion)
+- ✅ GPT-4V vision-based token extraction
+- ✅ Per-token confidence scoring (0-1 scale)
+- ✅ Automatic fallback to shadcn/ui defaults (confidence < 0.7)
+- ✅ Error handling with retries (3 attempts)
+- ✅ Comprehensive test coverage (51 tests)
+
+## Extraction Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
@@ -114,69 +138,128 @@
 │   Client     │
 │  (Browser)   │
 └──────────────┘
+```
 
+## API Endpoints
 
-═══════════════════════════════════════════════════════════════════════
-EXAMPLE RESPONSE
-═══════════════════════════════════════════════════════════════════════
+### POST /api/v1/tokens/extract/screenshot
 
+Extract design tokens from an uploaded screenshot.
+
+**Request:**
+```bash
+curl -X POST http://localhost:8000/api/v1/tokens/extract/screenshot \
+  -F "file=@screenshot.png"
+```
+
+**Response:**
+```json
 {
   "tokens": {
     "colors": {
-      "primary": "#3B82F6",      ← Used (confidence 0.95)
-      "background": "#FFFFFF",   ← Used (confidence 0.92)
-      "foreground": "#09090B"    ← Used (confidence 0.88)
+      "primary": "#3B82F6",
+      "background": "#FFFFFF",
+      "foreground": "#09090B"
     },
     "typography": {
-      "fontFamily": "Inter",     ← Fallback (confidence 0.65 < 0.7)
-      "fontSize": "16px",        ← Used (confidence 0.85)
-      "fontWeight": 500          ← Flagged (confidence 0.78, needs review)
+      "fontFamily": "Inter",
+      "fontSize": "16px",
+      "fontWeight": 500
     },
     "spacing": {
-      "padding": "16px",         ← Used (confidence 0.82)
-      "gap": "8px"               ← Flagged (confidence 0.79, needs review)
+      "padding": "16px",
+      "gap": "8px"
     }
   },
   "confidence": {
-    "colors": {"primary": 0.95, "background": 0.92, "foreground": 0.88},
-    "typography": {"fontFamily": 0.65, "fontSize": 0.85, "fontWeight": 0.78},
-    "spacing": {"padding": 0.82, "gap": 0.79}
+    "colors": {
+      "primary": 0.95,
+      "background": 0.92,
+      "foreground": 0.88
+    },
+    "typography": {
+      "fontFamily": 0.65,
+      "fontSize": 0.85,
+      "fontWeight": 0.78
+    },
+    "spacing": {
+      "padding": 0.82,
+      "gap": 0.79
+    }
   },
   "fallbacks_used": ["typography.fontFamily"],
   "review_needed": ["typography.fontWeight", "spacing.gap"],
   "metadata": {
-    "filename": "design-system.png",
-    "image": {"width": 1200, "height": 800, "format": "PNG"},
+    "filename": "screenshot.png",
+    "image": {
+      "width": 1200,
+      "height": 800,
+      "format": "PNG"
+    },
     "extraction_method": "gpt-4v"
   }
 }
+```
 
-═══════════════════════════════════════════════════════════════════════
-ERROR HANDLING
-═══════════════════════════════════════════════════════════════════════
+**Validation Rules:**
+- File size: Maximum 10MB
+- Formats: PNG, JPG, JPEG only
+- Dimensions: Minimum 50x50 pixels, maximum 2000px width (auto-resized)
 
-Oversized File (>10MB)
-  → 400 Bad Request
-  → "File too large (11.5MB). Maximum size is 10MB."
+**Error Responses:**
 
-Invalid Format
-  → 400 Bad Request
-  → "Invalid file type: image/gif. Allowed types: PNG, JPG, JPEG."
+400 Bad Request - Invalid file:
+```json
+{
+  "detail": "File too large (11.5MB). Maximum size is 10MB."
+}
+```
 
-Corrupted Image
-  → 400 Bad Request
-  → "Corrupted or invalid image file: cannot identify image file"
+500 Internal Server Error - Extraction failed:
+```json
+{
+  "detail": "Failed to extract tokens: Extraction failed after 3 attempts"
+}
+```
 
-GPT-4V Error
-  → Retry up to 3 times with exponential backoff
-  → If all retries fail:
-    → 500 Internal Server Error
-    → "Failed to extract tokens after 3 attempts: <error>"
+### GET /api/v1/tokens/defaults
 
-═══════════════════════════════════════════════════════════════════════
-CONFIDENCE THRESHOLDS
-═══════════════════════════════════════════════════════════════════════
+Get shadcn/ui default design tokens.
 
+**Request:**
+```bash
+curl http://localhost:8000/api/v1/tokens/defaults
+```
+
+**Response:**
+```json
+{
+  "tokens": {
+    "colors": {
+      "primary": "#3B82F6",
+      "background": "#FFFFFF",
+      "foreground": "#09090B"
+    },
+    "typography": {
+      "fontFamily": "Inter",
+      "fontSize": "16px",
+      "fontWeight": 500
+    },
+    "spacing": {
+      "padding": "16px",
+      "gap": "8px"
+    }
+  },
+  "source": "shadcn/ui",
+  "description": "Default design tokens used as fallbacks"
+}
+```
+
+## Confidence Scoring
+
+### Thresholds
+
+```
  1.0 ─┬─────────────────────────────  Perfect
       │  AUTO-ACCEPT
       │  (No review needed)
@@ -189,13 +272,105 @@ CONFIDENCE THRESHOLDS
       │  USE FALLBACK
       │  (Replace with shadcn/ui defaults)
  0.0 ─┴─────────────────────────────  Low confidence
+```
 
+- **0.9 - 1.0**: Auto-accepted (high confidence)
+- **0.7 - 0.9**: Flagged for review (moderate confidence)
+- **0.0 - 0.7**: Fallback applied (low confidence)
 
-═══════════════════════════════════════════════════════════════════════
-TESTING
-═══════════════════════════════════════════════════════════════════════
+### Calculation
 
-Unit Tests (51 total)
+Confidence scores are derived from GPT-4V's log probabilities:
+
+```python
+confidence = exp(average_logprob)
+```
+
+Higher log probabilities indicate the model is more certain about its extraction.
+
+### Fallback Behavior
+
+When confidence < 0.7, the system automatically uses shadcn/ui defaults:
+
+| Token | Fallback Value |
+|-------|---------------|
+| colors.primary | #3B82F6 |
+| colors.background | #FFFFFF |
+| colors.foreground | #09090B |
+| typography.fontFamily | Inter |
+| typography.fontSize | 16px |
+| typography.fontWeight | 500 |
+| spacing.padding | 16px |
+| spacing.gap | 8px |
+
+## Module Structure
+
+```
+backend/src/
+├── api/v1/routes/
+│   └── tokens.py              # API endpoints
+├── agents/
+│   └── token_extractor.py     # GPT-4V integration
+├── prompts/
+│   └── token_extraction.py    # Prompt template
+├── services/
+│   └── image_processor.py     # Image validation & processing
+└── core/
+    ├── confidence.py          # Confidence scoring
+    └── defaults.py            # Shadcn/ui defaults
+```
+
+## Usage Examples
+
+### Python Client
+
+```python
+import httpx
+from pathlib import Path
+
+async def extract_tokens(image_path: str):
+    async with httpx.AsyncClient() as client:
+        with open(image_path, 'rb') as f:
+            files = {'file': ('screenshot.png', f, 'image/png')}
+            response = await client.post(
+                'http://localhost:8000/api/v1/tokens/extract/screenshot',
+                files=files
+            )
+        return response.json()
+
+# Usage
+result = await extract_tokens('design_system.png')
+print(f"Primary color: {result['tokens']['colors']['primary']}")
+print(f"Confidence: {result['confidence']['colors']['primary']}")
+```
+
+### JavaScript/TypeScript Client
+
+```typescript
+async function extractTokens(file: File) {
+  const formData = new FormData();
+  formData.append('file', file);
+
+  const response = await fetch('http://localhost:8000/api/v1/tokens/extract/screenshot', {
+    method: 'POST',
+    body: formData,
+  });
+
+  return await response.json();
+}
+
+// Usage
+const fileInput = document.querySelector('input[type="file"]');
+const result = await extractTokens(fileInput.files[0]);
+console.log('Extracted tokens:', result.tokens);
+```
+
+## Testing
+
+### Unit Tests (51 total)
+
+```
+Unit Tests
   ├── API Endpoints (7 tests)
   │   ✓ Successful extraction
   │   ✓ Oversized file rejection
@@ -218,17 +393,83 @@ Unit Tests (51 total)
       ✓ Image resizing
       ✓ Format conversion
       └── Base64 encoding
-
-Integration Tests
-  ├── API test script (test_token_api.sh)
-  │   ✓ Server health check
-  │   ✓ Defaults endpoint
-  │   ✓ Screenshot upload
-  │   ✓ Validation tests
-  │   └── Error handling
-  │
-  └── End-to-end extraction (integration_test_extraction.py)
-      ✓ Create test image
-      ✓ Extract with GPT-4V
-      └── Verify response structure
 ```
+
+### Running Tests
+
+```bash
+cd backend
+source venv/bin/activate
+pytest tests/test_confidence.py -v       # Confidence scoring tests
+pytest tests/test_image_processor.py -v  # Image processing tests
+pytest tests/test_api_tokens.py -v       # API endpoint tests
+pytest tests/ -v                         # All tests
+```
+
+### Integration Test
+
+Run with a real OpenAI API key:
+
+```bash
+export OPENAI_API_KEY=your-api-key
+python tests/integration_test_extraction.py
+```
+
+## Configuration
+
+Required environment variables:
+
+```bash
+OPENAI_API_KEY=sk-...  # OpenAI API key for GPT-4V
+```
+
+Optional configuration (defaults shown):
+
+```python
+MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+MAX_IMAGE_WIDTH = 2000             # pixels
+CONFIDENCE_THRESHOLD_FALLBACK = 0.7
+CONFIDENCE_THRESHOLD_AUTO_ACCEPT = 0.9
+```
+
+## Error Handling
+
+The system handles various error scenarios:
+
+| Error Type | Handling |
+|------------|----------|
+| **Oversized files** (>10MB) | Rejected with clear message |
+| **Invalid formats** (not PNG/JPG) | Rejected with format list |
+| **Corrupted images** | Detected and rejected |
+| **GPT-4V errors** | Retries up to 3 times with exponential backoff |
+| **Invalid JSON response** | Logged and retried |
+| **Missing tokens** | Fallback to defaults |
+
+## Performance
+
+- **Image preprocessing**: <100ms for typical images
+- **GPT-4V extraction**: 3-8 seconds (depends on image complexity)
+- **Total latency**: <10 seconds (target met)
+
+## Limitations
+
+1. **Font family detection**: Lower confidence (0.5-0.7) due to visual inference
+2. **Complex designs**: May require manual review for accuracy
+3. **Rate limits**: OpenAI API limits apply (10,000 RPM for Tier 2)
+4. **Cost**: ~$0.01-0.03 per extraction (GPT-4V pricing)
+
+## Future Enhancements
+
+- [ ] Batch processing for multiple screenshots
+- [ ] Support for Figma file extraction
+- [ ] Custom confidence thresholds per user
+- [ ] Token history and versioning
+- [ ] Manual override UI
+- [ ] Export to JSON/CSS formats
+
+## See Also
+
+- [Figma Integration](./figma-integration.md)
+- [Architecture Overview](../architecture/overview.md)
+- [API Reference](../api/overview.md)
+- [Backend Token Extraction](../../backend/docs/README.md)
