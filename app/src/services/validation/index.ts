@@ -34,5 +34,9 @@ export {
 
 export type { RGBColor } from './utils';
 
-// Export validators
+// Export validators (Tasks F2-F6)
 export { A11yValidator } from './a11y-validator';
+export { KeyboardValidator } from './keyboard-validator';
+export { FocusValidator } from './focus-validator';
+export { ContrastValidator } from './contrast-validator';
+export { TokenValidator } from './token-validator';

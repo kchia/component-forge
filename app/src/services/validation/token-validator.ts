@@ -1,0 +1,410 @@
+/**
+ * Epic 5 Task F6: Token Adherence Validator
+ * Validates component uses approved design tokens
+ */
+
+import type { ValidationResult, TokenViolation } from './types';
+import { calculateDeltaEFromStrings } from './utils';
+
+/**
+ * Design tokens (would typically come from design system)
+ * This is a simplified example - in production, these would be imported from a tokens file
+ */
+const DESIGN_TOKENS = {
+  colors: {
+    // Primary colors
+    'primary': '#3b82f6',
+    'primary-hover': '#2563eb',
+    'primary-focus': '#1d4ed8',
+    // Secondary colors
+    'secondary': '#64748b',
+    'secondary-hover': '#475569',
+    // Text colors
+    'text-primary': '#1e293b',
+    'text-secondary': '#64748b',
+    'text-muted': '#94a3b8',
+    // Background colors
+    'bg-primary': '#ffffff',
+    'bg-secondary': '#f8fafc',
+    'bg-tertiary': '#f1f5f9',
+    // Border colors
+    'border-default': '#e2e8f0',
+    'border-muted': '#f1f5f9',
+    // Status colors
+    'success': '#10b981',
+    'warning': '#f59e0b',
+    'error': '#ef4444',
+    'info': '#3b82f6',
+  },
+  typography: {
+    // Font families
+    'font-sans': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif',
+    'font-mono': 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace',
+    // Font sizes
+    'text-xs': '12px',
+    'text-sm': '14px',
+    'text-base': '16px',
+    'text-lg': '18px',
+    'text-xl': '20px',
+    'text-2xl': '24px',
+    // Font weights
+    'font-normal': '400',
+    'font-medium': '500',
+    'font-semibold': '600',
+    'font-bold': '700',
+    // Line heights
+    'leading-tight': '1.25',
+    'leading-normal': '1.5',
+    'leading-relaxed': '1.75',
+  },
+  spacing: {
+    // Padding/Margin
+    '0': '0px',
+    '1': '4px',
+    '2': '8px',
+    '3': '12px',
+    '4': '16px',
+    '5': '20px',
+    '6': '24px',
+    '8': '32px',
+    '10': '40px',
+    '12': '48px',
+    // Gap
+    'gap-1': '4px',
+    'gap-2': '8px',
+    'gap-3': '12px',
+    'gap-4': '16px',
+  },
+};
+
+/**
+ * TokenValidator validates component adherence to design tokens
+ * 
+ * Checks:
+ * - Colors match approved tokens (with ΔE ≤2 tolerance)
+ * - Typography uses approved fonts, sizes, and weights
+ * - Spacing uses approved values
+ * 
+ * Target: ≥90% adherence overall
+ */
+export class TokenValidator {
+  /**
+   * Validate component token adherence
+   * 
+   * @param componentCode - React component code to validate
+   * @param componentStyles - Extracted styles from component (CSS-in-JS or computed styles)
+   * @returns ValidationResult with token violations
+   */
+  async validate(
+    componentCode: string,
+    componentStyles?: Record<string, string>
+  ): Promise<ValidationResult> {
+    const violations: TokenViolation[] = [];
+
+    // If styles not provided, extract from code
+    const styles = componentStyles || this.extractStylesFromCode(componentCode);
+
+    // Check color adherence
+    const colorViolations = this.checkColorAdherence(styles);
+    violations.push(...colorViolations);
+
+    // Check typography adherence
+    const typographyViolations = this.checkTypographyAdherence(styles);
+    violations.push(...typographyViolations);
+
+    // Check spacing adherence
+    const spacingViolations = this.checkSpacingAdherence(styles);
+    violations.push(...spacingViolations);
+
+    // Calculate adherence scores
+    const adherenceScores = this.calculateAdherenceScores(violations, styles);
+
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    // Overall adherence must be ≥90%
+    if (adherenceScores.overall < 90) {
+      errors.push(
+        `Token adherence ${adherenceScores.overall.toFixed(1)}% is below 90% target`
+      );
+    }
+
+    // Warn for categories below 90%
+    if (adherenceScores.byCategory.colors < 90) {
+      warnings.push(`Color adherence ${adherenceScores.byCategory.colors.toFixed(1)}% is below target`);
+    }
+    if (adherenceScores.byCategory.typography < 90) {
+      warnings.push(`Typography adherence ${adherenceScores.byCategory.typography.toFixed(1)}% is below target`);
+    }
+    if (adherenceScores.byCategory.spacing < 90) {
+      warnings.push(`Spacing adherence ${adherenceScores.byCategory.spacing.toFixed(1)}% is below target`);
+    }
+
+    return {
+      valid: errors.length === 0,
+      errors,
+      warnings,
+      details: {
+        violations,
+        adherenceScore: adherenceScores.overall,
+        byCategory: adherenceScores.byCategory,
+        totalChecks: adherenceScores.totalChecks,
+        passedChecks: adherenceScores.passedChecks,
+      },
+    };
+  }
+
+  /**
+   * Extract styles from component code
+   * This is a simplified parser - in production, would use AST parsing
+   */
+  private extractStylesFromCode(componentCode: string): Record<string, string> {
+    const styles: Record<string, string> = {};
+
+    // Extract inline styles from style={{ }}
+    const styleMatches = componentCode.matchAll(/style=\{\{([^}]+)\}\}/g);
+    for (const match of styleMatches) {
+      const styleContent = match[1];
+      const properties = styleContent.split(',');
+      
+      for (const prop of properties) {
+        const [key, value] = prop.split(':').map((s) => s.trim());
+        if (key && value) {
+          // Convert camelCase to kebab-case
+          const cssKey = key.replace(/([A-Z])/g, '-$1').toLowerCase();
+          styles[cssKey] = value.replace(/['"]/g, '');
+        }
+      }
+    }
+
+    // Extract Tailwind-style colors from className
+    const colorClasses = componentCode.matchAll(/(?:bg|text|border)-\[([^\]]+)\]/g);
+    for (const match of colorClasses) {
+      const color = match[1];
+      if (match[0].startsWith('bg-')) {
+        styles['background-color'] = color;
+      } else if (match[0].startsWith('text-')) {
+        styles['color'] = color;
+      } else if (match[0].startsWith('border-')) {
+        styles['border-color'] = color;
+      }
+    }
+
+    return styles;
+  }
+
+  /**
+   * Check color adherence to design tokens
+   */
+  private checkColorAdherence(styles: Record<string, string>): TokenViolation[] {
+    const violations: TokenViolation[] = [];
+    const colorProperties = ['color', 'background-color', 'border-color'];
+
+    for (const prop of colorProperties) {
+      const value = styles[prop];
+      if (!value) continue;
+
+      // Check if color matches any token (with Delta E tolerance)
+      const matchedToken = this.findMatchingColorToken(value);
+
+      if (!matchedToken) {
+        violations.push({
+          category: 'color',
+          property: prop,
+          expected: 'Design token color',
+          actual: value,
+          target: prop,
+          withinTolerance: false,
+        });
+      } else if (matchedToken.deltaE > 2.0) {
+        // Within tolerance if ΔE ≤ 2.0
+        violations.push({
+          category: 'color',
+          property: prop,
+          expected: matchedToken.tokenValue,
+          actual: value,
+          target: prop,
+          deltaE: matchedToken.deltaE,
+          withinTolerance: false,
+        });
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Find matching color token with Delta E calculation
+   */
+  private findMatchingColorToken(
+    color: string
+  ): { tokenName: string; tokenValue: string; deltaE: number } | null {
+    let bestMatch: { tokenName: string; tokenValue: string; deltaE: number } | null = null;
+    let lowestDeltaE = Infinity;
+
+    for (const [tokenName, tokenValue] of Object.entries(DESIGN_TOKENS.colors)) {
+      const deltaE = calculateDeltaEFromStrings(color, tokenValue);
+      if (deltaE === null) continue;
+
+      if (deltaE < lowestDeltaE) {
+        lowestDeltaE = deltaE;
+        bestMatch = { tokenName, tokenValue, deltaE };
+      }
+
+      // Exact match (or very close)
+      if (deltaE <= 0.1) {
+        return bestMatch;
+      }
+    }
+
+    return bestMatch;
+  }
+
+  /**
+   * Check typography adherence
+   */
+  private checkTypographyAdherence(styles: Record<string, string>): TokenViolation[] {
+    const violations: TokenViolation[] = [];
+
+    // Check font family
+    if (styles['font-family']) {
+      const matched = Object.values(DESIGN_TOKENS.typography)
+        .filter((v) => v.includes(','))
+        .some((tokenValue) => styles['font-family'] === tokenValue);
+
+      if (!matched) {
+        violations.push({
+          category: 'typography',
+          property: 'font-family',
+          expected: DESIGN_TOKENS.typography['font-sans'],
+          actual: styles['font-family'],
+          target: 'font-family',
+          withinTolerance: false,
+        });
+      }
+    }
+
+    // Check font size
+    if (styles['font-size']) {
+      const matched = Object.values(DESIGN_TOKENS.typography)
+        .filter((v) => v.includes('px'))
+        .includes(styles['font-size']);
+
+      if (!matched) {
+        violations.push({
+          category: 'typography',
+          property: 'font-size',
+          expected: 'Design token font size',
+          actual: styles['font-size'],
+          target: 'font-size',
+          withinTolerance: false,
+        });
+      }
+    }
+
+    // Check font weight
+    if (styles['font-weight']) {
+      const matched = Object.values(DESIGN_TOKENS.typography).includes(styles['font-weight']);
+
+      if (!matched) {
+        violations.push({
+          category: 'typography',
+          property: 'font-weight',
+          expected: 'Design token font weight',
+          actual: styles['font-weight'],
+          target: 'font-weight',
+          withinTolerance: false,
+        });
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Check spacing adherence
+   */
+  private checkSpacingAdherence(styles: Record<string, string>): TokenViolation[] {
+    const violations: TokenViolation[] = [];
+    const spacingProperties = ['padding', 'margin', 'gap', 'padding-top', 'padding-bottom', 'padding-left', 'padding-right', 'margin-top', 'margin-bottom', 'margin-left', 'margin-right'];
+
+    for (const prop of spacingProperties) {
+      const value = styles[prop];
+      if (!value) continue;
+
+      const matched = Object.values(DESIGN_TOKENS.spacing).includes(value);
+
+      if (!matched) {
+        violations.push({
+          category: 'spacing',
+          property: prop,
+          expected: 'Design token spacing value',
+          actual: value,
+          target: prop,
+          withinTolerance: false,
+        });
+      }
+    }
+
+    return violations;
+  }
+
+  /**
+   * Calculate adherence scores by category
+   */
+  private calculateAdherenceScores(
+    violations: TokenViolation[],
+    styles: Record<string, string>
+  ): {
+    overall: number;
+    byCategory: { colors: number; typography: number; spacing: number };
+    totalChecks: number;
+    passedChecks: number;
+  } {
+    const totalProps = Object.keys(styles).length;
+    const totalViolations = violations.filter((v) => !v.withinTolerance).length;
+    const totalChecks = Math.max(totalProps, 1);
+    const passedChecks = totalChecks - totalViolations;
+
+    const colorChecks = Object.keys(styles).filter((k) =>
+      k.includes('color') || k === 'background'
+    ).length;
+    const colorViolations = violations.filter(
+      (v) => v.category === 'color' && !v.withinTolerance
+    ).length;
+    const colorScore = colorChecks > 0 ? ((colorChecks - colorViolations) / colorChecks) * 100 : 100;
+
+    const typographyChecks = Object.keys(styles).filter((k) =>
+      k.includes('font') || k.includes('text') || k.includes('leading')
+    ).length;
+    const typographyViolations = violations.filter(
+      (v) => v.category === 'typography' && !v.withinTolerance
+    ).length;
+    const typographyScore = typographyChecks > 0
+      ? ((typographyChecks - typographyViolations) / typographyChecks) * 100
+      : 100;
+
+    const spacingChecks = Object.keys(styles).filter((k) =>
+      k.includes('padding') || k.includes('margin') || k.includes('gap')
+    ).length;
+    const spacingViolations = violations.filter(
+      (v) => v.category === 'spacing' && !v.withinTolerance
+    ).length;
+    const spacingScore = spacingChecks > 0
+      ? ((spacingChecks - spacingViolations) / spacingChecks) * 100
+      : 100;
+
+    const overall = (passedChecks / totalChecks) * 100;
+
+    return {
+      overall,
+      byCategory: {
+        colors: colorScore,
+        typography: typographyScore,
+        spacing: spacingScore,
+      },
+      totalChecks,
+      passedChecks,
+    };
+  }
+}
