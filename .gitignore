@@ -315,3 +315,8 @@ profile.out
 *.trace
 .benchmark/
 screenshots/
+
+# Demo files (generated at runtime)
+demo_report_generator.py
+sample_report_*.json
+sample_report_*.html
