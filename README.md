@@ -107,16 +107,20 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 ## 🏗️ AI Pipeline Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          ComponentForge AI Pipeline                         │
-├─────────────────┬─────────────────┬─────────────────┬─────────────────────────┤
-│  📷 Input       │  🤖 AI Agents   │  📐 Retrieval   │  ✨ Generation         │
-│                 │                 │                 │                         │
-│ • Screenshots   │ • Token         │ • Pattern       │ • TypeScript Component  │
-│ • Figma Files   │   Extractor     │   Matcher       │ • Storybook Stories     │
-│ • Design Specs  │ • Requirement   │ • Similarity    │ • Accessibility Tests   │
-│                 │   Proposer      │   Search        │ • Design Tokens JSON   │
-└─────────────────┴─────────────────┴─────────────────┴─────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────────────────────┐
+│                              ComponentForge AI Pipeline                                     │
+├─────────────────┬──────────────────────────────────┬─────────────────┬─────────────────────────┤
+│  📷 Input       │  🤖 Multi-Agent System (6 Agents)│  📐 Retrieval   │  ✨ Generation         │
+│                 │                                  │                 │                         │
+│ • Screenshots   │ 1. Token Extractor (GPT-4V)      │ • BM25 Keyword  │ • TypeScript Component  │
+│ • Figma Files   │ 2. Component Classifier          │   Search        │ • Storybook Stories     │
+│ • Design Specs  │ ──────────────────────────────   │ • Semantic      │ • Accessibility Tests   │
+│                 │ Orchestrator → Parallel (4):     │   Similarity    │ • Design Tokens JSON   │
+│                 │ 3. Props Proposer     ┐          │ • Weighted      │                         │
+│                 │ 4. Events Proposer    │ Async    │   Fusion        │                         │
+│                 │ 5. States Proposer    │ Parallel │ • Explainability│                         │
+│                 │ 6. A11y Proposer      ┘          │                 │                         │
+└─────────────────┴──────────────────────────────────┴─────────────────┴─────────────────────────┘
 
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend       │    │   Services      │
@@ -201,37 +205,121 @@ Storybook runs on http://localhost:6006 and provides:
 
 ```
 component-forge/
-├── app/                          # Next.js frontend
+├── app/                                    # Next.js 15 Frontend (React 19)
 │   ├── src/
-│   │   ├── app/                 # App Router pages
-│   │   ├── components/ui/       # shadcn/ui components
-│   │   └── lib/                # Utilities and stores
-│   ├── components.json         # shadcn/ui configuration
-│   ├── .env.local.example      # Frontend environment template
-│   └── package.json           # Dependencies (shadcn/ui, Zustand, etc.)
-├── backend/                     # FastAPI backend
+│   │   ├── app/                           # App Router pages and routes
+│   │   │   ├── demo/                      # Demo page for testing
+│   │   │   ├── extract/                   # Token extraction flow
+│   │   │   ├── patterns/                  # Pattern library browsing
+│   │   │   ├── preview/                   # Component preview page
+│   │   │   ├── requirements/              # Requirements management
+│   │   │   ├── layout.tsx                 # Root layout with providers
+│   │   │   ├── page.tsx                   # Home page
+│   │   │   ├── error.tsx                  # Error boundary
+│   │   │   ├── providers.tsx              # React Query, Zustand providers
+│   │   │   └── globals.css                # Global styles and CSS variables
+│   │   ├── components/
+│   │   │   ├── ui/                        # shadcn/ui base components (Button, Card, etc.)
+│   │   │   ├── composite/                 # Composed business components
+│   │   │   ├── extract/                   # Token extraction components
+│   │   │   ├── patterns/                  # Pattern display components
+│   │   │   ├── preview/                   # Code preview and editor
+│   │   │   ├── requirements/              # Requirements form components
+│   │   │   ├── tokens/                    # Design token components
+│   │   │   ├── layout/                    # Layout components (Header, Footer)
+│   │   │   └── onboarding/                # User onboarding flow
+│   │   ├── hooks/                         # Custom React hooks
+│   │   ├── lib/                           # Utilities and helpers
+│   │   ├── services/                      # API client services
+│   │   ├── store/                         # Zustand store (global state)
+│   │   ├── stores/                        # Individual feature stores
+│   │   ├── stories/                       # Storybook stories for components
+│   │   └── types/                         # TypeScript type definitions
+│   ├── e2e/                               # Playwright E2E tests
+│   ├── public/                            # Static assets (images, fonts)
+│   ├── components.json                    # shadcn/ui configuration
+│   ├── eslint.config.mjs                  # ESLint configuration
+│   ├── next.config.ts                     # Next.js configuration
+│   ├── playwright.config.ts               # Playwright test configuration
+│   ├── postcss.config.mjs                 # PostCSS configuration
+│   ├── tsconfig.json                      # TypeScript configuration
+│   ├── vitest.config.ts                   # Vitest test configuration
+│   ├── .env.local.example                 # Frontend environment template
+│   ├── package.json                       # Dependencies (React 19, Next.js 15.5.4)
+│   └── README.md                          # Frontend documentation
+│
+├── backend/                                # FastAPI Backend
 │   ├── src/
-│   │   ├── agents/            # AI agents (LangGraph)
-│   │   ├── api/v1/           # API routes
-│   │   ├── retrieval/        # Retrieval and vector operations
-│   │   ├── monitoring/       # LangSmith observability
-│   │   └── main.py          # FastAPI application
-│   ├── docs/                 # Backend technical documentation
-│   ├── .env.example          # Backend environment template
-│   ├── requirements.txt      # AI dependencies (LangGraph, LangSmith, Pillow)
-│   └── venv/                # Python virtual environment
-├── docs/                       # Comprehensive documentation
-│   ├── getting-started/      # Installation and FAQ
-│   ├── architecture/         # System design
-│   ├── api/                  # API reference
-│   ├── features/             # Feature documentation
-│   ├── testing/              # Testing guides
-│   ├── deployment/           # Production deployment
-│   ├── development/          # Development guides
-│   └── project-history/      # Historical documentation
-├── docker-compose.yml         # Services (PostgreSQL, Qdrant, Redis)
-├── Makefile                   # Development commands
-└── README.md                 # This file
+│   │   ├── agents/                        # 6 AI agents (LangGraph)
+│   │   │   ├── token_extractor.py         # GPT-4V token extraction
+│   │   │   ├── component_classifier.py    # Component type classification
+│   │   │   ├── props_proposer.py          # Props inference
+│   │   │   ├── events_proposer.py         # Event handlers inference
+│   │   │   ├── states_proposer.py         # State management inference
+│   │   │   ├── a11y_proposer.py           # Accessibility requirements
+│   │   │   └── requirement_orchestrator.py # Parallel agent orchestration
+│   │   ├── api/                           # API routes and endpoints
+│   │   ├── cache/                         # Redis caching layer
+│   │   ├── core/                          # Core utilities and database
+│   │   ├── generation/                    # Code generation and validation
+│   │   │   ├── generator_service.py       # TypeScript generation
+│   │   │   ├── code_validator.py          # ESLint, TypeScript validation
+│   │   │   └── storybook_generator.py     # Storybook story generation
+│   │   ├── monitoring/                    # LangSmith observability and metrics
+│   │   ├── prompts/                       # AI prompt templates
+│   │   ├── retrieval/                     # Pattern retrieval system
+│   │   │   ├── bm25_retriever.py          # Keyword-based search
+│   │   │   ├── semantic_retriever.py      # Vector similarity search
+│   │   │   ├── weighted_fusion.py         # Hybrid retrieval (0.3/0.7)
+│   │   │   └── explainer.py               # Confidence scoring
+│   │   ├── services/                      # Business logic services
+│   │   ├── types/                         # Pydantic models and schemas
+│   │   ├── validation/                    # Input validation and sanitization
+│   │   └── main.py                        # FastAPI application entry point
+│   ├── docs/                              # Backend technical documentation
+│   ├── tests/                             # Unit and integration tests
+│   │   ├── unit/                          # Unit tests for individual modules
+│   │   └── integration/                   # Integration tests for workflows
+│   ├── scripts/                           # Utility scripts (seed data, etc.)
+│   ├── alembic/                           # Database migrations
+│   ├── .env.example                       # Backend environment template
+│   ├── requirements.txt                   # Python dependencies (LangGraph, etc.)
+│   ├── pyproject.toml                     # Python project configuration
+│   └── venv/                              # Python virtual environment
+│
+├── docs/                                   # Comprehensive Documentation
+│   ├── getting-started/                   # Installation, setup, FAQ
+│   ├── architecture/                      # System design and architecture decisions
+│   ├── api/                               # API reference and examples
+│   ├── features/                          # Feature documentation
+│   ├── testing/                           # Testing guides and strategies
+│   ├── deployment/                        # Production deployment guides
+│   ├── development/                       # Development workflow and guides
+│   ├── project-history/                   # Epic completion reports
+│   ├── coursework/                        # Academic coursework documentation
+│   ├── adr/                               # Architecture Decision Records
+│   ├── backend/                           # Backend-specific documentation
+│   ├── screenshots/                       # Documentation screenshots
+│   ├── slides/                            # Presentation materials
+│   └── README.md                          # Documentation index
+│
+├── scripts/                                # Utility Scripts
+│   ├── seed_patterns.py                   # Seed pattern library to Qdrant
+│   └── setup_dev.sh                       # Development environment setup
+│
+├── notebooks/                              # Jupyter Notebooks
+│   └── (research and experimentation)
+│
+├── .claude/                                # Claude Code Configuration
+│   └── BASE-COMPONENTS.md                 # Component library specification
+│
+├── docker-compose.yml                      # Services (PostgreSQL, Qdrant, Redis)
+├── Makefile                                # Development commands (install, dev, test)
+├── CLAUDE.md                               # Claude Code project instructions
+├── LICENSE                                 # MIT License
+├── RAG_Fusion.ipynb                        # RAG-Fusion evaluation notebook
+├── pyproject.toml                          # Python project metadata
+└── README.md                               # This file
 ```
 
 ## 🔧 Configuration
