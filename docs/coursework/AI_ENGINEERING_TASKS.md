@@ -2,7 +2,6 @@
 
 **Project**: ComponentForge
 **Technology Stack**: FastAPI, LangGraph, Next.js 15, Qdrant, OpenAI GPT-4/GPT-4V
-**Date**: January 2025
 
 ---
 
@@ -1231,4 +1230,4 @@ The evaluation demonstrates strong retrieval accuracy (0.91 MRR, 0.95 Hit@3), fa
 
 **Document Generated**: 2025-10-14
 **Project Repository**: github.com/kchia/component-forge (assumed)
-**Author**: ComponentForge Team
+**Author**: Hou Chia
