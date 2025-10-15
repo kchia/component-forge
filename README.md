@@ -7,7 +7,7 @@ Transform design assets into high-quality TypeScript components in seconds, not 
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Latest-black?style=flat-square)](https://ui.shadcn.com/)
 [![LangGraph](https://img.shields.io/badge/LangGraph-0.6.8-blue?style=flat-square&logo=langchain)](https://github.com/langchain-ai/langgraph)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
 ## ✨ Features
@@ -138,7 +138,7 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 - **Tailwind CSS v4** with CSS variables for theming
 - **Zustand** for client state management
 - **TanStack Query** for server state and caching
-- **TypeScript 5** for strict type safety
+- **TypeScript 5.9.3** for strict type safety
 - **axe-core** for accessibility testing
 - **Playwright** for E2E testing
 
@@ -213,7 +213,7 @@ component-forge/
 │   ├── src/
 │   │   ├── agents/            # AI agents (LangGraph)
 │   │   ├── api/v1/           # API routes
-│   │   ├── rag/              # Retrieval and vector operations
+│   │   ├── retrieval/        # Retrieval and vector operations
 │   │   ├── monitoring/       # LangSmith observability
 │   │   └── main.py          # FastAPI application
 │   ├── docs/                 # Backend technical documentation
