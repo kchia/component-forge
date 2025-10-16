@@ -197,7 +197,7 @@ Note: **RAGAS not used** because:
    - **Output**: Colors, typography, spacing with confidence scores
    - **Agentic reasoning**: Analyzes visual context to infer semantic meaning (e.g., "this blue is likely a primary brand color")
 
-[Button Variants](./good-button-variants.png)
+![Button Variants](./good-button-variants.png)
 
 2. **Component Classifier Agent** (`backend/src/agents/component_classifier.py`)
 
@@ -567,7 +567,7 @@ cd app && npm run dev  # Port 3000
 - Error traces with stack traces
 - **Implementation**: `backend/src/core/tracing.py` with `@traced` decorator
 
-[LangSmith Trace](./langsmith-tracing-example.png)
+![LangSmith Trace](./langsmith-tracing-example.png)
 
 **Monitoring Dashboard**: LangSmith UI shows all runs with filtering, search, and cost analysis
 
