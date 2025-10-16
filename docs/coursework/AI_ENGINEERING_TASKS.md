@@ -377,6 +377,8 @@ ComponentForge is an **end-to-end agentic RAG application** with a production-gr
 
 ### Architecture Overview
 
+#### Note: The Figma-based workflow is WIP.
+
 ```
 ┌──────────────────────────────────────────────────────────────────────────────┐
 │                     ComponentForge Agentic RAG Pipeline                      │
@@ -531,15 +533,6 @@ cd app && npm run dev  # Port 3000
 - **Qdrant** (`localhost:6333`): Vector database for pattern embeddings (1536 dims, cosine similarity)
 - **Redis 7** (`localhost:6379`): Cache for Figma responses, session management, rate limiting
 
-**Production** (Recommended):
-
-- Frontend: Vercel (Next.js optimized)
-- Backend: Railway / Render (FastAPI + Uvicorn)
-- Database: AWS RDS / Supabase (managed PostgreSQL)
-- Vector DB: Qdrant Cloud
-- Cache: Redis Cloud / AWS ElastiCache
-- Monitoring: LangSmith + Prometheus + Grafana
-
 ### Key Endpoints
 
 **Backend API** (`backend/src/api/v1/routes/`)
@@ -565,12 +558,6 @@ cd app && npm run dev  # Port 3000
 - **GPT-4V**: Screenshot token extraction
 - **text-embedding-3-small**: Semantic embeddings
 
-**No Local OSS Models** (but architecture supports it):
-
-- LangGraph's abstraction layer allows swapping in local models (e.g., Llama 3.1 for generation)
-- Qdrant can use local embedding models (e.g., sentence-transformers/all-MiniLM-L6-v2)
-- Current decision: Prioritize reliability and quality over cost (OpenAI models outperform OSS for our use case)
-
 ### Integration Points
 
 **LangSmith Tracing**: Every agent call traced with:
@@ -580,16 +567,7 @@ cd app && npm run dev  # Port 3000
 - Error traces with stack traces
 - **Implementation**: `backend/src/core/tracing.py` with `@traced` decorator
 
-**Example trace hierarchy**:
-
-```
-propose_requirements (15.2s, $0.042)
-  ├─ classify_component (2.1s, $0.003)
-  ├─ propose_props (3.4s, $0.012) [parallel]
-  ├─ propose_events (2.9s, $0.008) [parallel]
-  ├─ propose_states (3.2s, $0.010) [parallel]
-  └─ propose_accessibility (3.6s, $0.009) [parallel]
-```
+[LangSmith Trace](./langsmith-tracing-example.png)
 
 **Monitoring Dashboard**: LangSmith UI shows all runs with filtering, search, and cost analysis
 
@@ -1256,15 +1234,13 @@ def rag_fusion_retrieve(query: str, k: int = 3) -> List[Tuple[Dict, float]]:
 ComponentForge is a **production-ready end-to-end agentic RAG application** that automates design-to-code conversion with:
 
 - **Multi-agent orchestration** (6 specialized agents via LangGraph)
-- **Advanced hybrid retrieval** (BM25 + semantic fusion with 0.91 MRR)
-- **High-quality code generation** (98% TypeScript compilation, 92% accessibility pass rate)
-- **Excellent performance** (p50 44.3s, 26% faster than 60s target)
-- **Comprehensive testing** (100+ tests, 85% backend coverage)
+- **Advanced hybrid retrieval** (BM25 + semantic fusion)
+- **High-quality code generation** (TypeScript compilation, accessibility pass rate)
+- **Excellent performance**
+- **Comprehensive testing**
 - **Production infrastructure** (PostgreSQL, Qdrant, Redis, LangSmith monitoring)
 
 The evaluation demonstrates strong retrieval accuracy (0.91 MRR, 0.95 Hit@3), faithful code generation (98% compilation), and fast performance (44s p50 latency). Planned improvements focus on increasing token adherence (90%+), expanding pattern coverage (50+ patterns), and implementing caching (15s p50 latency with 20% hit rate).
-
-**This project showcases a complete understanding of agentic RAG architecture, production deployment, and evaluation best practices—suitable for submission as a capstone demonstration of AI engineering skills.**
 
 ---
 
