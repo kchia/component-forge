@@ -92,7 +92,7 @@ The developer receives a complete component package: `Button.tsx`, `Button.stori
 - **Optimized for semantic search**: Cosine similarity scores accurately rank component pattern relevance
 - **Fast inference**: <100ms latency for query embeddings
 - **Cost-effective**: $0.00002 per 1K tokens (vs. $0.0001 for text-embedding-3-large)
-- **Sufficient dimensionality**: 1536 dims capture component semantics well (tested with 10+ patterns, MRR ≥0.75)
+- **Sufficient dimensionality**: 1536 dims capture component semantics well
 - **Native integration**: Direct OpenAI API support without external dependencies
 
 **Implementation**: `backend/src/retrieval/semantic_retriever.py:52-74` (embedding generation with retry logic)
@@ -117,7 +117,7 @@ The developer receives a complete component package: `Button.tsx`, `Button.stori
 
 **Why**:
 
-- **Fast similarity search**: <50ms for top-10 retrieval on 10+ patterns
+- **Fast similarity search**: milliseconds for top-10 retrieval on 10+ patterns
 - **Metadata filtering**: Can filter by framework (React), library (shadcn/ui), category (form, layout)
 - **Easy local development**: Docker container runs on `localhost:6333` with dashboard UI
 - **Scalability**: Supports collections with millions of vectors (future-proof for expanded pattern library)
@@ -181,7 +181,7 @@ Note: **RAGAS not used** because:
 
 - **Async support**: Handle multiple generation requests concurrently without blocking
 - **Auto-generated docs**: OpenAPI/Swagger UI at `/docs` for API exploration
-- **Performance**: Uvicorn provides low-latency HTTP handling (<5ms overhead)
+- **Performance**: Uvicorn provides low-latency HTTP handling
 - **Python ecosystem**: Easy integration with AI libraries (LangChain, OpenAI, Pillow)
 
 **Implementation**: `backend/src/main.py`
@@ -196,6 +196,8 @@ Note: **RAGAS not used** because:
    - **Input**: PIL Image (screenshot)
    - **Output**: Colors, typography, spacing with confidence scores
    - **Agentic reasoning**: Analyzes visual context to infer semantic meaning (e.g., "this blue is likely a primary brand color")
+
+[Button Variants](./good-button-variants.png)
 
 2. **Component Classifier Agent** (`backend/src/agents/component_classifier.py`)
 
@@ -305,9 +307,8 @@ Note: **RAGAS not used** because:
 - **Purpose**: Text generation (GPT-4), vision analysis (GPT-4V), embeddings (text-embedding-3-small)
 - **Usage**: All agent prompts, semantic search embeddings, code generation
 - **Rate limits**: 10,000 requests/min (Tier 5), 1M tokens/min
-- **Error handling**: Exponential backoff with retry (3 attempts), circuit breaker pattern
 
-**2. Figma API** (Optional)
+**2. Figma API** (Optional/Work in Progress)
 
 - **Purpose**: Extract design tokens directly from Figma files (alternative to screenshots)
 - **Usage**: GET `/v1/files/:key` endpoint for styles and components
@@ -366,30 +367,85 @@ def create_searchable_text(self, pattern: Dict[str, Any]) -> str:
 **3. Integration Test Assets** (referenced in `backend/tests/integration/test_retrieval_pipeline.py`)
 
 - Mock retrieval responses
-- Sample requirements from Epic 2
 - Expected pattern matches for validation
 
 ---
 
 ## Task 4: Building an End-to-End Agentic RAG Prototype
 
-### Implementation Status: **Production-Ready** ✅
-
-ComponentForge is a **complete, deployed end-to-end agentic RAG application** with a production-grade stack. It is not a prototype—it's a fully functional system with 100+ tests, monitoring, and real-world usage.
+ComponentForge is an **end-to-end agentic RAG application** with a production-grade stack (100+ tests).
 
 ### Architecture Overview
 
 ```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│                          ComponentForge AI Pipeline                         │
-├─────────────────┬─────────────────┬─────────────────┬─────────────────────────┤
-│  📷 Input       │  🤖 AI Agents   │  📐 Retrieval   │  ✨ Generation         │
-│                 │                 │                 │                         │
-│ • Screenshots   │ • Token         │ • Pattern       │ • TypeScript Component  │
-│ • Figma Files   │   Extractor     │   Matcher       │ • Storybook Stories     │
-│ • Design Specs  │ • Requirement   │ • Similarity    │ • Accessibility Tests   │
-│                 │   Proposer      │   Search        │ • Design Tokens JSON   │
-└─────────────────┴─────────────────┴─────────────────┴─────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                     ComponentForge Agentic RAG Pipeline                      │
+└──────────────────────────────────────────────────────────────────────────────┘
+
+┌─────────────┐      ┌──────────────────────────────────────────┐
+│   📷 INPUT  │      │         🤖 AGENT ORCHESTRATION           │
+│             │      │                                          │
+│ Screenshots │──────┤   1️⃣  Token Extractor Agent (GPT-4V)   │
+│ Figma Files │      │      ├─ Extract colors, typography      │
+│ Design Specs│      │      ├─ Extract spacing, dimensions     │
+│             │      │      └─ Output: Design tokens + confidence
+│             │      │                                          │
+│             │      │   2️⃣  RequirementOrchestrator (LangGraph)│
+│             │      │      ├─ Component Classifier Agent      │
+│             │      │      │   └─ Infer component type        │
+│             │      │      │                                  │
+│             │      │      ├─ Props Proposer Agent (parallel) │
+│             │      │      ├─ Events Proposer Agent (parallel)│
+│             │      │      ├─ States Proposer Agent (parallel)│
+│             │      │      └─ A11y Proposer Agent (parallel)  │
+│             │      │         └─ Output: Structured requirements
+└─────────────┘      └───────────────┬──────────────────────────┘
+                                     │
+                     ┌───────────────▼──────────────────────────┐
+                     │      📐 HYBRID RETRIEVAL SYSTEM          │
+                     │                                          │
+                     │   3️⃣  QueryBuilder                       │
+                     │      └─ Transform requirements → queries │
+                     │                                          │
+                     │   4️⃣  Parallel Retrieval                 │
+                     │      ├─ BM25Retriever (30% weight)      │
+                     │      │   ├─ Multi-field weighting       │
+                     │      │   └─ Keyword-based ranking       │
+                     │      │                                  │
+                     │      └─ SemanticRetriever (70% weight)  │
+                     │          ├─ OpenAI embeddings (1536d)   │
+                     │          ├─ Qdrant vector search        │
+                     │          └─ Cosine similarity ranking   │
+                     │                                          │
+                     │   5️⃣  WeightedFusion                     │
+                     │      └─ Combine: 0.3×BM25 + 0.7×semantic│
+                     │                                          │
+                     │   6️⃣  RetrievalExplainer                 │
+                     │      ├─ Confidence scoring              │
+                     │      ├─ Match highlights                │
+                     │      └─ Output: Top-3 patterns          │
+                     └───────────────┬──────────────────────────┘
+                                     │
+                     ┌───────────────▼──────────────────────────┐
+                     │      ✨ CODE GENERATION PIPELINE         │
+                     │                                          │
+                     │   7️⃣  GeneratorService (GPT-4)           │
+                     │      ├─ Parse pattern AST               │
+                     │      ├─ Inject design tokens            │
+                     │      ├─ Generate Tailwind classes       │
+                     │      ├─ Implement requirements          │
+                     │      ├─ Add TypeScript types            │
+                     │      └─ Resolve imports                 │
+                     │                                          │
+                     │   8️⃣  CodeValidator                      │
+                     │      ├─ TypeScript strict compilation   │
+                     │      ├─ ESLint validation               │
+                     │      ├─ axe-core accessibility testing  │
+                     │      └─ Auto-fix common issues          │
+                     │                                          │
+                     │   Output: Component.tsx, .stories.tsx,   │
+                     │           tokens.json, quality report    │
+                     └──────────────────────────────────────────┘
 
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
 │   Frontend      │    │   Backend       │    │   Services      │
@@ -397,9 +453,14 @@ ComponentForge is a **complete, deployed end-to-end agentic RAG application** wi
 │                 │    │                 │    │                 │
 │ • Next.js 15    │    │ • LangGraph     │    │ • PostgreSQL    │
 │ • shadcn/ui     │    │ • LangSmith     │    │ • Qdrant Vector │
-│ • Zustand       │    │ • GPT-4V        │    │ • Redis Cache   │
-│ • TanStack      │    │ • Pillow        │    │                 │
+│ • Zustand       │    │ • GPT-4/GPT-4V  │    │ • Redis Cache   │
+│ • TanStack      │    │ • OpenAI API    │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
+
+Key:
+🤖 = AI Agent (LLM-powered reasoning)
+📐 = Retrieval Component (RAG system)
+✨ = Generation & Validation
 ```
 
 ### Complete Pipeline Flow
