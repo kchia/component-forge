@@ -77,18 +77,21 @@ class CodeValidator:
         scripts_dir: Optional[Path] = None,
         llm_generator=None,  # LLMComponentGenerator instance
         max_retries: int = 2,
+        skip_eslint: bool = False,
     ):
         """
         Initialize code validator.
-        
+
         Args:
             scripts_dir: Directory containing validation scripts
             llm_generator: LLM generator for fixing errors
             max_retries: Maximum number of fix attempts
+            skip_eslint: Skip ESLint validation (only run TypeScript)
         """
         self.scripts_dir = scripts_dir or Path(__file__).parent.parent.parent / "scripts"
         self.llm_generator = llm_generator
         self.max_retries = max_retries
+        self.skip_eslint = skip_eslint
         
         # Paths to validation scripts
         self.ts_script = self.scripts_dir / "validate_typescript.js"
@@ -119,25 +122,29 @@ class CodeValidator:
         current_code = code
         
         for attempt in range(self.max_retries + 1):
-            # Run validations in parallel
-            ts_result, eslint_result = await asyncio.gather(
-                self._validate_typescript(current_code),
-                self._validate_eslint(current_code),
-            )
-            
+            # Run validations (skip ESLint if configured)
+            if self.skip_eslint:
+                ts_result = await self._validate_typescript(current_code)
+                eslint_result = {"valid": True, "errors": [], "warnings": []}
+            else:
+                ts_result, eslint_result = await asyncio.gather(
+                    self._validate_typescript(current_code),
+                    self._validate_eslint(current_code),
+                )
+
             # Parse results
             ts_errors = self._parse_validation_result(ts_result, "typescript")
             eslint_errors = self._parse_validation_result(eslint_result, "eslint")
-            
+
             # Separate errors and warnings
             ts_error_list = [e for e in ts_errors if e.severity == "error"]
             ts_warning_list = [e for e in ts_errors if e.severity == "warning"]
             eslint_error_list = [e for e in eslint_errors if e.severity == "error"]
             eslint_warning_list = [e for e in eslint_errors if e.severity == "warning"]
-            
+
             # Check if valid (no errors)
             compilation_success = len(ts_error_list) == 0
-            lint_success = len(eslint_error_list) == 0
+            lint_success = len(eslint_error_list) == 0 or self.skip_eslint
             valid = compilation_success and lint_success
             
             if valid:
@@ -230,12 +237,18 @@ class CodeValidator:
             Validation result as JSON
         """
         try:
+            # Set NODE_PATH to find modules in app/node_modules
+            app_node_modules = Path(__file__).parent.parent.parent.parent / "app" / "node_modules"
+            env = os.environ.copy()
+            env["NODE_PATH"] = str(app_node_modules)
+
             process = await asyncio.create_subprocess_exec(
                 "node",
                 str(self.ts_script),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=env,
             )
             
             stdout, stderr = await process.communicate(code.encode("utf-8"))
@@ -271,12 +284,18 @@ class CodeValidator:
             Validation result as JSON
         """
         try:
+            # Set NODE_PATH to find modules in app/node_modules
+            app_node_modules = Path(__file__).parent.parent.parent.parent / "app" / "node_modules"
+            env = os.environ.copy()
+            env["NODE_PATH"] = str(app_node_modules)
+
             process = await asyncio.create_subprocess_exec(
                 "node",
                 str(self.eslint_script),
                 stdin=asyncio.subprocess.PIPE,
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
+                env=env,
             )
             
             stdout, stderr = await process.communicate(code.encode("utf-8"))
