@@ -6,7 +6,7 @@ OpenAI and Qdrant clients.
 
 import pytest
 from unittest.mock import Mock, AsyncMock, MagicMock
-from backend.src.retrieval.semantic_retriever import SemanticRetriever
+from src.retrieval.semantic_retriever import SemanticRetriever
 from qdrant_client.models import ScoredPoint, Filter
 
 

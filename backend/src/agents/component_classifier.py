@@ -10,15 +10,15 @@ from typing import Any, Dict, List, Optional
 from openai import AsyncOpenAI
 from PIL import Image
 
-from ..types.requirement_types import (
+from src.types.requirement_types import (
     ComponentType,
     ComponentClassification,
     get_confidence_level,
 )
-from ..services.image_processor import prepare_image_for_vision_api
-from ..prompts.component_classifier import create_classification_prompt
-from ..core.tracing import traced
-from ..core.logging import get_logger
+from src.services.image_processor import prepare_image_for_vision_api
+from src.prompts.component_classifier import create_classification_prompt
+from src.core.tracing import traced
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

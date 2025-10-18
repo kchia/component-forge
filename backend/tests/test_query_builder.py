@@ -5,7 +5,7 @@ for BM25 and semantic search.
 """
 
 import pytest
-from backend.src.retrieval.query_builder import QueryBuilder
+from src.retrieval.query_builder import QueryBuilder
 
 
 class TestQueryBuilder:

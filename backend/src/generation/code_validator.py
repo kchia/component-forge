@@ -478,8 +478,8 @@ Return the complete fixed code."""
         # Deduct for warnings (minor impact)
         score -= warning_count * WARNING_PENALTY
         
-        # Clamp to [0.0, 1.0]
-        return max(0.0, min(1.0, score))
+        # Clamp to [0.0, 1.0] and round to avoid floating point precision issues
+        return round(max(0.0, min(1.0, score)), 6)
     
     def _calculate_typescript_quality_score(
         self,

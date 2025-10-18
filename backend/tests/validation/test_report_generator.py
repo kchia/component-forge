@@ -285,7 +285,7 @@ class TestQualityReportGenerator:
         recommendations = generator._generate_recommendations(valid_results)
         
         assert any("token adherence" in rec for rec in recommendations)
-        assert any("75%" in rec for rec in recommendations)
+        assert any("75.0%" in rec for rec in recommendations)
     
     def test_generate_recommendations_keyboard_fail(self, generator, valid_results):
         """Test recommendations when keyboard navigation fails."""

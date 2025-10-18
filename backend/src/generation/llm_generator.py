@@ -266,11 +266,32 @@ class MockLLMGenerator(LLMComponentGenerator):
         # Detect component type from prompt
         user_prompt_lower = user_prompt.lower()
         
-        if "card" in user_prompt_lower:
+        # Check for specific pattern IDs first (most reliable)
+        if "shadcn-card" in user_prompt_lower:
             return self._generate_mock_card()
-        elif "input" in user_prompt_lower or "textfield" in user_prompt_lower:
+        elif "shadcn-button" in user_prompt_lower:
+            return self._generate_mock_button()
+        elif "shadcn-input" in user_prompt_lower:
             return self._generate_mock_input()
+        
+        # Check for component names with more specific patterns
+        # Look for component names in the prompt
+        elif "component: button" in user_prompt_lower or "button component" in user_prompt_lower:
+            return self._generate_mock_button()
+        elif "component: card" in user_prompt_lower or "card component" in user_prompt_lower:
+            return self._generate_mock_card()
+        elif "component: input" in user_prompt_lower or "input component" in user_prompt_lower:
+            return self._generate_mock_input()
+        
+        # Check for component names in the prompt (less specific but still useful)
+        elif "input" in user_prompt_lower and ("component" in user_prompt_lower or "input" in user_prompt_lower):
+            return self._generate_mock_input()
+        elif "card" in user_prompt_lower and ("component" in user_prompt_lower or "card" in user_prompt_lower):
+            return self._generate_mock_card()
+        elif "button" in user_prompt_lower and ("component" in user_prompt_lower or "button" in user_prompt_lower):
+            return self._generate_mock_button()
         else:
+            # Default to button for unknown types
             return self._generate_mock_button()
     
     def _generate_mock_button(self) -> LLMGeneratedCode:

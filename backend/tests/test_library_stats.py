@@ -14,6 +14,7 @@ class TestLibraryStats:
         """Test library stats computation with valid patterns."""
         patterns = [
             {
+                "id": "shadcn-button",
                 "name": "Button",
                 "category": "form",
                 "framework": "react",
@@ -24,6 +25,7 @@ class TestLibraryStats:
                 }
             },
             {
+                "id": "shadcn-card",
                 "name": "Card",
                 "category": "layout",
                 "framework": "react",
@@ -65,6 +67,7 @@ class TestLibraryStats:
         """Test library stats with patterns missing metadata."""
         patterns = [
             {
+                "id": "shadcn-input",
                 "name": "Input",
                 "category": "form",
                 # No metadata field
@@ -83,6 +86,7 @@ class TestLibraryStats:
         """Test library stats when props is a dict instead of list."""
         patterns = [
             {
+                "id": "shadcn-select",
                 "name": "Select",
                 "metadata": {
                     "props": {
@@ -101,9 +105,9 @@ class TestLibraryStats:
     def test_get_library_stats_unique_values(self):
         """Test that duplicate values are deduplicated."""
         patterns = [
-            {"name": "Button", "category": "form", "framework": "react"},
-            {"name": "Input", "category": "form", "framework": "react"},
-            {"name": "Button", "category": "form", "framework": "react"},  # Duplicate
+            {"id": "shadcn-button-1", "name": "Button", "category": "form", "framework": "react"},
+            {"id": "shadcn-input", "name": "Input", "category": "form", "framework": "react"},
+            {"id": "shadcn-button-2", "name": "Button", "category": "form", "framework": "react"},  # Duplicate
         ]
 
         service = RetrievalService(patterns=patterns)
@@ -120,9 +124,9 @@ class TestLibraryStats:
     def test_get_library_stats_sorted_output(self):
         """Test that output lists are sorted alphabetically."""
         patterns = [
-            {"name": "Zebra"},
-            {"name": "Apple"},
-            {"name": "Banana"},
+            {"id": "shadcn-zebra", "name": "Zebra"},
+            {"id": "shadcn-apple", "name": "Apple"},
+            {"id": "shadcn-banana", "name": "Banana"},
         ]
 
         service = RetrievalService(patterns=patterns)

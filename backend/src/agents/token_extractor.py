@@ -6,10 +6,10 @@ from typing import Dict, Any, Optional
 from openai import AsyncOpenAI
 from PIL import Image
 
-from ..prompts.token_extraction import create_extraction_prompt
-from ..services.image_processor import prepare_image_for_vision_api
-from ..core.confidence import process_tokens_with_confidence
-from ..core.logging import get_logger
+from src.prompts.token_extraction import create_extraction_prompt
+from src.services.image_processor import prepare_image_for_vision_api
+from src.core.confidence import process_tokens_with_confidence
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

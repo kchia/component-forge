@@ -18,7 +18,8 @@ class FrontendValidatorBridge:
     """
 
     def __init__(self):
-        self.script_path = Path(__file__).parent.parent / "scripts" / "run_validators.js"
+        # Look for the script in the backend/scripts directory
+        self.script_path = Path(__file__).parent.parent.parent / "scripts" / "run_validators.js"
         if not self.script_path.exists():
             raise FileNotFoundError(f"Validator script not found: {self.script_path}")
 

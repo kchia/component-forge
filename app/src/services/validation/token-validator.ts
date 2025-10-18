@@ -3,14 +3,15 @@
  * Validates component uses approved design tokens
  */
 
-import type { ValidationResult, TokenViolation } from './types';
+import type { ValidationResult, TokenViolation, DesignTokens } from './types';
 import { calculateDeltaEFromStrings } from './utils';
 
 /**
- * Design tokens (would typically come from design system)
- * This is a simplified example - in production, these would be imported from a tokens file
+ * Default design tokens used as fallback when no tokens are provided
+ * In production, design tokens are extracted from Figma/screenshots per-request
+ * and passed to the validate() method
  */
-const DESIGN_TOKENS = {
+const DESIGN_TOKENS: DesignTokens = {
   colors: {
     // Primary colors
     'primary': '#3b82f6',
@@ -79,28 +80,36 @@ const DESIGN_TOKENS = {
 
 /**
  * TokenValidator validates component adherence to design tokens
- * 
+ *
  * Checks:
  * - Colors match approved tokens (with ΔE ≤2 tolerance)
  * - Typography uses approved fonts, sizes, and weights
  * - Spacing uses approved values
- * 
+ *
  * Target: ≥90% adherence overall
  */
 export class TokenValidator {
+  private tokens!: DesignTokens;
+
   /**
    * Validate component token adherence
-   * 
+   *
    * @param componentCode - React component code to validate
    * @param componentStyles - Optional: Computed styles from Playwright browser context.
    *                          If provided, uses these instead of parsing code.
    *                          Recommended for accurate style extraction.
+   * @param designTokens - Optional: Design tokens to validate against.
+   *                       If not provided, uses default fallback tokens.
+   *                       In production, pass extracted tokens from Figma/screenshots.
    * @returns ValidationResult with token violations
    */
   async validate(
     componentCode: string,
-    componentStyles?: Record<string, string>
+    componentStyles?: Record<string, string>,
+    designTokens?: DesignTokens
   ): Promise<ValidationResult> {
+    // Use provided tokens or fall back to defaults
+    this.tokens = designTokens || DESIGN_TOKENS;
     const violations: TokenViolation[] = [];
 
     // Prefer provided computed styles over code parsing
@@ -254,7 +263,7 @@ export class TokenValidator {
     let bestMatch: { tokenName: string; tokenValue: string; deltaE: number } | null = null;
     let lowestDeltaE = Infinity;
 
-    for (const [tokenName, tokenValue] of Object.entries(DESIGN_TOKENS.colors)) {
+    for (const [tokenName, tokenValue] of Object.entries(this.tokens.colors)) {
       const deltaE = calculateDeltaEFromStrings(color, tokenValue);
       if (deltaE === null) continue;
 
@@ -280,7 +289,7 @@ export class TokenValidator {
 
     // Check font family
     if (styles['font-family']) {
-      const matched = Object.values(DESIGN_TOKENS.typography)
+      const matched = Object.values(this.tokens.typography)
         .filter((v) => v.includes(','))
         .some((tokenValue) => styles['font-family'] === tokenValue);
 
@@ -288,7 +297,7 @@ export class TokenValidator {
         violations.push({
           category: 'typography',
           property: 'font-family',
-          expected: DESIGN_TOKENS.typography['font-sans'],
+          expected: this.tokens.typography['font-sans'] || 'system-ui, sans-serif',
           actual: styles['font-family'],
           target: 'font-family',
           withinTolerance: false,
@@ -298,7 +307,7 @@ export class TokenValidator {
 
     // Check font size
     if (styles['font-size']) {
-      const matched = Object.values(DESIGN_TOKENS.typography)
+      const matched = Object.values(this.tokens.typography)
         .filter((v) => v.includes('px'))
         .includes(styles['font-size']);
 
@@ -316,7 +325,7 @@ export class TokenValidator {
 
     // Check font weight
     if (styles['font-weight']) {
-      const matched = Object.values(DESIGN_TOKENS.typography).includes(styles['font-weight']);
+      const matched = Object.values(this.tokens.typography).includes(styles['font-weight']);
 
       if (!matched) {
         violations.push({
@@ -344,7 +353,7 @@ export class TokenValidator {
       const value = styles[prop];
       if (!value) continue;
 
-      const matched = Object.values(DESIGN_TOKENS.spacing).includes(value);
+      const matched = Object.values(this.tokens.spacing).includes(value);
 
       if (!matched) {
         violations.push({

@@ -102,6 +102,18 @@ export interface ContrastViolation {
 }
 
 /**
+ * Design tokens structure (Task F6)
+ */
+export interface DesignTokens {
+  /** Color tokens (e.g., primary, secondary, text, background) */
+  colors: Record<string, string>;
+  /** Typography tokens (e.g., font families, sizes, weights, line heights) */
+  typography: Record<string, string>;
+  /** Spacing tokens (e.g., padding, margin, gap values) */
+  spacing: Record<string, string>;
+}
+
+/**
  * Token adherence violation (Task F6)
  */
 export interface TokenViolation {

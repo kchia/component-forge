@@ -71,6 +71,8 @@ jupyter
 ipykernel
 matplotlib
 pandas
+scipy
 seaborn
 plotly
 notebook
+nest-asyncio

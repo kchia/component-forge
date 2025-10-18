@@ -13,6 +13,7 @@ Transform design assets into high-quality TypeScript components in seconds, not 
 ## ✨ Features
 
 ### 🎨 **AI-Powered Design-to-Code**
+
 - **📷 Screenshot Processing**: Extract design tokens from any UI screenshot using GPT-4V
 - **🎯 Figma Integration**: Direct token extraction from Figma files (colors, typography, spacing)
 - **🤖 Multi-Agent Pipeline**: LangGraph orchestration for complex AI workflows
@@ -20,6 +21,7 @@ Transform design assets into high-quality TypeScript components in seconds, not 
 - **✨ Code Generation**: Production-ready TypeScript + Storybook components
 
 ### 🛠️ **Production-Ready Stack**
+
 - **⚡ Modern Frontend**: Next.js 15.5.4 + React 19 + shadcn/ui + Tailwind CSS v4
 - **🚀 Powerful Backend**: FastAPI + LangChain + LangGraph + LangSmith observability
 - **♿ Accessibility First**: Built-in axe-core testing for WCAG compliance
@@ -69,6 +71,46 @@ cd backend && source venv/bin/activate && uvicorn src.main:app --reload
 cd app && npm run dev
 ```
 
+### 2.5. Seed Qdrant Vector Database
+
+**⚠️ CRITICAL: Required for hybrid retrieval (BM25 + semantic search)**
+
+After starting Docker services, seed the Qdrant vector database with component pattern embeddings:
+
+```bash
+make seed-patterns
+```
+
+Or manually:
+
+```bash
+cd backend
+source venv/bin/activate
+python scripts/seed_patterns.py
+```
+
+**Expected output:**
+
+```
+INFO: Loading pattern library...
+INFO: Loaded 10 patterns from library
+INFO: Creating Qdrant collection 'patterns'...
+INFO: Generating embeddings for 10 patterns...
+INFO: Pattern seeding complete! (10 vectors)
+```
+
+**Why this is required:**
+
+- Enables semantic search (70% of retrieval accuracy)
+- Without seeding, system falls back to BM25-only mode (keyword search)
+
+**Verify seeding succeeded:**
+
+```bash
+curl http://localhost:6333/collections/patterns | jq '.result.vectors_count'
+# Should return: 10
+```
+
 ### 3. Configure Environment
 
 Copy and configure your environment files:
@@ -90,6 +132,43 @@ cp app/.env.local.example app/.env.local
 - **Health Check**: http://localhost:8000/health
 - **Qdrant Dashboard**: http://localhost:6333/dashboard
 - **Storybook**: http://localhost:6006 (see below for setup)
+
+### 5. Verify Hybrid Retrieval is Active
+
+**Check that semantic search is working (not just BM25 fallback):**
+
+```bash
+# Test retrieval endpoint
+curl -X POST http://localhost:8000/api/v1/retrieval/search \
+  -H "Content-Type: application/json" \
+  -d '{"requirements": {"component_type": "Button"}}' \
+  | jq '.retrieval_metadata'
+```
+
+**Expected output (SUCCESS):**
+
+```json
+{
+  "methods_used": ["bm25", "semantic"],
+  "weights": { "bm25": 0.3, "semantic": 0.7 }
+}
+```
+
+**Failure output (degraded mode):**
+
+```json
+{
+  "methods_used": ["bm25"],
+  "weights": { "bm25": 1.0, "semantic": 0.0 }
+}
+```
+
+**If you see BM25-only mode:**
+
+1. Verify Qdrant is running: `curl http://localhost:6333/health`
+2. Check pattern collection exists: `curl http://localhost:6333/collections/patterns`
+3. Re-run seeding: `make seed-patterns`
+4. Restart backend: Kill and restart `uvicorn src.main:app --reload`
 
 ## 📚 Documentation
 
@@ -196,6 +275,7 @@ cd app && npm run build-storybook
 ```
 
 Storybook runs on http://localhost:6006 and provides:
+
 - **Interactive component development** - Build and test components in isolation
 - **Visual documentation** - Auto-generated docs for all component variants
 - **Accessibility testing** - Built-in a11y addon for WCAG compliance checks
@@ -393,18 +473,21 @@ cd app && npm run test:e2e
 ## 📊 AI Pipeline Monitoring
 
 ### Health Checks & APIs
+
 - **ComponentForge Health**: http://localhost:8000/health
 - **API Documentation**: http://localhost:8000/docs (FastAPI Swagger)
 - **Metrics**: http://localhost:8000/metrics (Prometheus format)
 - **Storybook**: http://localhost:6006 (Component library & testing)
 
 ### AI Observability
+
 - **LangSmith Traces**: Monitor agent performance and costs
 - **Token Extraction Confidence**: Track vision model accuracy
 - **Pattern Retrieval Scores**: Semantic search effectiveness
 - **Generation Quality**: TypeScript compilation and accessibility scores
 
 ### Infrastructure
+
 - **Qdrant Dashboard**: http://localhost:6333/dashboard (Vector operations)
 - **PostgreSQL**: Database performance and query logs
 - **Redis**: Cache hit rates and performance
@@ -468,20 +551,87 @@ npm install
 - Frontend (3000), Backend (8000), PostgreSQL (5432), Qdrant (6333), Redis (6379)
 - Check for other services using these ports: `lsof -i :3000`
 
+**Qdrant/Semantic Search Issues:**
+
+**Symptom: "Semantic retriever unavailable" in backend logs**
+
+This means the system is running in BM25-only fallback mode (degraded accuracy).
+
+**Solution:**
+
+```bash
+# 1. Verify Qdrant is running
+curl http://localhost:6333/health
+
+# 2. Check if patterns collection exists
+curl http://localhost:6333/collections/patterns
+
+# 3. If collection missing, seed it
+cd backend
+source venv/bin/activate
+python scripts/seed_patterns.py
+
+# 4. Restart backend to reinitialize semantic retriever
+# (Kill uvicorn and restart)
+```
+
+**Symptom: "Architecture mismatch (arm64 vs x86_64)" when seeding**
+
+Your Python venv was created with wrong architecture.
+
+**Solution:**
+
+```bash
+# Recreate venv with correct architecture
+cd backend
+deactivate
+rm -rf venv
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+
+# Retry seeding
+python scripts/seed_patterns.py
+```
+
+**Symptom: OpenAI API errors during seeding**
+
+Seeding requires OpenAI API to generate embeddings.
+
+**Solution:**
+
+```bash
+# Check API key is set
+echo $OPENAI_API_KEY
+
+# If empty, add to backend/.env
+echo "OPENAI_API_KEY=your-key-here" >> backend/.env
+
+# Export it
+export OPENAI_API_KEY="your-key-here"
+
+# Retry seeding
+cd backend && source venv/bin/activate
+python scripts/seed_patterns.py
+```
+
 ## 🎯 ComponentForge Workflow
 
 ### 1. Design Input
+
 - **Screenshot Upload**: Drag & drop any UI design screenshot
 - **Figma Integration**: Connect with Personal Access Token
 - **Design Analysis**: GPT-4V extracts visual design patterns
 
 ### 2. AI Processing Pipeline
+
 - **Token Extraction**: Colors, typography, spacing with confidence scores
 - **Requirement Proposal**: Inferred props, states, behaviors, accessibility needs
 - **Pattern Retrieval**: Semantic search through shadcn/ui component patterns
 - **Quality Validation**: TypeScript, ESLint, axe-core accessibility checks
 
 ### 3. Generated Output
+
 - **TypeScript Component**: Production-ready React component with proper types
 - **Storybook Stories**: Interactive documentation and testing
 - **Accessibility**: WCAG-compliant with proper ARIA attributes

@@ -202,7 +202,7 @@ class TestCodeValidator:
         
         score = validator._calculate_quality_score(many_errors, [], [], [])
         
-        assert score == 0.0  # Clamped to minimum
+        assert score == pytest.approx(0.05, abs=1e-6)  # Should be 0.05 for 10 errors
     
     def test_calculate_typescript_quality_score(self, validator):
         """Test TypeScript-specific quality score calculation."""

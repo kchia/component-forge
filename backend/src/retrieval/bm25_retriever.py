@@ -38,9 +38,13 @@ class BM25Retriever:
         # Create weighted corpus for BM25 indexing
         corpus = [self._create_document(p) for p in patterns]
         
-        # Initialize BM25 with corpus
-        tokenized_corpus = [self._tokenize(doc) for doc in corpus]
-        self.bm25 = BM25Okapi(tokenized_corpus)
+        # Initialize BM25 with corpus (handle empty corpus)
+        if corpus:
+            tokenized_corpus = [self._tokenize(doc) for doc in corpus]
+            self.bm25 = BM25Okapi(tokenized_corpus)
+        else:
+            # Create empty BM25 instance for empty corpus
+            self.bm25 = BM25Okapi([[""]])
     
     def _tokenize(self, text: str) -> List[str]:
         """Tokenize text with camelCase and kebab-case support.
@@ -64,7 +68,10 @@ class BM25Retriever:
         # Split camelCase: onClick -> on Click
         text = re.sub(r'([a-z])([A-Z])', r'\1 \2', text)
         
-        # Split on non-alphanumeric (handles kebab-case, underscores, spaces)
+        # Split on underscores, hyphens, and other non-alphanumeric characters
+        text = re.sub(r'[_\-\s]+', ' ', text)
+        
+        # Split on whitespace and get words
         tokens = re.findall(r'\b\w+\b', text.lower())
         
         return tokens

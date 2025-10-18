@@ -10,8 +10,12 @@ import json
 from pathlib import Path
 from typing import List, Dict, Any
 
-# Add src to Python path
+# Load environment variables from .env file
+from dotenv import load_dotenv
 backend_dir = Path(__file__).parent.parent
+load_dotenv(backend_dir / ".env")
+
+# Add src to Python path
 src_dir = backend_dir / "src"
 sys.path.insert(0, str(src_dir))
 

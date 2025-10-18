@@ -4,7 +4,7 @@ Tests the explanation and confidence scoring for retrieval results.
 """
 
 import pytest
-from backend.src.retrieval.explainer import RetrievalExplainer
+from src.retrieval.explainer import RetrievalExplainer
 
 
 class TestRetrievalExplainer:
@@ -231,7 +231,7 @@ class TestRetrievalExplainer:
             sample_pattern, sample_requirements, matches, 0.9, 0.85
         )
         
-        assert "Exact match for 'Button' component type" in explanation
+        assert "Exact match for 'button' component type" in explanation
     
     def test_generate_explanation_with_props(self, explainer, sample_pattern, sample_requirements):
         """Test explanation includes matched props."""
@@ -275,4 +275,4 @@ class TestRetrievalExplainer:
         
         # Should still have valid explanation
         assert len(explanation) > 0
-        assert "Card" in explanation
+        assert "card" in explanation

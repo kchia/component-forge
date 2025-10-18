@@ -11,6 +11,7 @@ export type {
   FocusIssue,
   ContrastViolation,
   TokenViolation,
+  DesignTokens,
   AutoFixResult,
   ValidationReport,
 } from './types';
@@ -104,27 +105,27 @@ export async function extractComputedStyles(
 
     const computed = window.getComputedStyle(element);
     return {
-      'color': computed.color,
-      'background-color': computed.backgroundColor,
-      'border-color': computed.borderColor,
-      'font-family': computed.fontFamily,
-      'font-size': computed.fontSize,
-      'font-weight': computed.fontWeight,
-      'line-height': computed.lineHeight,
-      'padding': computed.padding,
-      'margin': computed.margin,
-      'padding-top': computed.paddingTop,
-      'padding-bottom': computed.paddingBottom,
-      'padding-left': computed.paddingLeft,
-      'padding-right': computed.paddingRight,
-      'margin-top': computed.marginTop,
-      'margin-bottom': computed.marginBottom,
-      'margin-left': computed.marginLeft,
-      'margin-right': computed.marginRight,
-      'gap': computed.gap,
+      'color': computed.color || '',
+      'background-color': computed.backgroundColor || '',
+      'border-color': computed.borderColor || '',
+      'font-family': computed.fontFamily || '',
+      'font-size': computed.fontSize || '',
+      'font-weight': computed.fontWeight || '',
+      'line-height': computed.lineHeight || '',
+      'padding': computed.padding || '',
+      'margin': computed.margin || '',
+      'padding-top': computed.paddingTop || '',
+      'padding-bottom': computed.paddingBottom || '',
+      'padding-left': computed.paddingLeft || '',
+      'padding-right': computed.paddingRight || '',
+      'margin-top': computed.marginTop || '',
+      'margin-bottom': computed.marginBottom || '',
+      'margin-left': computed.marginLeft || '',
+      'margin-right': computed.marginRight || '',
+      'gap': computed.gap || '',
     };
   });
 
   await browser.close();
-  return styles;
+  return styles as Record<string, string>;
 }

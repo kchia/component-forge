@@ -121,7 +121,7 @@ class TestProcessTokens:
         result = process_tokens_with_confidence(tokens)
         
         assert result["tokens"]["colors"]["primary"] == "#FF0000"
-        assert result["confidence"]["colors"]["primary"] == 0.95
+        assert result["confidence"]["colors.primary"] == 0.95
         assert len(result["fallbacks_used"]) == 0
         assert len(result["review_needed"]) == 0
     
@@ -136,7 +136,7 @@ class TestProcessTokens:
         result = process_tokens_with_confidence(tokens)
         
         assert result["tokens"]["colors"]["primary"] == "#3B82F6"  # fallback
-        assert result["confidence"]["colors"]["primary"] == 0.5
+        assert result["confidence"]["colors.primary"] == 0.5
         assert "colors.primary" in result["fallbacks_used"]
         assert len(result["review_needed"]) == 0
     
@@ -151,7 +151,7 @@ class TestProcessTokens:
         result = process_tokens_with_confidence(tokens)
         
         assert result["tokens"]["colors"]["primary"] == "#FF0000"
-        assert result["confidence"]["colors"]["primary"] == 0.8
+        assert result["confidence"]["colors.primary"] == 0.8
         assert len(result["fallbacks_used"]) == 0
         assert "colors.primary" in result["review_needed"]
     

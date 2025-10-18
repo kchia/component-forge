@@ -53,20 +53,13 @@ def button_requirements():
     
     Shared across integration and performance test suites.
     """
-    return {
-        "props": [
-            {"name": "variant", "type": "string", "required": False},
-            {"name": "size", "type": "string", "required": False},
-            {"name": "disabled", "type": "boolean", "required": False}
-        ],
-        "events": [
-            {"name": "onClick", "type": "MouseEvent", "required": False}
-        ],
-        "states": [],
-        "accessibility": [
-            {"name": "aria-label", "required": True}
-        ]
-    }
+    return [
+        {"name": "variant", "type": "string", "required": False, "category": "props"},
+        {"name": "size", "type": "string", "required": False, "category": "props"},
+        {"name": "disabled", "type": "boolean", "required": False, "category": "props"},
+        {"name": "onClick", "type": "MouseEvent", "required": False, "category": "events"},
+        {"name": "aria-label", "required": True, "category": "accessibility"}
+    ]
 
 
 @pytest.fixture
@@ -76,17 +69,11 @@ def card_requirements():
     
     Shared across integration and performance test suites.
     """
-    return {
-        "props": [
-            {"name": "title", "type": "string", "required": False},
-            {"name": "description", "type": "string", "required": False}
-        ],
-        "events": [],
-        "states": [],
-        "accessibility": [
-            {"name": "role", "value": "article", "required": False}
-        ]
-    }
+    return [
+        {"name": "title", "type": "string", "required": False, "category": "props"},
+        {"name": "description", "type": "string", "required": False, "category": "props"},
+        {"name": "role", "value": "article", "required": False, "category": "accessibility"}
+    ]
 
 
 @pytest.fixture
@@ -96,17 +83,10 @@ def input_requirements():
     
     Shared across integration and performance test suites.
     """
-    return {
-        "props": [
-            {"name": "type", "type": "string", "required": False},
-            {"name": "placeholder", "type": "string", "required": False},
-            {"name": "disabled", "type": "boolean", "required": False}
-        ],
-        "events": [
-            {"name": "onChange", "type": "ChangeEvent", "required": False}
-        ],
-        "states": [],
-        "accessibility": [
-            {"name": "aria-label", "required": True}
-        ]
-    }
+    return [
+        {"name": "type", "type": "string", "required": False, "category": "props"},
+        {"name": "placeholder", "type": "string", "required": False, "category": "props"},
+        {"name": "disabled", "type": "boolean", "required": False, "category": "props"},
+        {"name": "onChange", "type": "ChangeEvent", "required": False, "category": "events"},
+        {"name": "aria-label", "required": True, "category": "accessibility"}
+    ]

@@ -258,10 +258,6 @@ cache/
 
 # Jupyter & Research
 .ipynb_checkpoints/
-*.ipynb
-!notebooks/*.ipynb
-!docs/*.ipynb
-!examples/*.ipynb
 .jupyter/
 jupyter_config/
 

@@ -9,14 +9,14 @@ from datetime import datetime, timezone
 from typing import Any, Dict, Optional
 from PIL import Image
 
-from ..types.requirement_types import RequirementState, ComponentClassification
-from ..agents.component_classifier import ComponentClassifier
-from ..agents.props_proposer import PropsProposer
-from ..agents.events_proposer import EventsProposer
-from ..agents.states_proposer import StatesProposer
-from ..agents.accessibility_proposer import AccessibilityProposer
-from ..core.tracing import traced
-from ..core.logging import get_logger
+from src.types.requirement_types import RequirementState, ComponentClassification
+from src.agents.component_classifier import ComponentClassifier
+from src.agents.props_proposer import PropsProposer
+from src.agents.events_proposer import EventsProposer
+from src.agents.states_proposer import StatesProposer
+from src.agents.accessibility_proposer import AccessibilityProposer
+from src.core.tracing import traced
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

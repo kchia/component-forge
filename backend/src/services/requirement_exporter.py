@@ -12,13 +12,13 @@ from typing import List, Dict, Any, Optional
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from ..types.requirement_types import (
+from src.types.requirement_types import (
     RequirementProposal,
     ComponentType,
     RequirementCategory
 )
-from ..core.models import RequirementExport
-from ..core.logging import get_logger
+from src.core.models import RequirementExport
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

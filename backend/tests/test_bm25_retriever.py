@@ -5,7 +5,7 @@ and tokenization support.
 """
 
 import pytest
-from backend.src.retrieval.bm25_retriever import BM25Retriever
+from src.retrieval.bm25_retriever import BM25Retriever
 
 
 class TestBM25Retriever:

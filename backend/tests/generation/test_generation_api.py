@@ -134,7 +134,7 @@ class TestGenerationAPI:
         
         assert service.code_validator is not None
         assert isinstance(service.code_validator, CodeValidator)
-        assert hasattr(service.code_validator, 'validate')
+        assert hasattr(service.code_validator, 'validate_and_fix')
         
         assert service.prompt_builder is not None
         assert isinstance(service.prompt_builder, PromptBuilder)

@@ -20,6 +20,7 @@ class TestLLMGeneratedCode:
         code = LLMGeneratedCode(
             component_code="const Button = () => <button>Click</button>;",
             stories_code="// stories",
+            showcase_code="// showcase",
             imports=["import React from 'react';"],
             exports=["Button"],
             explanation="Test component",
@@ -37,6 +38,7 @@ class TestLLMGeneratedCode:
         code = LLMGeneratedCode(
             component_code="test",
             stories_code="test",
+            showcase_code="test",
             imports=[],
             exports=[],
             explanation="test",
@@ -222,6 +224,7 @@ class TestLLMGeneratorValidation:
         response = {
             "component_code": "const Button = () => <button>Click</button>;",
             "stories_code": "// stories",
+            "showcase_code": "// showcase",
             "imports": [],
             "exports": [],
             "explanation": "test",

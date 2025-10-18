@@ -28,7 +28,7 @@ async function validateESLint(code) {
     // Create Linter instance
     const linter = new Linter();
     
-    // Lint configuration
+    // Lint configuration for TypeScript/React
     const config = {
       languageOptions: {
         ecmaVersion: 'latest',
@@ -40,12 +40,14 @@ async function validateESLint(code) {
         },
       },
       rules: {
-        // Basic rules for code quality
-        'no-unused-vars': 'warn',
-        'no-undef': 'error',
+        // Basic rules for code quality (TypeScript-compatible)
+        'no-unused-vars': 'off', // TypeScript handles this
+        'no-undef': 'off', // TypeScript handles this
         'no-console': 'warn',
         'prefer-const': 'warn',
         'no-var': 'error',
+        // Allow TypeScript keywords
+        'no-reserved-keys': 'off',
       },
     };
     

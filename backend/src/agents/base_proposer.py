@@ -8,14 +8,14 @@ from abc import ABC, abstractmethod
 from typing import Any, Dict, List, Optional
 from PIL import Image
 
-from ..types.requirement_types import (
+from src.types.requirement_types import (
     RequirementProposal,
     ComponentClassification,
     RequirementCategory,
     get_confidence_level,
 )
-from ..core.tracing import traced
-from ..core.logging import get_logger
+from src.core.tracing import traced
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 

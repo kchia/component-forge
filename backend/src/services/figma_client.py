@@ -5,8 +5,8 @@ import re
 from typing import Optional, Dict, Any
 import httpx
 
-from ..core.logging import get_logger
-from ..cache.figma_cache import FigmaCache
+from src.core.logging import get_logger
+from src.cache.figma_cache import FigmaCache
 
 logger = get_logger(__name__)
 

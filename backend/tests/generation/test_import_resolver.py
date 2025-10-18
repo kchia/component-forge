@@ -86,13 +86,13 @@ class TestImportResolver:
         assert any("react" in imp.lower() for imp in ordered)
     
     def test_add_missing_utils_import(self, resolver):
-        """Test that utils import is added if missing."""
+        """Test that utils import is NOT added (self-contained code policy)."""
         imports = ['import * as React from "react"']
         
         ordered = resolver.resolve_and_order(imports)
         
-        # Should have utils import
-        assert any("utils" in imp for imp in ordered)
+        # Should NOT have utils import (self-contained code policy)
+        assert not any("utils" in imp for imp in ordered)
     
     def test_deduplicate_imports(self, resolver):
         """Test that duplicate imports are removed."""
@@ -211,9 +211,9 @@ class TestImportResolver:
         # Should add missing imports based on component type
         ordered = resolver.resolve_and_order(imports, component_type="input")
         
-        # Should have React and utils
+        # Should have React but NOT utils (self-contained code policy)
         assert any("react" in imp.lower() for imp in ordered)
-        assert any("utils" in imp for imp in ordered)
+        assert not any("utils" in imp for imp in ordered)
     
     def test_empty_imports_list(self, resolver):
         """Test handling empty imports list."""

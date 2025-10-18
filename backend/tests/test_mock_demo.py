@@ -13,7 +13,7 @@ from datetime import datetime, timezone
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from PIL import Image, ImageDraw, ImageFont
-from types.requirement_types import (
+from src.types.requirement_types import (
     RequirementProposal,
     RequirementCategory,
     ComponentType,

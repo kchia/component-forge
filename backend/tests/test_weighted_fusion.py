@@ -5,7 +5,7 @@ with configurable weights.
 """
 
 import pytest
-from backend.src.retrieval.weighted_fusion import WeightedFusion
+from src.retrieval.weighted_fusion import WeightedFusion
 
 
 class TestWeightedFusion:

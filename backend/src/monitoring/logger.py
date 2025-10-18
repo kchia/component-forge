@@ -4,7 +4,7 @@ from functools import wraps
 from typing import Any, Callable, Dict, Optional, TypeVar, cast
 from fastapi import Request, Response
 
-from ..core.logging import get_logger, log_with_context
+from src.core.logging import get_logger, log_with_context
 
 # Type variable for decorator return type
 F = TypeVar('F', bound=Callable[..., Any])

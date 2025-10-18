@@ -3,8 +3,8 @@
 from typing import Optional
 import time
 
-from ..core.cache import BaseCache
-from ..core.logging import get_logger
+from src.core.cache import BaseCache
+from src.core.logging import get_logger
 
 logger = get_logger(__name__)
 
@@ -132,7 +132,7 @@ class FigmaCache(BaseCache):
         latency_ms = int(latency * 1000)
         if self.config.enabled:
             try:
-                from ..core.cache import get_redis
+                from src.core.cache import get_redis
                 async with get_redis() as redis:
                     await redis.rpush(latency_key, str(latency_ms))
                     await redis.ltrim(latency_key, -100, -1)  # Keep last 100 samples
@@ -182,7 +182,7 @@ class FigmaCache(BaseCache):
         avg_latency_ms = 0.0
         if self.config.enabled:
             try:
-                from ..core.cache import get_redis
+                from src.core.cache import get_redis
                 async with get_redis() as redis:
                     latency_samples = await redis.lrange(latency_key, 0, -1)
                     if latency_samples:

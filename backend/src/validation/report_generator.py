@@ -177,14 +177,32 @@ class QualityReportGenerator:
         total = 0
         
         # TypeScript errors
-        total += results.get("typescript", {}).get("errorCount", 0)
+        typescript_errors = results.get("typescript", {}).get("errors", [])
+        total += len(typescript_errors)
         
         # ESLint errors
-        total += results.get("eslint", {}).get("errorCount", 0)
+        eslint_errors = results.get("eslint", {}).get("errors", [])
+        total += len(eslint_errors)
         
-        # Accessibility critical violations
-        a11y_violations = results.get("a11y", {}).get("violations", [])
-        total += len([v for v in a11y_violations if v.get("impact") == "critical"])
+        # Accessibility errors
+        a11y_errors = results.get("a11y", {}).get("errors", [])
+        total += len(a11y_errors)
+        
+        # Keyboard errors
+        keyboard_errors = results.get("keyboard", {}).get("errors", [])
+        total += len(keyboard_errors)
+        
+        # Focus errors
+        focus_errors = results.get("focus", {}).get("errors", [])
+        total += len(focus_errors)
+        
+        # Contrast errors
+        contrast_errors = results.get("contrast", {}).get("errors", [])
+        total += len(contrast_errors)
+        
+        # Token errors
+        token_errors = results.get("tokens", {}).get("errors", [])
+        total += len(token_errors)
         
         return total
     

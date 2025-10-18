@@ -8,14 +8,15 @@ import asyncio
 import json
 import sys
 import os
+import pytest
 from pathlib import Path
 
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
 
 from PIL import Image, ImageDraw, ImageFont
-from agents.requirement_orchestrator import RequirementOrchestrator
-from types.requirement_types import get_confidence_level
+from src.agents.requirement_orchestrator import RequirementOrchestrator
+from src.types.requirement_types import get_confidence_level
 
 
 def create_test_button_image() -> Image.Image:
@@ -63,6 +64,7 @@ def create_test_button_image() -> Image.Image:
     return img
 
 
+@pytest.mark.asyncio
 async def test_requirement_proposal():
     """Test the complete requirement proposal workflow."""
     

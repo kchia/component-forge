@@ -148,7 +148,7 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick }) => {
         result = builder._format_design_tokens(sample_tokens)
         
         assert "Colors:" in result
-        assert "primary: #3B82F6" in result
+        assert "primary: `#3B82F6` → Use as `bg-[#3B82F6]` or `text-[#3B82F6]`" in result
         assert "Typography:" in result
         assert "fontSize: 16px" in result
         assert "Spacing:" in result
@@ -171,7 +171,7 @@ export const Button: React.FC<ButtonProps> = ({ children, onClick }) => {
         result = builder._format_design_tokens(tokens)
         
         assert "Colors:" in result
-        assert "primary: #3B82F6" in result
+        assert "primary: `#3B82F6` → Use as `bg-[#3B82F6]` or `text-[#3B82F6]`" in result
         assert "Typography:" not in result
     
     def test_format_requirements_with_data(self, builder):
