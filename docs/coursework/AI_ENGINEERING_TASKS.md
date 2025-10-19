@@ -799,6 +799,90 @@ Test system robustness by generating the same component with variations:
 
 > The right evaluation strategy depends on the phase. Notebooks excel at exploration but shouldn't be used for execution in production. Separate concerns, automate what matters, and use LLMs to evaluate what humans care about.
 
+### 5.8 Additional Evaluation Dimensions for Future Exploration
+
+The current implementation provides comprehensive coverage of retrieval accuracy (MRR, Hit@K) and functional correctness (TypeScript compilation, token adherence). Drawing from industry research on AI code generation evaluation<sup>1</sup>, several complementary metrics could further enhance the evaluation framework:
+
+#### Code Similarity and Semantic Equivalence
+
+Beyond functional correctness, **syntactic and semantic similarity metrics** can quantify how closely generated code matches reference implementations:
+
+- **CodeBLEU**: Extends traditional BLEU by incorporating Abstract Syntax Tree (AST) structure and data-flow analysis. This metric rewards functionally equivalent code even when variable names or formatting differ, providing a more nuanced similarity score than text-based comparison alone.
+
+- **CodeBERTScore**: Embedding-based semantic similarity using code-specific language models. Research shows this correlates more strongly with human judgment of code quality than surface-level metrics.
+
+**Potential Integration**: Add semantic similarity evaluation to the LLM-as-judge framework (Section 5.4), comparing generated components against reference implementations using both structural (AST) and semantic (embedding) dimensions.
+
+#### Robustness and Consistency: pass@k Evaluation
+
+The **pass@k metric** measures generation reliability by producing k code samples for each test case and calculating the probability that at least one passes all validation tests. For example, pass@3 with k=3 generations at temperature=0.7 captures model variance and robustness beyond single-shot testing.
+
+**Potential Integration**: Extend the golden test dataset (Section 5.1) to include multi-generation analysis, measuring whether the system consistently produces valid code across sampling variations. Target: pass@3 ≥95% for production deployment.
+
+#### Maintainability and Code Quality Scores
+
+While ESLint validation is currently implemented, **quantitative maintainability metrics** provide objective measures of code quality:
+
+- **Cyclomatic Complexity**: Measures code path complexity (target: <10 per function)
+- **Code Duplication**: Identifies repeated patterns that should be abstracted
+- **SonarQube Quality Scores**: Holistic maintainability grades (A-F scale)
+- **Technical Debt Ratio**: Estimated time to fix issues vs. development time
+
+**Potential Integration**: Add SonarQube or similar static analysis to the CodeValidator pipeline (Section 4), generating maintainability reports alongside TypeScript/ESLint validation.
+
+#### Performance Profiling
+
+Generated components could be evaluated for **runtime efficiency** in addition to functional correctness:
+
+- **Initial Render Time**: Measure first paint with React DevTools Profiler (target: <100ms)
+- **Re-render Performance**: Track unnecessary re-renders and reconciliation overhead
+- **Memory Footprint**: Monitor heap allocation during component lifecycle
+- **Bundle Size Impact**: Measure contribution to application bundle (target: <5KB gzipped)
+
+**Potential Integration**: Add optional performance benchmarking tier to the three-tier testing architecture (Section 5.3), running quarterly regression tests on component render efficiency.
+
+#### Security and Vulnerability Analysis
+
+**Static and dynamic security analysis** can prevent vulnerabilities in generated code:
+
+- **Dependency Audits**: `npm audit` or Snyk scanning for known CVEs
+- **XSS Prevention**: Detect unsafe patterns (`dangerouslySetInnerHTML` without sanitization)
+- **OWASP Compliance**: Check for common web vulnerabilities (injection, broken access control)
+- **Accessibility Security**: Ensure ARIA attributes don't create spoofing vulnerabilities
+
+**Potential Integration**: Extend the quality validation pipeline (Section 4, Step 5) to include security scanning, blocking code generation if high/critical vulnerabilities are detected.
+
+#### Continuous Evaluation and CI/CD Integration
+
+While weekly/monthly evaluation cadences are defined (Section 5.6), **automated continuous evaluation** provides faster feedback loops:
+
+- **Pre-commit Hooks**: Fast unit test validation (<30s)
+- **PR Quality Gates**: Full evaluation suite must pass before merge
+- **Automated Regression Detection**: Alert when metrics drop below thresholds (e.g., MRR <0.75)
+- **Historical Dashboards**: Track metric trends over time with anomaly detection
+- **Cost Monitoring**: Alert on unexpected OpenAI API spend increases
+
+**Potential Integration**: Enhance Phase 6 (Continuous Monitoring) with GitHub Actions workflows that automatically run the evaluation suite on every pull request, preventing regressions from reaching production.
+
+#### Summary of Complementary Metrics
+
+| Evaluation Dimension | Current Implementation | Complementary Enhancement | Complexity | Value Add |
+|---------------------|------------------------|---------------------------|------------|-----------|
+| **Functional Correctness** | ✅ TypeScript compilation, token adherence | CodeBLEU, CodeBERTScore similarity | Medium | Quantifies "how similar" not just "does it work" |
+| **Robustness** | ✅ Single-shot generation | pass@k multi-generation testing | Low | Measures consistency across sampling |
+| **Code Quality** | ✅ ESLint validation | SonarQube maintainability scores | Low | Provides holistic quality grades |
+| **Performance** | Not currently measured | Runtime profiling, bundle analysis | Medium | Ensures generated code is efficient |
+| **Security** | Not currently measured | Dependency audits, vulnerability scanning | Low | Prevents shipping insecure code |
+| **Automation** | ✅ Weekly/monthly cadence | CI/CD integration with PR gates | High | Faster feedback, regression prevention |
+
+These complementary dimensions build upon the rigorous RAGAS-adapted foundation (MRR, Hit@K, compilation rate, token adherence) by adding layers of quality, performance, and security analysis. The current implementation provides strong fundamentals for production deployment; these enhancements offer pathways for continuous improvement as the system matures.
+
+---
+
+**References**
+
+1. Walturn. (2024). "Measuring the Performance of AI Code Generation: A Practical Guide." Retrieved from https://www.walturn.com/insights/measuring-the-performance-of-ai-code-generation-a-practical-guide
+
 ---
 
 ## Task 6: The Benefits of Advanced Retrieval & Task 7: Assessing Performance
