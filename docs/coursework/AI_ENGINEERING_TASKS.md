@@ -54,6 +54,10 @@ This repetitive workflow not only slows down feature delivery but also introduce
 
 ## Task 2: Proposing a Solution
 
+### Live Demo
+
+[Loom Video](https://www.loom.com/share/4ea3f116df1945d1b54f3cb96eb85d87?sid=fc647a7d-592a-45bb-b8fc-9652449554f7)
+
 ### Solution Overview (1-2 paragraphs)
 
 **ComponentForge transforms the design-to-code workflow from hours to seconds** by automating the entire pipeline with AI-powered agents. A developer uploads a screenshot or provides a Figma URL, and ComponentForge:
