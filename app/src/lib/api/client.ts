@@ -48,15 +48,23 @@ apiClient.interceptors.response.use(
       if (typeof data?.detail === 'string') {
         message = data.detail;
         
-        // Enhanced error messages for specific security scenarios
+        // Enhanced error messages for specific security scenarios (Epic 003 Story 3.1)
         if (message.toLowerCase().includes('pii')) {
           message = '🔒 Security Alert: This image contains personally identifiable information (PII) and cannot be processed for privacy protection.';
-        } else if (message.toLowerCase().includes('svg') && message.toLowerCase().includes('security')) {
-          message = '⚠️ Security Alert: This SVG file contains potentially malicious content and has been blocked for your safety.';
+        } else if (message.toLowerCase().includes('svg') && message.toLowerCase().includes('forbidden')) {
+          message = '⚠️ Security Alert: This SVG file contains potentially malicious content (scripts or embedded code) and has been blocked for your safety.';
         } else if (message.toLowerCase().includes('file type') || message.toLowerCase().includes('invalid file')) {
-          message = '📄 Invalid File: Please upload PNG, JPG, or SVG files only.';
+          message = '📄 Invalid File Type: Please upload PNG, JPG, or SVG files only.';
         } else if (message.toLowerCase().includes('file size') || message.toLowerCase().includes('too large')) {
           message = '📦 File Too Large: Please compress your image to under 10MB.';
+        } else if (message.toLowerCase().includes('image too small')) {
+          message = '📐 Image Too Small: Please upload an image at least 50x50 pixels.';
+        } else if (message.toLowerCase().includes('resolution too high') || message.toLowerCase().includes('memory exhaustion')) {
+          message = '📐 Image Resolution Too High: Please use an image with fewer than 25 million pixels to prevent memory issues.';
+        } else if (message.toLowerCase().includes('corrupted') || message.toLowerCase().includes('invalid image')) {
+          message = '❌ Corrupted Image: This file appears to be corrupted or is not a valid image. Please try a different file.';
+        } else if (message.toLowerCase().includes('mime type') && message.toLowerCase().includes('mismatch')) {
+          message = '⚠️ File Type Mismatch: The file extension doesn\'t match the actual file content. This may indicate a security risk.';
         }
       } else if (typeof data?.detail === 'object') {
         // Validation errors from FastAPI
