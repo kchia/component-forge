@@ -297,3 +297,4 @@ See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage e
 - Don't ignore database query optimization
 - Don't create unnecessary re-renders in React
 - Don't ignore proper caching strategies
+- thank you for being thoughtful and not overengineering
