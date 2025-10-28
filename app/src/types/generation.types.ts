@@ -52,6 +52,22 @@ export interface ValidationError {
   severity?: string;  // Severity level (error or warning)
 }
 
+// Security issue detail (Epic 003 - Story 3.2)
+export interface SecurityIssue {
+  type: 'security_violation';
+  pattern: string;       // Forbidden pattern matched (e.g., 'eval\\s*\\(')
+  line: number;          // Line number where violation occurs
+  severity: 'high' | 'medium' | 'low';
+  message?: string;      // Optional human-readable message
+}
+
+// Code sanitization results (Epic 003 - Story 3.2)
+export interface CodeSanitizationResults {
+  is_safe: boolean;                // True if no security violations found
+  issues: SecurityIssue[];         // List of security violations
+  sanitized_code?: string;         // Optional sanitized version if issues found
+}
+
 // Validation results from code validator
 export interface ValidationResults {
   attempts: number;                    // Number of fix attempts (0 = perfect first try)
@@ -61,6 +77,8 @@ export interface ValidationResults {
   eslint_passed: boolean;
   eslint_errors: ValidationError[];
   eslint_warnings: ValidationError[];
+  // Epic 003 - Story 3.2: Code sanitization results
+  security_sanitization?: CodeSanitizationResults;
 }
 
 // Quality scores for generated code
