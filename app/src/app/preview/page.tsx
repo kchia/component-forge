@@ -66,6 +66,7 @@ export default function PreviewPage() {
   const resetWorkflow = useWorkflowStore((state) => state.resetWorkflow);
   const tokens = useTokenStore((state) => state.tokens);
   const clearTokens = useTokenStore((state) => state.clearTokens);
+  const selectedPattern = usePatternSelection((state) => state.selectedPattern);
   const clearSelection = usePatternSelection((state) => state.clearSelection);
   const clearComparison = usePatternSelection((state) => state.clearComparison);
 
@@ -108,7 +109,7 @@ export default function PreviewPage() {
   const isComplete = generation.isSuccess || !!generatedCode; // Use local state as fallback
   const hasFailed = generation.isError;
 
-  // Route guard: redirect if patterns not completed
+  // Route guard: redirect if patterns not completed or no pattern selected
   // Wait for hydration before checking route guard to avoid false redirects
   useEffect(() => {
     // Skip route guard check until store is hydrated
@@ -119,13 +120,18 @@ export default function PreviewPage() {
     if (!completedSteps.includes(WorkflowStep.PATTERNS)) {
       router.push("/patterns");
     }
-  }, [completedSteps, router, hasHydrated]);
+
+    // Ensure a pattern was selected
+    if (!selectedPattern) {
+      router.push("/patterns");
+    }
+  }, [completedSteps, router, hasHydrated, selectedPattern]);
 
   // Trigger generation on page load (only once)
   useEffect(() => {
     // Only generate if we have required data and haven't generated yet
     if (
-      componentType &&
+      selectedPattern &&
       tokens &&
       !hasTriggeredRef.current &&
       !generation.data &&
@@ -141,8 +147,8 @@ export default function PreviewPage() {
         ...approvedRequirements.accessibility
       ];
 
-      // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
-      const patternId = componentType.toLowerCase() + "-001";
+      // Use actual pattern_id from pattern selection page
+      const patternId = selectedPattern.pattern_id;
 
       // Start generation
       setStartTime(Date.now());
@@ -152,7 +158,7 @@ export default function PreviewPage() {
         requirements: allRequirements
       });
     }
-  }, [componentType, tokens, generation.data, isGenerating, hasFailed]); // Removed getApprovedProposals to prevent unnecessary re-renders
+  }, [selectedPattern, tokens, generation.data, isGenerating, hasFailed]); // Removed getApprovedProposals to prevent unnecessary re-renders
 
   // Update elapsed time while generating
   useEffect(() => {
@@ -193,6 +199,11 @@ export default function PreviewPage() {
 
   // Handle retry action
   const handleRetry = () => {
+    if (!selectedPattern) {
+      console.error("Cannot retry: no pattern selected");
+      return;
+    }
+
     setElapsedMs(0);
     setStartTime(Date.now());
     hasTriggeredRef.current = false; // Reset trigger flag for retry
@@ -206,8 +217,8 @@ export default function PreviewPage() {
       ...approvedRequirements.states,
       ...approvedRequirements.accessibility
     ];
-    // TODO: Use actual pattern_id from pattern selection page once Epic 3 is complete
-    const patternId = (componentType?.toLowerCase() || "button") + "-001";
+    // Use actual pattern_id from pattern selection page
+    const patternId = selectedPattern.pattern_id;
 
     generation.mutate({
       pattern_id: patternId,
