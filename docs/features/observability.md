@@ -22,6 +22,8 @@ LangSmith provides **comprehensive AI observability**:
 - ✅ **Monitor latency** - Identify bottlenecks in AI pipeline
 - ✅ **Debug failures** - View full context of failed operations
 - ✅ **Compare prompts** - A/B test prompt variations
+- ✅ **Session tracking** - Track related operations across a user session
+- ✅ **Frontend integration** - View traces directly from the UI
 
 ### Setup
 
@@ -50,6 +52,33 @@ from langchain_openai import ChatOpenAI
 # Automatically traced by LangSmith
 llm = ChatOpenAI(model="gpt-4o", temperature=0)
 response = await llm.ainvoke(messages)
+```
+
+**4. Session Tracking**
+
+Every API request automatically gets a unique session ID via middleware:
+
+```python
+# backend/src/api/middleware/session_tracking.py
+# Automatically applied to all requests
+# Session ID is included in X-Session-ID response header
+# and propagated to all traces for correlation
+```
+
+**5. Trace URLs in API Responses**
+
+All AI operations return a direct link to view the trace in LangSmith:
+
+```json
+{
+  "code": { "component": "...", "stories": "..." },
+  "metadata": {
+    "trace_url": "https://smith.langchain.com/o/default/projects/p/component-forge/r/abc-123",
+    "session_id": "550e8400-e29b-41d4-a716-446655440000",
+    "latency_ms": 3500,
+    "token_count": 1250
+  }
+}
 ```
 
 ### Trace Hierarchy
@@ -82,20 +111,138 @@ View traces at: `https://smith.langchain.com/projects/component-forge`
 - Error rate by operation type
 - Cost per component generation
 
+### Frontend Integration
+
+**Viewing Traces from the UI:**
+
+After generating a component, click the "View Trace" link in the preview page to open the full trace in LangSmith. The trace link appears in the Observability section and shows:
+
+- Complete execution flow with all AI operations
+- Token usage and costs
+- Latency breakdown by stage
+- Session ID for tracking related operations
+
+**Frontend Components:**
+
+```typescript
+// app/src/components/observability/LangSmithTraceLink.tsx
+import { LangSmithTraceLink } from "@/components/observability/LangSmithTraceLink";
+
+<LangSmithTraceLink
+  traceUrl={metadata.trace_url}
+  sessionId={metadata.session_id}
+  variant="outline"
+  size="default"
+/>
+```
+
+**Generation Metadata Display:**
+
+```typescript
+// app/src/components/observability/GenerationMetadataDisplay.tsx
+import { GenerationMetadataDisplay } from "@/components/observability/GenerationMetadataDisplay";
+
+<GenerationMetadataDisplay
+  metadata={{
+    latency_ms: 3500,
+    token_count: 1250,
+    estimated_cost: 0.0125,
+    stage_latencies: {
+      llm_generating: 2500,
+      validating: 800,
+      post_processing: 200
+    }
+  }}
+/>
+```
+
+The preview page displays:
+- Total latency and stage breakdown with progress bars
+- Token usage (prompt/completion) 
+- Estimated cost
+- Direct link to LangSmith trace
+
+### Session Tracking
+
+Each request gets a unique session ID that flows through:
+
+1. **Middleware** generates UUID for each request
+2. **Context variable** stores session ID for access by agents
+3. **Trace metadata** includes session ID for correlation
+4. **API response** returns session ID in both `X-Session-ID` header and `metadata.session_id` body field
+5. **Frontend** displays session ID with trace link
+
+**Session ID Flow:**
+
+```
+Request → SessionTrackingMiddleware
+  ↓
+  session_id = uuid4()
+  ↓
+  Context Variable (session_id_var)
+  ↓
+  Trace Metadata (build_trace_metadata)
+  ↓
+  API Response (X-Session-ID header + metadata.session_id)
+  ↓
+  Frontend Display (LangSmithTraceLink)
+```
+
+**Using Session ID:**
+
+```python
+from src.api.middleware.session_tracking import get_session_id
+
+# In any traced function
+session_id = get_session_id()  # Gets current request's session ID
+logger.info(f"Processing request", extra={"session_id": session_id})
+```
+
 ### Custom Metadata
 
 Add custom metadata to traces:
 
 ```python
-from langsmith import traceable
+from src.core.tracing import traced, build_trace_metadata
 
-@traceable(
-    name="generate_component",
-    metadata={"user_id": user.id, "source": "screenshot"}
+@traced(
+    run_name="generate_component",
+    metadata={"user_id": user.id, "component_type": "button"}
 )
 async def generate_component(image: bytes):
     # Operation automatically traced with metadata
+    # session_id is automatically included from context
     ...
+
+# Or build metadata dynamically
+metadata = build_trace_metadata(
+    user_id=user.id,
+    component_type="button",
+    pattern_id="shadcn-button",
+    custom_field="custom_value"
+)
+# Returns: {
+#   "timestamp": "2025-10-28T20:30:00.000Z",
+#   "session_id": "550e8400-e29b-41d4-a716-446655440000",
+#   "user_id": "user.id",
+#   "component_type": "button",
+#   "pattern_id": "shadcn-button",
+#   "custom_field": "custom_value"
+# }
+```
+
+**Trace URL Generation:**
+
+```python
+from src.core.tracing import get_current_run_id, get_trace_url
+
+# Get current trace run ID
+run_id = get_current_run_id()  # Returns: "abc-123-def-456" or None
+
+# Generate LangSmith URL
+if run_id:
+    trace_url = get_trace_url(run_id)
+    # Returns: "https://smith.langchain.com/o/default/projects/p/component-forge/r/abc-123-def-456"
 ```
 
 ## Prometheus Metrics
@@ -395,6 +542,43 @@ annotations:
 4. Replay with different inputs
 5. Compare with successful traces
 
+### Troubleshooting Trace URLs
+
+**No trace link appears in UI:**
+
+1. Check that `LANGCHAIN_TRACING_V2=true` in `backend/.env`
+2. Verify `LANGCHAIN_API_KEY` is set and valid
+3. Check backend logs for tracing errors
+4. Confirm `trace_url` is in API response metadata
+
+**Trace link appears but no trace in LangSmith:**
+
+1. Verify API key is valid (check LangSmith dashboard)
+2. Confirm project name matches `LANGCHAIN_PROJECT` environment variable
+3. Check network connectivity to `api.smith.langchain.com`
+4. Allow 1-2 seconds for traces to appear in LangSmith
+5. Check LangSmith filters (may be filtered out)
+
+**Missing stages in trace:**
+
+1. Verify all agents have `@traced` decorator
+2. Check imports: `from src.core.tracing import traced`
+3. Ensure tracing is enabled before function calls
+4. Review agent instrumentation
+
+**Session ID not showing:**
+
+1. Confirm `SessionTrackingMiddleware` is registered in `main.py`
+2. Check `X-Session-ID` header in API response
+3. Verify session ID is in response body `metadata.session_id`
+
+**Frontend not displaying trace link:**
+
+1. Verify `LangSmithTraceLink` component is imported
+2. Check that `metadata.trace_url` is being passed to component
+3. Confirm component is rendered in preview page
+4. Check browser console for JavaScript errors
+
 ### Log Analysis
 
 ```bash
@@ -406,6 +590,9 @@ cat logs/app.log | jq 'select(.duration_ms > 5000)'
 
 # Track user activity
 cat logs/app.log | jq 'select(.user_id=="user_123")'
+
+# Find requests by session ID
+cat logs/app.log | jq 'select(.session_id=="550e8400-e29b-41d4-a716-446655440000")'
 ```
 
 ## Production Setup
