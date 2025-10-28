@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Badge, type BadgeProps } from "@/components/ui/badge"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { CodeSanitizationResults, SecurityIssue } from "@/types"
 import { ShieldAlert, ShieldCheck, AlertTriangle, XCircle } from "lucide-react"
@@ -55,8 +55,10 @@ export function SecurityIssuesPanel({
     return explanations[pattern] || 'This pattern has been flagged as a potential security risk'
   }
 
-  // Get severity color
-  const getSeverityVariant = (severity: SecurityIssue['severity']): "error" | "warning" | "neutral" => {
+  // Get severity color - returns Badge variant type
+  const getSeverityVariant = (
+    severity: SecurityIssue['severity']
+  ): NonNullable<BadgeProps['variant']> => {
     switch (severity) {
       case 'critical': return 'error'  // Treat critical as error (red)
       case 'high': return 'error'
