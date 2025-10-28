@@ -12,6 +12,7 @@ import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
 import { GenerationProgress } from "@/components/composite/GenerationProgress";
 import { ValidationErrorsDisplay } from "@/components/preview/ValidationErrorsDisplay";
 import { QualityScoresDisplay } from "@/components/preview/QualityScoresDisplay";
+import { SecurityIssuesPanel } from "@/components/preview/SecurityIssuesPanel";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { usePatternSelection } from "@/store/patternSelectionStore";
@@ -32,7 +33,10 @@ import {
   Copy,
   ExternalLink,
   Check,
-  RotateCcw
+  RotateCcw,
+  Shield,
+  ShieldAlert,
+  ShieldCheck
 } from "lucide-react";
 
 export default function PreviewPage() {
@@ -243,6 +247,9 @@ export default function PreviewPage() {
   // Epic 4.5: Extract validation results and quality scores
   const validationResults = metadata?.validation_results;
   const qualityScores = metadata?.quality_scores;
+  
+  // Epic 003 - Story 3.2: Extract security sanitization results
+  const securityResults = validationResults?.security_sanitization;
 
   return (
     <main className="container mx-auto p-4 sm:p-8 space-y-6">
@@ -302,7 +309,20 @@ export default function PreviewPage() {
 
       {/* Quality Metrics (show when complete) */}
       {isComplete && metadata && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
+          <MetricCard
+            title="Security"
+            value={
+              securityResults 
+                ? (securityResults.is_safe ? "✓ Safe" : `${securityResults.issues.length} Issues`)
+                : "Not Checked"
+            }
+            icon={
+              securityResults 
+                ? (securityResults.is_safe ? ShieldCheck : ShieldAlert)
+                : Shield
+            }
+          />
           <MetricCard
             title="Accessibility"
             value={metadata.has_accessibility_warnings ? "Warnings" : "✓ Pass"}
@@ -451,6 +471,11 @@ export default function PreviewPage() {
               {/* Epic 4.5: Quality Scores Display */}
               {qualityScores && (
                 <QualityScoresDisplay qualityScores={qualityScores} />
+              )}
+
+              {/* Epic 003 - Story 3.2: Security Issues Display */}
+              {securityResults && (
+                <SecurityIssuesPanel sanitizationResults={securityResults} />
               )}
 
               {/* Epic 4.5: Validation Errors Display */}
