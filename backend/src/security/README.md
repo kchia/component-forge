@@ -181,12 +181,84 @@ openai               # GPT-4V API (for PII detection)
 
 ## Future Enhancements
 
-Story 3.1 is complete. Future stories will add:
+Story 3.1 and 3.2 are complete. Future stories will add:
 
-- **Story 3.2**: Code sanitization (detect XSS, eval(), etc. in generated code)
 - **Story 3.3**: Rate limiting with Redis
 - **Story 3.4**: Prompt injection protection
 - **Story 3.5**: Security monitoring dashboard
+
+### Code Sanitizer (`code_sanitizer.py`)
+
+Scans generated code for security vulnerabilities before returning to clients:
+
+**Features:**
+- Detects arbitrary code execution patterns (eval, Function constructor)
+- Identifies XSS vulnerabilities (dangerouslySetInnerHTML, innerHTML)
+- Checks for prototype pollution (__proto__)
+- Detects SQL injection vulnerabilities (template literals, string concatenation)
+- Finds hardcoded secrets and API keys (20+ character minimum)
+- Flags suspicious environment variable access in client-side code
+- Provides detailed issue tracking with line numbers and code snippets
+- Categorizes issues by severity (critical, high, medium, low)
+
+**Security Patterns Detected:**
+- `eval()` - Critical: Arbitrary code execution
+- `new Function()` - Critical: Code injection
+- SQL injection (template literals) - Critical: Database attacks
+- SQL injection (concatenation) - High: Database attacks
+- `dangerouslySetInnerHTML` - High: XSS risk
+- `innerHTML =` - High: XSS vulnerability
+- `document.write()` - High: XSS risk
+- `__proto__` - High: Prototype pollution
+- Hardcoded API keys/secrets (20+ chars) - Critical: Credential exposure
+- `process.env` in client code - Medium: Secret exposure
+
+**Example Usage:**
+
+```python
+from src.security.code_sanitizer import CodeSanitizer
+
+sanitizer = CodeSanitizer()
+
+# Scan generated code
+result = sanitizer.sanitize(
+    generated_code,
+    include_snippets=True
+)
+
+if not result.is_safe:
+    print(f"⚠ Found {result.issues_count} security issues:")
+    print(f"  Critical: {result.critical_count}")
+    print(f"  High: {result.high_count}")
+    print(f"  Medium: {result.medium_count}")
+    
+    for issue in result.issues:
+        print(f"  Line {issue.line}: {issue.type.value} - {issue.message}")
+else:
+    print("✓ Code is safe")
+```
+
+**Integration:**
+The code sanitizer is automatically run on all generated components in the `/api/v1/generate` endpoint. Results are included in the API response under `security_issues`.
+
+### Security Metrics (`metrics.py`)
+
+Prometheus metrics for monitoring security events:
+
+**Metrics:**
+- `code_sanitization_failures_total` - Counter for unsafe code patterns detected
+- `pii_detections_total` - Counter for PII found in uploads
+- `input_validation_failures_total` - Counter for input validation errors
+- `security_events_total` - Counter for all security events
+
+**Example Usage:**
+
+```python
+from src.security.metrics import record_code_sanitization_failure
+
+# Record a security issue
+record_code_sanitization_failure(pattern="eval", severity="critical")
+```
 
 ## References
 
