@@ -24,6 +24,13 @@ from .metrics import (
 
 from .golden_dataset import GoldenDataset
 from .e2e_evaluator import E2EEvaluator
+from .retrieval_queries import (
+    TEST_QUERIES,
+    get_queries_by_category,
+    get_all_queries,
+    get_query_statistics,
+    get_expected_patterns,
+)
 
 __all__ = [
     # Types
@@ -40,4 +47,10 @@ __all__ = [
     'GoldenDataset',
     # Evaluator
     'E2EEvaluator',
+    # Retrieval Queries
+    'TEST_QUERIES',
+    'get_queries_by_category',
+    'get_all_queries',
+    'get_query_statistics',
+    'get_expected_patterns',
 ]
