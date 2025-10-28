@@ -58,9 +58,11 @@ export function SecurityIssuesPanel({
   // Get severity color
   const getSeverityVariant = (severity: SecurityIssue['severity']): "error" | "warning" | "neutral" => {
     switch (severity) {
+      case 'critical': return 'error'  // Treat critical as error (red)
       case 'high': return 'error'
       case 'medium': return 'warning'
       case 'low': return 'neutral'
+      default: return 'warning'  // Fallback for unknown severities
     }
   }
 

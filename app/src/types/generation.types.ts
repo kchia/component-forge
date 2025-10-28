@@ -54,11 +54,13 @@ export interface ValidationError {
 
 // Security issue detail (Epic 003 - Story 3.2)
 export interface SecurityIssue {
-  type: 'security_violation';
+  type: string;          // Issue type (e.g., 'code_injection', 'xss_risk', 'hardcoded_secret')
   pattern: string;       // Forbidden pattern matched (e.g., 'eval\\s*\\(')
   line: number;          // Line number where violation occurs
-  severity: 'high' | 'medium' | 'low';
-  message?: string;      // Optional human-readable message
+  column?: number;       // Column number where violation occurs
+  severity: 'critical' | 'high' | 'medium' | 'low';  // Includes critical from backend
+  message?: string;      // Human-readable message
+  code_snippet?: string; // Optional code snippet showing the violation
 }
 
 // Code sanitization results (Epic 003 - Story 3.2)
