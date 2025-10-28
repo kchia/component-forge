@@ -19,6 +19,8 @@ import { GenerationProgress } from "@/components/composite/GenerationProgress";
 import { ValidationErrorsDisplay } from "@/components/preview/ValidationErrorsDisplay";
 import { QualityScoresDisplay } from "@/components/preview/QualityScoresDisplay";
 import { SecurityIssuesPanel } from "@/components/preview/SecurityIssuesPanel";
+import { LangSmithTraceLink } from "@/components/observability/LangSmithTraceLink";
+import { GenerationMetadataDisplay } from "@/components/observability/GenerationMetadataDisplay";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { usePatternSelection } from "@/store/patternSelectionStore";
@@ -384,6 +386,54 @@ export default function PreviewPage() {
             value={timing ? `${(timing.total_ms / 1000).toFixed(1)}s` : "N/A"}
             icon={Clock}
           />
+        </div>
+      )}
+
+      {/* Observability Section - Trace Link & Metadata (Epic 004) */}
+      {isComplete && metadata && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* LangSmith Trace Link */}
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="text-sm font-semibold">AI Observability</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <p className="text-xs text-muted-foreground">
+                View detailed AI operation logs and metrics in LangSmith
+              </p>
+              <LangSmithTraceLink
+                traceUrl={metadata.trace_url}
+                sessionId={metadata.session_id}
+                variant="outline"
+                size="default"
+                className="w-full"
+              />
+              {!metadata.trace_url && (
+                <p className="text-xs text-muted-foreground italic">
+                  Trace link will appear here when LangSmith is configured
+                </p>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Generation Metadata Display */}
+          <div className="lg:col-span-2">
+            <GenerationMetadataDisplay
+              metadata={{
+                latency_ms: timing?.total_ms,
+                stage_latencies: timing?.llm_generating_ms && timing?.validating_ms && timing?.post_processing_ms 
+                  ? {
+                      llm_generating: timing.llm_generating_ms,
+                      validating: timing.validating_ms,
+                      post_processing: timing.post_processing_ms,
+                    }
+                  : undefined,
+                token_count: metadata.llm_token_usage?.total_tokens,
+                llm_token_usage: metadata.llm_token_usage,
+                estimated_cost: undefined, // Backend will provide this in future
+              }}
+            />
+          </div>
         </div>
       )}
 

@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { MetricCard } from "@/components/composite/MetricCard";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { WorkflowStep } from "@/types";
-import { Sparkles, Palette, Component, RotateCcw } from "lucide-react";
+import { Sparkles, Palette, Component, RotateCcw, ExternalLink } from "lucide-react";
 
 export default function Dashboard() {
   const completedSteps = useWorkflowStore((state) => state.completedSteps);
@@ -89,6 +89,47 @@ export default function Dashboard() {
               Start by extracting tokens from a screenshot or Figma file
             </p>
           </div>
+        </CardContent>
+      </Card>
+
+      {/* AI Observability Card (Epic 004) */}
+      <Card>
+        <CardHeader>
+          <CardTitle>AI Observability</CardTitle>
+          <CardDescription>
+            Monitor AI operations, token usage, and performance metrics
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <p className="text-sm text-muted-foreground">
+              View detailed traces of AI operations, including:
+            </p>
+            <ul className="text-sm text-muted-foreground space-y-1 list-disc list-inside ml-2">
+              <li>Token extraction with GPT-4V</li>
+              <li>Requirement classification and proposals</li>
+              <li>Code generation workflows</li>
+              <li>Token usage and cost tracking</li>
+              <li>Performance metrics and latency</li>
+            </ul>
+          </div>
+          
+          <Button asChild variant="outline" size="lg" className="w-full sm:w-auto">
+            <a 
+              href={`https://smith.langchain.com/o/default/projects/p/${process.env.NEXT_PUBLIC_LANGSMITH_PROJECT || 'component-forge'}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="gap-2"
+            >
+              <ExternalLink className="h-4 w-4" />
+              Open LangSmith Dashboard
+            </a>
+          </Button>
+
+          <p className="text-xs text-muted-foreground">
+            Note: LangSmith traces appear after AI operations are performed. 
+            Each generation result includes a direct link to its trace.
+          </p>
         </CardContent>
       </Card>
     </main>
