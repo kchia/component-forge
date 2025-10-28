@@ -126,7 +126,7 @@ export function SecurityIssuesPanel({
         {/* Security issues found */}
         {!is_safe && (
           <>
-            <Alert variant="destructive">
+            <Alert variant="error">
               <AlertTriangle className="size-4" />
               <AlertDescription>
                 Security violations detected in the generated code. Please review and fix before using in production.
