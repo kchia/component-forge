@@ -3,7 +3,7 @@
  */
 
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { APIErrorResponse } from '@/types';
+import { APIErrorResponse, RateLimitError } from '@/types';
 
 // Get API URL from environment
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
@@ -42,7 +42,35 @@ apiClient.interceptors.response.use(
     // Transform API errors into user-friendly messages
     if (error.response) {
       // Server responded with error status
-      const { status, data } = error.response;
+      const { status, data, headers } = error.response;
+      
+      // Handle rate limiting (Epic 003 Story 3.3)
+      if (status === 429) {
+        // Parse Retry-After header (in seconds)
+        const retryAfter = headers['retry-after'] 
+          ? parseInt(headers['retry-after'], 10) 
+          : 60; // default to 60 seconds
+        
+        let message = typeof data?.detail === 'string' 
+          ? data.detail 
+          : 'Rate limit exceeded. Please try again in a moment.';
+        
+        // Extract endpoint from URL if available
+        const endpoint = error.config?.url;
+        
+        // Create rate limit error
+        const rateLimitError = new RateLimitError(
+          message,
+          retryAfter,
+          endpoint
+        );
+        
+        if (process.env.NODE_ENV === 'development') {
+          console.error(`[API Rate Limit] ${status}: ${message} (retry after ${retryAfter}s)`);
+        }
+        
+        return Promise.reject(rateLimitError);
+      }
       
       let message: string;
       if (typeof data?.detail === 'string') {
