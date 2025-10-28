@@ -68,7 +68,11 @@ async def get_evaluation_metrics() -> Dict[str, Any]:
 
         # ===== Retrieval-Only Evaluation =====
         logger.info("Running retrieval-only evaluation...")
-        retrieval_service = RetrievalService()
+
+        # Create mock patterns for retrieval testing
+        # TODO: Load real patterns from database or pattern library
+        mock_patterns = _create_mock_patterns()
+        retrieval_service = RetrievalService(patterns=mock_patterns)
         retrieval_results = []
 
         for query_data in TEST_QUERIES:
@@ -232,3 +236,17 @@ async def get_evaluation_status() -> Dict[str, Any]:
             else "Evaluation system not ready. Check API key and golden dataset."
         )
     }
+
+
+def _create_mock_patterns():
+    """Create mock patterns for testing."""
+    return [
+        {"id": "button", "name": "Button", "description": "Interactive button component", "component_type": "button"},
+        {"id": "card", "name": "Card", "description": "Content container card component", "component_type": "card"},
+        {"id": "badge", "name": "Badge", "description": "Small label or tag badge component", "component_type": "badge"},
+        {"id": "input", "name": "Input", "description": "Text input field component", "component_type": "input"},
+        {"id": "checkbox", "name": "Checkbox", "description": "Checkbox selection component", "component_type": "checkbox"},
+        {"id": "alert", "name": "Alert", "description": "Alert or notification banner component", "component_type": "alert"},
+        {"id": "select", "name": "Select", "description": "Dropdown select component", "component_type": "select"},
+        {"id": "switch", "name": "Switch", "description": "Toggle switch component", "component_type": "switch"},
+    ]

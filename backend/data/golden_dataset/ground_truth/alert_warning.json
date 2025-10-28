@@ -1,14 +1,13 @@
 {
-  "screenshot_id": "button_secondary",
-  "component_name": "Button (secondary)",
+  "screenshot_id": "alert_warning",
+  "component_name": "Alert (warning)",
   "expected_tokens": {
     "colors": {
-      "secondary": "#64748B",
+      "alert": "#F59E0B",
       "text": "#0F172A"
     },
     "spacing": {
-      "padding": "12px 24px",
-      "gaps": "8px 16px"
+      "padding": "12px 24px"
     },
     "typography": {
       "fontSize": "14px",
@@ -18,11 +17,11 @@
       "radius": "10px"
     }
   },
-  "expected_pattern_id": "button",
+  "expected_pattern_id": "alert",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
     "compiles": true
   },
-  "notes": "Auto-generated Button secondary variant"
+  "notes": "Auto-generated Alert warning variant"
 }

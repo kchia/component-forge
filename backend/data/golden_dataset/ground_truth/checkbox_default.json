@@ -1,10 +1,11 @@
 {
-  "screenshot_id": "button_secondary",
-  "component_name": "Button (secondary)",
+  "screenshot_id": "checkbox_default",
+  "component_name": "Checkbox (default)",
   "expected_tokens": {
     "colors": {
-      "secondary": "#64748B",
-      "text": "#0F172A"
+      "primary": "#3B82F6",
+      "text": "#0F172A",
+      "background": "#FFFFFF"
     },
     "spacing": {
       "padding": "12px 24px",
@@ -15,14 +16,15 @@
       "fontWeight": "500"
     },
     "border": {
-      "radius": "10px"
+      "color": "#E2E8F0",
+      "width": "2px"
     }
   },
-  "expected_pattern_id": "button",
+  "expected_pattern_id": "checkbox",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
     "compiles": true
   },
-  "notes": "Auto-generated Button secondary variant"
+  "notes": "Auto-generated Checkbox default variant"
 }

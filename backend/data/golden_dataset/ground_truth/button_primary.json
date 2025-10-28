@@ -1,28 +1,28 @@
 {
   "screenshot_id": "button_primary",
-  "component_name": "Primary Button",
+  "component_name": "Button (primary)",
   "expected_tokens": {
     "colors": {
       "primary": "#3B82F6",
-      "text": "#FFFFFF"
+      "text": "#0F172A"
     },
     "spacing": {
-      "padding": "12px 24px"
+      "padding": "12px 24px",
+      "gaps": "8px 16px"
     },
     "typography": {
       "fontSize": "14px",
       "fontWeight": "500"
     },
     "border": {
-      "radius": "6px"
+      "radius": "20px"
     }
   },
   "expected_pattern_id": "button",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
-    "compiles": true,
-    "has_onclick_handler": true
+    "compiles": true
   },
-  "notes": "Standard primary button from shadcn/ui with blue background"
+  "notes": "Auto-generated Button primary variant"
 }

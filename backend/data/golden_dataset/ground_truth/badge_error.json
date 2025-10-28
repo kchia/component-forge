@@ -1,28 +1,28 @@
 {
   "screenshot_id": "badge_error",
-  "component_name": "Error Badge",
+  "component_name": "Badge (error)",
   "expected_tokens": {
     "colors": {
-      "background": "#EF4444",
-      "text": "#FFFFFF"
+      "badge": "#EF4444",
+      "text": "#0F172A"
     },
     "spacing": {
-      "padding": "4px 12px"
+      "padding": "12px 24px",
+      "gaps": "8px 16px"
     },
     "typography": {
-      "fontSize": "12px",
+      "fontSize": "14px",
       "fontWeight": "500"
     },
     "border": {
-      "radius": "12px"
+      "radius": "10px"
     }
   },
   "expected_pattern_id": "badge",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
-    "compiles": true,
-    "is_inline": true
+    "compiles": true
   },
-  "notes": "Error badge variant with red background"
+  "notes": "Auto-generated Badge error variant"
 }

@@ -53,7 +53,11 @@ class E2EEvaluator:
         """
         self.dataset = GoldenDataset(golden_dataset_path)
         self.token_extractor = TokenExtractor(api_key=api_key)
-        self.retrieval_service = RetrievalService()
+
+        # Create mock patterns for evaluation testing
+        # TODO: Load real patterns from database or pattern library
+        mock_patterns = self._create_mock_patterns()
+        self.retrieval_service = RetrievalService(patterns=mock_patterns)
         self.generator_service = GeneratorService(api_key=api_key)
 
         self.results: List[E2EResult] = []
@@ -345,6 +349,64 @@ class E2EEvaluator:
                 validation_errors=[str(e)],
                 generation_time_ms=(time.time() - start_time) * 1000
             )
+
+    def _create_mock_patterns(self) -> List[Dict]:
+        """
+        Create mock patterns for testing.
+
+        Returns:
+            List of mock pattern dictionaries with minimal required fields
+        """
+        return [
+            {
+                "id": "button",
+                "name": "Button",
+                "description": "Interactive button component",
+                "component_type": "button",
+            },
+            {
+                "id": "card",
+                "name": "Card",
+                "description": "Content container card component",
+                "component_type": "card",
+            },
+            {
+                "id": "badge",
+                "name": "Badge",
+                "description": "Small label or tag badge component",
+                "component_type": "badge",
+            },
+            {
+                "id": "input",
+                "name": "Input",
+                "description": "Text input field component",
+                "component_type": "input",
+            },
+            {
+                "id": "checkbox",
+                "name": "Checkbox",
+                "description": "Checkbox selection component",
+                "component_type": "checkbox",
+            },
+            {
+                "id": "alert",
+                "name": "Alert",
+                "description": "Alert or notification banner component",
+                "component_type": "alert",
+            },
+            {
+                "id": "select",
+                "name": "Select",
+                "description": "Dropdown select component",
+                "component_type": "select",
+            },
+            {
+                "id": "switch",
+                "name": "Switch",
+                "description": "Toggle switch component",
+                "component_type": "switch",
+            },
+        ]
 
     def _result_to_dict(self, result: E2EResult) -> Dict:
         """

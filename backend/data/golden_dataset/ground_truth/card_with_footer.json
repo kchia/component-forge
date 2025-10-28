@@ -1,10 +1,11 @@
 {
-  "screenshot_id": "button_secondary",
-  "component_name": "Button (secondary)",
+  "screenshot_id": "card_with_footer",
+  "component_name": "Card (with_footer)",
   "expected_tokens": {
     "colors": {
-      "secondary": "#64748B",
-      "text": "#0F172A"
+      "primary": "#3B82F6",
+      "text": "#0F172A",
+      "border": "#E2E8F0"
     },
     "spacing": {
       "padding": "12px 24px",
@@ -18,11 +19,11 @@
       "radius": "10px"
     }
   },
-  "expected_pattern_id": "button",
+  "expected_pattern_id": "card",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
     "compiles": true
   },
-  "notes": "Auto-generated Button secondary variant"
+  "notes": "Auto-generated Card with_footer variant"
 }

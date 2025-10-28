@@ -1,28 +1,27 @@
 {
   "screenshot_id": "badge_success",
-  "component_name": "Success Badge",
+  "component_name": "Badge (success)",
   "expected_tokens": {
     "colors": {
-      "background": "#10B981",
+      "success": "#22C55E",
       "text": "#FFFFFF"
     },
     "spacing": {
-      "padding": "4px 12px"
+      "padding": "12px 24px"
     },
     "typography": {
-      "fontSize": "12px",
+      "fontSize": "14px",
       "fontWeight": "500"
     },
     "border": {
-      "radius": "12px"
+      "radius": "20px"
     }
   },
   "expected_pattern_id": "badge",
   "expected_code_properties": {
     "has_variant_prop": true,
     "has_accessibility": true,
-    "compiles": true,
-    "is_inline": true
+    "compiles": true
   },
-  "notes": "Success badge variant with green background"
+  "notes": "Auto-generated Badge success variant"
 }

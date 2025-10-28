@@ -7,5 +7,6 @@ This directory contains:
 - `evaluations/` - RAGAS evaluation results
 - `metrics/` - Performance metrics
 - `errors/` - Error logs
+- `golden_dataset/` - Golden dataset for E2E evaluation (screenshots + ground truth)
 
-All subdirectories are gitignored.
+All subdirectories except `golden_dataset/` are gitignored.
