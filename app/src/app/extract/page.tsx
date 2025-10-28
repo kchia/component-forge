@@ -19,6 +19,8 @@ import { useUIStore } from "@/stores/useUIStore";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { WorkflowStep } from "@/types";
 import type { TokenData } from "@/components/tokens/TokenEditor";
+import { useRateLimitHandler } from "@/hooks/useRateLimitHandler";
+import { RateLimitAlert } from "@/components/composite/RateLimitAlert";
 
 // New components for EPIC 12
 import { CompactTips } from "@/components/extract/CompactTips";
@@ -69,6 +71,9 @@ export default function TokenExtractionPage() {
   const showAlert = useUIStore((state) => state.showAlert);
   const setUploadedFile = useWorkflowStore((state) => state.setUploadedFile);
   const completeStep = useWorkflowStore((state) => state.completeStep);
+  
+  // Rate limit handling (Epic 003 Story 3.3)
+  const { rateLimitState, handleRateLimitError, clearRateLimit, isRateLimitError } = useRateLimitHandler();
 
   // Convert tokens to TokenEditor format with actual confidence scores from backend
   const getEditorTokens = (): TokenData | null => {
@@ -119,6 +124,13 @@ export default function TokenExtractionPage() {
               block: "start"
             });
           }, 500);
+        },
+        onError: (error) => {
+          // Handle rate limit errors (Epic 003 Story 3.3)
+          if (isRateLimitError(error)) {
+            handleRateLimitError(error);
+          }
+          // Other errors are handled by the error state below
         }
       });
     }
@@ -152,6 +164,13 @@ export default function TokenExtractionPage() {
           
           // Show success toast
           showAlert('success', '✓ Tokens extracted from Figma successfully!');
+        },
+        onError: (error) => {
+          // Handle rate limit errors (Epic 003 Story 3.3)
+          if (isRateLimitError(error)) {
+            handleRateLimitError(error);
+          }
+          // Other errors are handled by the error state below
         }
       });
     }
@@ -231,8 +250,18 @@ export default function TokenExtractionPage() {
                 </div>
               )}
 
+              {/* Rate Limit Alert (Epic 003 Story 3.3) */}
+              {rateLimitState.isRateLimited && (
+                <RateLimitAlert
+                  retryAfter={rateLimitState.retryAfter}
+                  message={rateLimitState.message}
+                  endpoint={rateLimitState.endpoint}
+                  onDismiss={clearRateLimit}
+                />
+              )}
+
               {/* Error */}
-              {isError && (
+              {isError && !rateLimitState.isRateLimited && (
                 <Alert variant="error">
                   <p className="font-medium">Extraction Failed</p>
                   <p className="text-sm">{error?.message}</p>
