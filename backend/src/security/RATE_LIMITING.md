@@ -9,10 +9,11 @@ This directory contains the security-focused rate limiting implementation for Co
 ### Components
 
 1. **SecurityRateLimiter** (`backend/src/security/rate_limiter.py`)
-   - Redis-based sliding window counter
+   - **Async Redis-based** sliding window counter (uses `redis.asyncio`)
    - Tiered limits by subscription level (Free/Pro/Enterprise)
    - User identification from auth state or IP address
    - 429 error responses with Retry-After headers
+   - **Atomic pipeline operations** to prevent race conditions
 
 2. **RateLimitMiddleware** (`backend/src/api/middleware/rate_limit_middleware.py`)
    - FastAPI middleware for automatic rate limiting
@@ -202,36 +203,43 @@ Rate limit events are logged with structured metadata:
 
 ### Sliding Window Algorithm
 
-Uses Redis sorted sets for atomic sliding window:
+Uses **async** Redis sorted sets for atomic sliding window:
 
 1. Remove entries older than 60 seconds
 2. Add current timestamp to set
 3. Count entries in window
-4. Check if count exceeds limit
-5. Set TTL for automatic cleanup
+4. Get oldest entry (for retry-after calculation)
+5. Check if count exceeds limit
+6. Set TTL for automatic cleanup
 
 ### Atomic Operations
 
-All Redis operations use pipelining for atomicity:
+All Redis operations use **async pipelining** for atomicity and performance:
 
 ```python
-pipe = redis.pipeline()
-pipe.zremrangebyscore(key, 0, window_start)
-pipe.zadd(key, {now: now})
-pipe.zcard(key)
-pipe.expire(key, window)
-results = pipe.execute()
+async with redis.pipeline(transaction=True) as pipe:
+    pipe.zremrangebyscore(key, 0, window_start)
+    pipe.zadd(key, {now: now})
+    pipe.zcard(key)
+    pipe.zrange(key, 0, 0, withscores=True)  # Get oldest for retry-after
+    pipe.expire(key, window)
+    results = await pipe.execute()
 ```
 
-This ensures race-free rate limiting in distributed environments.
+This ensures:
+- **Race-free** rate limiting in distributed environments
+- **Non-blocking** I/O operations for better performance under load
+- **Accurate retry-after** calculation without additional Redis calls
 
 ### Production Considerations
 
 1. **Redis High Availability**: Use Redis Cluster or Sentinel for production
-2. **Authentication**: Implement proper JWT-based authentication to get user tiers
-3. **Rate Limit Tiers**: Adjust limits based on actual usage patterns
-4. **Monitoring**: Set up alerts for sustained high rate limit hits
-5. **IP Detection**: Configure `X-Forwarded-For` handling for your load balancer
+2. **Async Redis**: Uses `redis.asyncio` for non-blocking I/O operations
+3. **Authentication**: Implement proper JWT-based authentication to get user tiers
+4. **Rate Limit Tiers**: Adjust limits based on actual usage patterns
+5. **Monitoring**: Set up alerts for sustained high rate limit hits
+6. **IP Detection**: Configure `X-Forwarded-For` handling for your load balancer
+7. **Redis Health Check**: Startup verification ensures Redis is available before accepting requests
 
 ## Future Enhancements
 

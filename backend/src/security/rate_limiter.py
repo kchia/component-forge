@@ -8,7 +8,7 @@ Protects expensive endpoints from abuse with tiered limits.
 import time
 import logging
 from typing import Optional, Dict, Any
-from redis import Redis
+from redis.asyncio import Redis
 from fastapi import HTTPException, Request
 
 logger = logging.getLogger(__name__)
@@ -50,10 +50,10 @@ class SecurityRateLimiter:
         Initialize rate limiter.
         
         Args:
-            redis_client: Redis client instance. If None, creates a new client.
+            redis_client: Async Redis client instance. If None, creates a new client.
         """
         if redis_client is None:
-            # Default Redis connection
+            # Default Redis connection (async)
             import os
             redis_host = os.getenv("REDIS_HOST", "localhost")
             redis_port = int(os.getenv("REDIS_PORT", "6379"))
@@ -66,7 +66,7 @@ class SecurityRateLimiter:
                 decode_responses=True
             )
             logger.info(
-                f"Initialized Redis client: {redis_host}:{redis_port}/{redis_db}"
+                f"Initialized async Redis client: {redis_host}:{redis_port}/{redis_db}"
             )
         else:
             self.redis = redis_client
@@ -115,31 +115,35 @@ class SecurityRateLimiter:
         # Window start time
         window_start = now - window
         
-        # Use Redis pipeline for atomic operations
-        pipe = self.redis.pipeline()
-        
-        # Remove old entries outside the window
-        pipe.zremrangebyscore(key, 0, window_start)
-        
-        # Add current request
-        pipe.zadd(key, {now: now})
-        
-        # Count requests in current window
-        pipe.zcard(key)
-        
-        # Set expiry on the key (cleanup)
-        pipe.expire(key, window)
-        
-        # Execute pipeline
-        results = pipe.execute()
+        # Use Redis pipeline for atomic operations (async)
+        async with self.redis.pipeline(transaction=True) as pipe:
+            # Remove old entries outside the window
+            pipe.zremrangebyscore(key, 0, window_start)
+            
+            # Add current request
+            pipe.zadd(key, {now: now})
+            
+            # Count requests in current window
+            pipe.zcard(key)
+            
+            # Get oldest entry for retry-after calculation (fix race condition)
+            pipe.zrange(key, 0, 0, withscores=True)
+            
+            # Set expiry on the key (cleanup)
+            pipe.expire(key, window)
+            
+            # Execute pipeline
+            results = await pipe.execute()
         
         # Get request count (3rd result from pipeline)
         request_count = results[2]
         
+        # Get oldest entry (4th result from pipeline)
+        oldest_entries = results[3]
+        
         # Check if limit exceeded
         if request_count > limit:
-            # Calculate retry-after time
-            oldest_entries = self.redis.zrange(key, 0, 0, withscores=True)
+            # Calculate retry-after time using oldest entry from pipeline
             if oldest_entries:
                 oldest_time = oldest_entries[0][1]
                 retry_after = int(oldest_time + window - now)

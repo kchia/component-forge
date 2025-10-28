@@ -50,6 +50,27 @@ async def lifespan(app: FastAPI):
         logger.warning("OPENAI_API_KEY not set - token extraction will fail")
     else:
         logger.info("OpenAI API key configured")
+    
+    # Verify Redis connection for rate limiting
+    try:
+        from redis.asyncio import Redis
+        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_port = int(os.getenv("REDIS_PORT", "6379"))
+        redis_db = int(os.getenv("REDIS_DB", "0"))
+        
+        redis_client = Redis(
+            host=redis_host,
+            port=redis_port,
+            db=redis_db,
+            decode_responses=True
+        )
+        await redis_client.ping()
+        await redis_client.aclose()
+        logger.info(f"Redis connection verified: {redis_host}:{redis_port}/{redis_db}")
+    except Exception as e:
+        logger.error(f"Redis connection failed: {e}")
+        logger.warning("Rate limiting will fail without Redis. Please ensure Redis is running.")
+    
 
     # Initialize retrieval service
     try:

@@ -5,7 +5,7 @@ import asyncio
 import time
 from unittest.mock import Mock, MagicMock, patch
 from fastapi import Request, HTTPException
-from redis import Redis
+from redis.asyncio import Redis
 
 from src.security.rate_limiter import (
     SecurityRateLimiter,
@@ -14,14 +14,14 @@ from src.security.rate_limiter import (
 
 
 class MockRedis:
-    """Mock Redis client for testing."""
+    """Mock async Redis client for testing."""
     
     def __init__(self):
         """Initialize mock Redis with in-memory storage."""
         self.data = {}
         self.expirations = {}
     
-    def pipeline(self):
+    def pipeline(self, transaction=True):
         """Return mock pipeline."""
         return MockPipeline(self)
     
@@ -39,12 +39,20 @@ class MockRedis:
 
 
 class MockPipeline:
-    """Mock Redis pipeline for testing."""
+    """Mock async Redis pipeline for testing."""
     
     def __init__(self, redis_client):
         """Initialize mock pipeline."""
         self.redis = redis_client
         self.commands = []
+    
+    async def __aenter__(self):
+        """Async context manager entry."""
+        return self
+    
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        """Async context manager exit."""
+        pass
     
     def zremrangebyscore(self, key, min_score, max_score):
         """Mock zremrangebyscore."""
@@ -61,13 +69,18 @@ class MockPipeline:
         self.commands.append(("zcard", key))
         return self
     
+    def zrange(self, key, start, stop, withscores=False):
+        """Mock zrange."""
+        self.commands.append(("zrange", key, start, stop, withscores))
+        return self
+    
     def expire(self, key, seconds):
         """Mock expire."""
         self.commands.append(("expire", key, seconds))
         return self
     
-    def execute(self):
-        """Execute pipeline commands."""
+    async def execute(self):
+        """Execute pipeline commands asynchronously."""
         results = []
         
         for cmd in self.commands:
@@ -91,6 +104,18 @@ class MockPipeline:
                 _, key = cmd
                 count = len(self.redis.data.get(key, {}))
                 results.append(count)
+            
+            elif cmd[0] == "zrange":
+                _, key, start, stop, withscores = cmd
+                if key not in self.redis.data:
+                    results.append([])
+                else:
+                    sorted_items = sorted(self.redis.data[key].items(), key=lambda x: x[1])
+                    result = sorted_items[start:stop+1] if stop >= 0 else sorted_items[start:]
+                    if withscores:
+                        results.append(result)
+                    else:
+                        results.append([item[0] for item in result])
             
             elif cmd[0] == "expire":
                 _, key, seconds = cmd
