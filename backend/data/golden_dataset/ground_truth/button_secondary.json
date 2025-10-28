@@ -1,0 +1,28 @@
+{
+  "screenshot_id": "button_secondary",
+  "component_name": "Secondary Button",
+  "expected_tokens": {
+    "colors": {
+      "primary": "#6B7280",
+      "text": "#FFFFFF"
+    },
+    "spacing": {
+      "padding": "12px 24px"
+    },
+    "typography": {
+      "fontSize": "14px",
+      "fontWeight": "500"
+    },
+    "border": {
+      "radius": "6px"
+    }
+  },
+  "expected_pattern_id": "button",
+  "expected_code_properties": {
+    "has_variant_prop": true,
+    "has_accessibility": true,
+    "compiles": true,
+    "has_onclick_handler": true
+  },
+  "notes": "Secondary button variant with gray background"
+}

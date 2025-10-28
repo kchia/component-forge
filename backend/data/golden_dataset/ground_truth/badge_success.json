@@ -1,0 +1,28 @@
+{
+  "screenshot_id": "badge_success",
+  "component_name": "Success Badge",
+  "expected_tokens": {
+    "colors": {
+      "background": "#10B981",
+      "text": "#FFFFFF"
+    },
+    "spacing": {
+      "padding": "4px 12px"
+    },
+    "typography": {
+      "fontSize": "12px",
+      "fontWeight": "500"
+    },
+    "border": {
+      "radius": "12px"
+    }
+  },
+  "expected_pattern_id": "badge",
+  "expected_code_properties": {
+    "has_variant_prop": true,
+    "has_accessibility": true,
+    "compiles": true,
+    "is_inline": true
+  },
+  "notes": "Success badge variant with green background"
+}

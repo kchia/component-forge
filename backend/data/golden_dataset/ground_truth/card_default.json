@@ -1,0 +1,34 @@
+{
+  "screenshot_id": "card_default",
+  "component_name": "Default Card",
+  "expected_tokens": {
+    "colors": {
+      "background": "#FFFFFF",
+      "border": "#E5E7EB",
+      "title": "#111827",
+      "text": "#6B7280"
+    },
+    "spacing": {
+      "padding": "16px",
+      "gap": "12px"
+    },
+    "typography": {
+      "titleSize": "18px",
+      "titleWeight": "600",
+      "bodySize": "14px",
+      "bodyWeight": "400"
+    },
+    "border": {
+      "radius": "8px",
+      "width": "1px"
+    }
+  },
+  "expected_pattern_id": "card",
+  "expected_code_properties": {
+    "has_header": true,
+    "has_content": true,
+    "has_accessibility": true,
+    "compiles": true
+  },
+  "notes": "Standard card component with title and body content"
+}
