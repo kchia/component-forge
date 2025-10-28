@@ -8,8 +8,12 @@ import time
 from ....generation.generator_service import GeneratorService
 from ....generation.types import GenerationRequest, GenerationResult
 from ....core.logging import get_logger
+from ....security.code_sanitizer import CodeSanitizer
 
 logger = get_logger(__name__)
+
+# Initialize code sanitizer (singleton)
+code_sanitizer = CodeSanitizer()
 
 router = APIRouter(prefix="/generation", tags=["generation"])
 
@@ -18,13 +22,20 @@ generator_service = GeneratorService()
 
 # Prometheus metrics (optional - only if prometheus_client is available)
 try:
-    from prometheus_client import Histogram
+    from prometheus_client import Histogram, Counter
     
     generation_latency_seconds = Histogram(
         "generation_latency_seconds",
         "Code generation latency in seconds",
         ["pattern_id", "success"]
     )
+    
+    code_sanitization_failures = Counter(
+        'code_sanitization_failures_total',
+        'Unsafe code patterns detected in generated code',
+        ['pattern', 'severity']
+    )
+    
     METRICS_ENABLED = True
 except ImportError:
     METRICS_ENABLED = False
@@ -47,6 +58,7 @@ async def generate_component(
     LLM-first pipeline includes:
     - LLM code generation with structured output
     - TypeScript and ESLint validation with auto-fix loop
+    - Security sanitization for code vulnerabilities
     - Quality scoring and metrics
     
     Args:
@@ -59,6 +71,7 @@ async def generate_component(
         - timing: Latency breakdown by stage
         - validation_results: TypeScript/ESLint validation details (if available)
         - quality_scores: Code quality metrics (if available)
+        - security_issues: Security sanitization results
         - provenance: Generation metadata for tracking
         
     Raises:
@@ -102,6 +115,36 @@ async def generate_component(
         # If we have code but validation failed, continue and return it with validation errors
         if not result.success:
             logger.warning(f"Code generated but validation failed: {result.error}")
+        
+        # Run code sanitization on generated component code
+        logger.info("Running code sanitization on generated component")
+        sanitization_result = code_sanitizer.sanitize(
+            result.component_code,
+            include_snippets=True
+        )
+        
+        # Log and record metrics for security issues
+        if not sanitization_result.is_safe:
+            logger.warning(
+                f"Code sanitization detected {sanitization_result.issues_count} security issues",
+                extra={
+                    "event": "code_sanitization_issues",
+                    "pattern_id": request.pattern_id,
+                    "issues_count": sanitization_result.issues_count,
+                    "critical_count": sanitization_result.critical_count,
+                    "high_count": sanitization_result.high_count,
+                }
+            )
+            
+            # Record metrics for each issue
+            if METRICS_ENABLED:
+                for issue in sanitization_result.issues:
+                    code_sanitization_failures.labels(
+                        pattern=issue.type.value,
+                        severity=issue.severity.value
+                    ).inc()
+        else:
+            logger.info("Code sanitization passed - no security issues detected")
         
         # Calculate total latency
         total_latency_ms = int((time.time() - start_time) * 1000)
@@ -195,6 +238,28 @@ async def generate_component(
         if result.metadata.llm_token_usage:
             response["metadata"]["llm_token_usage"] = result.metadata.llm_token_usage
             response["metadata"]["validation_attempts"] = result.metadata.validation_attempts
+        
+        # Add security sanitization results
+        response["security_issues"] = {
+            "is_safe": sanitization_result.is_safe,
+            "issues_count": sanitization_result.issues_count,
+            "critical_count": sanitization_result.critical_count,
+            "high_count": sanitization_result.high_count,
+            "medium_count": sanitization_result.medium_count,
+            "low_count": sanitization_result.low_count,
+            "issues": [
+                {
+                    "type": issue.type.value,
+                    "severity": issue.severity.value,
+                    "line": issue.line,
+                    "column": issue.column,
+                    "message": issue.message,
+                    "pattern": issue.pattern,
+                    "code_snippet": issue.code_snippet
+                }
+                for issue in sanitization_result.issues
+            ]
+        }
         
         return response
     
