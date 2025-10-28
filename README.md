@@ -474,6 +474,77 @@ cd app && npm run test:a11y
 cd app && npm run test:e2e
 ```
 
+## 📊 Evaluation Framework
+
+ComponentForge includes a comprehensive end-to-end evaluation system that validates the complete screenshot-to-code pipeline with quantified metrics.
+
+### Golden Dataset
+
+15 component screenshots with ground truth data:
+- 8 component types: Button (3), Card (2), Badge (3), Input (2), Checkbox, Alert (2), Select, Switch
+- Expected tokens, pattern IDs, and code properties
+- Located in `backend/data/golden_dataset/`
+
+### Run Evaluation
+
+#### CLI Script (Terminal Output)
+
+```bash
+cd backend
+export OPENAI_API_KEY='your-key-here'
+python scripts/run_e2e_evaluation.py
+```
+
+Displays formatted metrics and saves JSON report to `backend/logs/`.
+
+#### Automated Tests (CI/CD)
+
+```bash
+cd backend
+pytest tests/evaluation/test_e2e_pipeline.py -v
+```
+
+Validates metrics against thresholds. Fails if pipeline success < 80%.
+
+#### API Endpoint (Programmatic Access)
+
+```bash
+curl http://localhost:8000/api/v1/evaluation/metrics
+```
+
+Returns comprehensive JSON with E2E and retrieval-only metrics.
+
+#### Dashboard (Visual UI)
+
+Navigate to: http://localhost:3000/evaluation
+
+Features:
+- Overall pipeline metrics (success rate, latency)
+- Stage-by-stage performance
+- Retrieval comparison (E2E vs isolated)
+- Per-screenshot results
+- Export JSON functionality
+
+### Metrics & Targets
+
+| Metric | Target | Description |
+|--------|--------|-------------|
+| Pipeline Success Rate | ≥ 80% | % producing valid code end-to-end |
+| Token Extraction | ≥ 85% | % of tokens correctly extracted |
+| Retrieval MRR | ≥ 0.90 | Context precision (mean reciprocal rank) |
+| Retrieval Hit@3 | ≥ 90% | Context recall (correct pattern in top-3) |
+| Code Compilation | ≥ 90% | % of generated code that compiles |
+| Quality Score | ≥ 0.85 | Average code quality from validator |
+| E2E Latency | < 20s | Time from screenshot to valid code |
+
+All metrics align with industry-standard RAGAS framework.
+
+### Documentation
+
+- Full docs: `backend/src/evaluation/README.md`
+- Demo materials: `DEMO_METRICS.md`
+- Dataset format: `backend/data/golden_dataset/README.md`
+
 ## 📊 AI Pipeline Monitoring
 
 ### Health Checks & APIs
