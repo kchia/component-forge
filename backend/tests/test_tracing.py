@@ -9,7 +9,10 @@ from src.core.tracing import (
     get_tracing_config,
     init_tracing,
     get_trace_url,
+    build_trace_metadata,
+    get_current_run_id,
 )
+from src.api.middleware.session_tracking import session_id_var
 
 
 class TestTracingConfig:
@@ -197,3 +200,82 @@ class TestTracedDecorator:
 
             result = sample_sync_function()
             assert result == "sync result"
+
+    @pytest.mark.asyncio
+    async def test_traced_decorator_with_metadata(self):
+        """Test traced decorator accepts metadata parameter."""
+        from src.core.tracing import traced
+
+        test_metadata = {"component_type": "button", "user_id": "user-123"}
+
+        @traced(run_name="test_function", metadata=test_metadata)
+        async def sample_function():
+            return "result"
+
+        with patch.dict(os.environ, {}, clear=True):
+            # Reset config
+            import src.core.tracing as tracing_module
+
+            tracing_module._tracing_config = None
+
+            result = await sample_function()
+            assert result == "result"
+
+
+class TestBuildTraceMetadata:
+    """Tests for build_trace_metadata function."""
+
+    def test_build_trace_metadata_basic(self):
+        """Test that build_trace_metadata includes timestamp."""
+        metadata = build_trace_metadata()
+
+        assert "timestamp" in metadata
+        assert isinstance(metadata["timestamp"], str)
+
+    def test_build_trace_metadata_with_session_id(self):
+        """Test that build_trace_metadata includes session_id from context."""
+        test_session_id = "test-session-123"
+        session_id_var.set(test_session_id)
+
+        metadata = build_trace_metadata()
+
+        assert "session_id" in metadata
+        assert metadata["session_id"] == test_session_id
+
+    def test_build_trace_metadata_with_user_id(self):
+        """Test that build_trace_metadata includes user_id when provided."""
+        metadata = build_trace_metadata(user_id="user-456")
+
+        assert "user_id" in metadata
+        assert metadata["user_id"] == "user-456"
+
+    def test_build_trace_metadata_with_component_type(self):
+        """Test that build_trace_metadata includes component_type when provided."""
+        metadata = build_trace_metadata(component_type="button")
+
+        assert "component_type" in metadata
+        assert metadata["component_type"] == "button"
+
+    def test_build_trace_metadata_with_extra_fields(self):
+        """Test that build_trace_metadata includes extra fields."""
+        metadata = build_trace_metadata(
+            user_id="user-123",
+            component_type="card",
+            custom_field="custom_value",
+            another_field=42,
+        )
+
+        assert metadata["user_id"] == "user-123"
+        assert metadata["component_type"] == "card"
+        assert metadata["custom_field"] == "custom_value"
+        assert metadata["another_field"] == 42
+        assert "timestamp" in metadata
+
+
+class TestGetCurrentRunId:
+    """Tests for get_current_run_id function."""
+
+    def test_get_current_run_id_returns_none_without_context(self):
+        """Test that get_current_run_id returns None when no run context exists."""
+        run_id = get_current_run_id()
+        assert run_id is None

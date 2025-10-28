@@ -1,15 +1,18 @@
 """API routes for code generation."""
 
+from typing import Any, Dict
+
 from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
-from typing import Dict, Any
 import time
 
+from ....core.logging import get_logger
+from ....core.tracing import get_current_run_id, get_trace_url
 from ....generation.generator_service import GeneratorService
 from ....generation.types import GenerationRequest, GenerationResult
-from ....core.logging import get_logger
 from ....security.code_sanitizer import CodeSanitizer
 from ....security.metrics import record_code_sanitization_failure
+from ....api.middleware.session_tracking import get_session_id
 
 logger = get_logger(__name__)
 
@@ -144,6 +147,18 @@ async def generate_component(
         total_latency_ms = int((time.time() - start_time) * 1000)
         success = True
         
+        # Get trace metadata for observability
+        # Note: session_id is always available from middleware
+        # trace_url will be None if LangSmith tracing is disabled or unavailable
+        # This is expected and handled gracefully by the frontend
+        session_id = get_session_id()
+        run_id = get_current_run_id()
+        trace_url = get_trace_url(run_id) if run_id else None
+        
+        # Add trace metadata to result
+        result.metadata.session_id = session_id
+        result.metadata.trace_url = trace_url
+        
         # Record Prometheus metric
         if METRICS_ENABLED:
             generation_latency_seconds.labels(
@@ -158,7 +173,9 @@ async def generate_component(
                     "pattern_id": request.pattern_id,
                     "latency_ms": total_latency_ms,
                     "token_count": result.metadata.token_count,
-                    "lines_of_code": result.metadata.lines_of_code
+                    "lines_of_code": result.metadata.lines_of_code,
+                    "session_id": session_id,
+                    "trace_url": trace_url,
                 }
             }
         )
@@ -181,7 +198,9 @@ async def generate_component(
                 "lines_of_code": result.metadata.lines_of_code,
                 "imports_count": result.metadata.imports_count,
                 "has_typescript_errors": result.metadata.has_typescript_errors,
-                "has_accessibility_warnings": result.metadata.has_accessibility_warnings
+                "has_accessibility_warnings": result.metadata.has_accessibility_warnings,
+                "trace_url": trace_url,
+                "session_id": session_id,
             },
             "timing": {
                 "total_ms": result.metadata.latency_ms,

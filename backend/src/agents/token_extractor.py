@@ -10,6 +10,7 @@ from src.prompts.token_extraction import create_extraction_prompt
 from src.services.image_processor import prepare_image_for_vision_api
 from src.core.confidence import process_tokens_with_confidence
 from src.core.logging import get_logger
+from src.core.tracing import traced
 
 logger = get_logger(__name__)
 
@@ -35,6 +36,7 @@ class TokenExtractor:
         self.client = AsyncOpenAI(api_key=self.api_key)
         self.max_retries = 3
     
+    @traced(run_name="extract_tokens")
     async def extract_tokens(
         self,
         image: Image.Image,

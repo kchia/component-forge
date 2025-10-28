@@ -4,9 +4,11 @@ This module provides configuration and utilities for LangSmith tracing,
 enabling observability for AI operations throughout the application.
 """
 
+import asyncio
 import os
-from typing import Optional
+from datetime import datetime
 from functools import wraps
+from typing import Any, Dict, Optional
 
 from .logging import get_logger
 
@@ -96,15 +98,20 @@ def init_tracing() -> bool:
     return True
 
 
-def traced(run_name: Optional[str] = None, **kwargs):
-    """Decorator to add tracing to a function.
+def traced(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = None):
+    """Decorator to add tracing to a function with metadata support.
 
-    This is a convenience decorator that can be used with LangChain's
-    @traceable decorator when it's available.
+    This decorator wraps functions with LangSmith tracing when available,
+    automatically including session context and custom metadata.
+
+    Note: The traceable decorator is applied at runtime (not at definition time)
+    to allow dynamic metadata that changes per request (e.g., session_id).
+    LangSmith's traceable decorator is designed to be lightweight, so the
+    overhead is minimal.
 
     Args:
         run_name: Optional name for the trace run
-        **kwargs: Additional arguments to pass to the tracer
+        metadata: Optional metadata dictionary to include in the trace
 
     Returns:
         Decorated function with tracing enabled
@@ -118,14 +125,24 @@ def traced(run_name: Optional[str] = None, **kwargs):
                 # If tracing not configured, just run the function normally
                 return await func(*args, **kwargs)
 
-            # Try to use LangChain's traceable decorator if available
+            # Try to use LangSmith's traceable decorator if available
             try:
-                from langchain_core.tracers.langchain import LangChainTracer
+                from langsmith import traceable
 
-                # Run with tracing
-                return await func(*args, **kwargs)
+                # Build trace metadata
+                trace_metadata = build_trace_metadata(**(metadata or {}))
+
+                # Wrap with traceable
+                traced_func = traceable(
+                    name=run_name or func.__name__, metadata=trace_metadata
+                )(func)
+
+                return await traced_func(*args, **kwargs)
             except ImportError:
-                logger.debug("LangChain tracer not available, running without trace")
+                logger.debug("LangSmith not available, running without trace")
+                return await func(*args, **kwargs)
+            except Exception as e:
+                logger.warning(f"Tracing error: {e}, running without trace")
                 return await func(*args, **kwargs)
 
         @wraps(func)
@@ -135,22 +152,91 @@ def traced(run_name: Optional[str] = None, **kwargs):
                 return func(*args, **kwargs)
 
             try:
-                from langchain_core.tracers.langchain import LangChainTracer
+                from langsmith import traceable
 
-                return func(*args, **kwargs)
+                # Build trace metadata
+                trace_metadata = build_trace_metadata(**(metadata or {}))
+
+                # Wrap with traceable
+                traced_func = traceable(
+                    name=run_name or func.__name__, metadata=trace_metadata
+                )(func)
+
+                return traced_func(*args, **kwargs)
             except ImportError:
-                logger.debug("LangChain tracer not available, running without trace")
+                logger.debug("LangSmith not available, running without trace")
+                return func(*args, **kwargs)
+            except Exception as e:
+                logger.warning(f"Tracing error: {e}, running without trace")
                 return func(*args, **kwargs)
 
         # Return appropriate wrapper based on function type
-        import asyncio
-
         if asyncio.iscoroutinefunction(func):
             return async_wrapper
         else:
             return sync_wrapper
 
     return decorator
+
+
+def build_trace_metadata(
+    user_id: Optional[str] = None,
+    component_type: Optional[str] = None,
+    **extra: Any,
+) -> Dict[str, Any]:
+    """Build standardized trace metadata.
+
+    Args:
+        user_id: Optional user ID
+        component_type: Optional component type being processed
+        **extra: Additional metadata fields
+
+    Returns:
+        Dictionary with standardized metadata including session_id and timestamp
+    """
+    # Import here to avoid circular dependency
+    try:
+        from ..api.middleware.session_tracking import get_session_id
+
+        session_id = get_session_id()
+    except Exception:
+        session_id = None
+
+    metadata = {
+        "timestamp": datetime.utcnow().isoformat(),
+    }
+
+    if session_id:
+        metadata["session_id"] = session_id
+    if user_id:
+        metadata["user_id"] = user_id
+    if component_type:
+        metadata["component_type"] = component_type
+
+    metadata.update(extra)
+    return metadata
+
+
+def get_current_run_id() -> Optional[str]:
+    """Get current LangSmith run ID from context.
+
+    Returns:
+        str: Current run ID, or None if not in a trace context or LangSmith unavailable
+
+    Note:
+        Returns None when:
+        - LangSmith tracing is disabled (LANGCHAIN_TRACING_V2=false)
+        - Not in a traced function call
+        - LangSmith packages not installed
+        This is expected behavior and should be handled gracefully by callers.
+    """
+    try:
+        from langchain_core.tracers.context import get_run_tree
+
+        run_tree = get_run_tree()
+        return str(run_tree.id) if run_tree else None
+    except Exception:
+        return None
 
 
 def get_trace_url(run_id: str) -> str:
@@ -161,6 +247,10 @@ def get_trace_url(run_id: str) -> str:
 
     Returns:
         str: Full URL to view the trace in LangSmith UI
+
+    Example:
+        >>> get_trace_url("12345-abcde-67890")
+        'https://smith.langchain.com/o/default/projects/p/componentforge-dev/r/12345-abcde-67890'
     """
     config = get_tracing_config()
     base_url = "https://smith.langchain.com"
