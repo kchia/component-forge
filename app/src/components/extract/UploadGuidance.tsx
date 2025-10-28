@@ -38,7 +38,7 @@ export function UploadGuidance({ mode }: UploadGuidanceProps) {
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-success" />
-                <span>Formats: PNG, JPG, or WebP</span>
+                <span>Formats: PNG, JPG, WebP, or SVG</span>
               </li>
               <li className="flex items-center gap-2">
                 <CheckCircle2 className="h-4 w-4 text-success" />
