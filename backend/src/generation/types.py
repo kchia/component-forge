@@ -89,6 +89,10 @@ class GenerationMetadata(BaseModel):
     llm_token_usage: Optional[Dict[str, int]] = Field(None, description="LLM token usage")
     validation_attempts: int = Field(default=0, description="Number of validation attempts")
     quality_score: float = Field(default=0.0, description="Code quality score (0.0-1.0)")
+    
+    # Observability metadata
+    trace_url: Optional[str] = Field(None, description="LangSmith trace URL")
+    session_id: Optional[str] = Field(None, description="Request session ID")
 
 
 class ValidationErrorDetail(BaseModel):

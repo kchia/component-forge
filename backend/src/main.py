@@ -7,6 +7,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .core.logging import init_logging_from_env, get_logger
 from .api.middleware.logging import LoggingMiddleware
 from .api.middleware.rate_limit_middleware import RateLimitMiddleware
+from .api.middleware.session_tracking import SessionTrackingMiddleware
 
 # Initialize logging configuration
 init_logging_from_env()
@@ -171,6 +172,9 @@ app.add_middleware(
     allow_headers=["*"],
     expose_headers=["*"],  # Expose all response headers
 )
+
+# Add session tracking middleware (must be early in chain)
+app.add_middleware(SessionTrackingMiddleware)
 
 # Add logging middleware
 app.add_middleware(
