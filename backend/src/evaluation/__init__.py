@@ -22,6 +22,8 @@ from .metrics import (
     E2EMetrics,
 )
 
+from .golden_dataset import GoldenDataset
+
 __all__ = [
     # Types
     'TokenExtractionResult',
@@ -33,4 +35,6 @@ __all__ = [
     'RetrievalMetrics',
     'GenerationMetrics',
     'E2EMetrics',
+    # Dataset
+    'GoldenDataset',
 ]
