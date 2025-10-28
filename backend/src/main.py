@@ -178,10 +178,11 @@ else:
 
 
 # Import and register routers
-from .api.v1.routes import figma, tokens, requirements, retrieval, generation
+from .api.v1.routes import figma, tokens, requirements, retrieval, generation, evaluation
 
 app.include_router(figma.router, prefix="/api/v1")
 app.include_router(tokens.router, prefix="/api/v1")
 app.include_router(requirements.router, prefix="/api/v1")
 app.include_router(retrieval.router, prefix="/api/v1")
 app.include_router(generation.router, prefix="/api/v1")
+app.include_router(evaluation.router, prefix="/api/v1")
