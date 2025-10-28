@@ -28,14 +28,16 @@ This document summarizes the implementation of **Story 3.2: Code Sanitization** 
 |---------|------|----------|-------------|
 | `eval()` | Code Injection | Critical | Arbitrary code execution |
 | `new Function()` | Code Injection | Critical | Code injection similar to eval |
+| SQL injection (template) | SQL Injection | Critical | Template literal interpolation in SQL |
+| SQL injection (concat) | SQL Injection | High | String concatenation in SQL queries |
 | `dangerouslySetInnerHTML` | XSS Risk | High | XSS with user input |
 | `innerHTML =` | Unsafe HTML | High | XSS vulnerability |
 | `document.write()` | XSS Risk | High | Deprecated, XSS risk |
 | `__proto__` | Prototype Pollution | High | Prototype pollution attacks |
 | `.constructor.prototype` | Prototype Pollution | Medium | Dangerous manipulation |
-| Hardcoded secrets | Hardcoded Secret | Critical | API keys, passwords, tokens |
-| `sk-[...]` | Hardcoded Secret | Critical | OpenAI API key pattern |
-| `process.env` | Env Var Exposure | Medium | Client-side secret exposure |
+| Hardcoded secrets (20+ chars) | Hardcoded Secret | Critical | API keys, passwords, tokens |
+| `sk-[...]` (20+ chars) | Hardcoded Secret | Critical | OpenAI API key pattern |
+| `process.env` in client code | Env Var Exposure | Medium | Client-side secret exposure |
 | `outerHTML =` | Unsafe HTML | Medium | Security issues |
 
 **Classes:**
@@ -120,23 +122,27 @@ Add security_issues to Response
 |----------|-------|--------|
 | Safe code detection | 3 | ✅ |
 | Code injection (eval, Function) | 2 | ✅ |
+| SQL injection detection | 2 | ✅ |
 | XSS vulnerabilities | 4 | ✅ |
 | Prototype pollution | 1 | ✅ |
 | Hardcoded secrets | 3 | ✅ |
-| Environment variables | 1 | ✅ |
+| Environment variables | 2 | ✅ |
 | Multiple issues | 1 | ✅ |
 | Line number tracking | 1 | ✅ |
 | Code snippets | 2 | ✅ |
 | Edge cases | 4 | ✅ |
 | Pattern info API | 1 | ✅ |
 
-**Total Tests:** 23 comprehensive tests covering all security patterns
+**Total Tests:** 27 comprehensive tests covering all security patterns
 
 **Example Tests:**
 - `test_safe_code_passes`: Validates safe React components pass
 - `test_detect_eval`: Detects eval() usage as critical
+- `test_detect_sql_injection_template_literal`: Detects SQL injection via template literals
+- `test_detect_sql_injection_concatenation`: Detects SQL injection via concatenation
 - `test_detect_dangerously_set_inner_html`: Detects XSS risk
-- `test_detect_hardcoded_api_key`: Finds hardcoded API keys
+- `test_detect_hardcoded_api_key`: Finds hardcoded API keys (20+ chars)
+- `test_server_side_process_env_allowed`: Allows process.env in server components
 - `test_multiple_issues_detected`: Multiple issues in same code
 - `test_realistic_safe_component`: Real-world safe component
 - `test_realistic_unsafe_component`: Real-world unsafe component

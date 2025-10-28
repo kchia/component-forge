@@ -195,20 +195,23 @@ Scans generated code for security vulnerabilities before returning to clients:
 - Detects arbitrary code execution patterns (eval, Function constructor)
 - Identifies XSS vulnerabilities (dangerouslySetInnerHTML, innerHTML)
 - Checks for prototype pollution (__proto__)
-- Finds hardcoded secrets and API keys
-- Flags suspicious environment variable access
+- Detects SQL injection vulnerabilities (template literals, string concatenation)
+- Finds hardcoded secrets and API keys (20+ character minimum)
+- Flags suspicious environment variable access in client-side code
 - Provides detailed issue tracking with line numbers and code snippets
 - Categorizes issues by severity (critical, high, medium, low)
 
 **Security Patterns Detected:**
 - `eval()` - Critical: Arbitrary code execution
 - `new Function()` - Critical: Code injection
+- SQL injection (template literals) - Critical: Database attacks
+- SQL injection (concatenation) - High: Database attacks
 - `dangerouslySetInnerHTML` - High: XSS risk
 - `innerHTML =` - High: XSS vulnerability
 - `document.write()` - High: XSS risk
 - `__proto__` - High: Prototype pollution
-- Hardcoded API keys/secrets - Critical
-- `process.env` exposure - Medium
+- Hardcoded API keys/secrets (20+ chars) - Critical: Credential exposure
+- `process.env` in client code - Medium: Secret exposure
 
 **Example Usage:**
 

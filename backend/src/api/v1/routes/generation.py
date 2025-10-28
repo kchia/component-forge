@@ -9,6 +9,7 @@ from ....generation.generator_service import GeneratorService
 from ....generation.types import GenerationRequest, GenerationResult
 from ....core.logging import get_logger
 from ....security.code_sanitizer import CodeSanitizer
+from ....security.metrics import record_code_sanitization_failure
 
 logger = get_logger(__name__)
 
@@ -22,18 +23,12 @@ generator_service = GeneratorService()
 
 # Prometheus metrics (optional - only if prometheus_client is available)
 try:
-    from prometheus_client import Histogram, Counter
+    from prometheus_client import Histogram
     
     generation_latency_seconds = Histogram(
         "generation_latency_seconds",
         "Code generation latency in seconds",
         ["pattern_id", "success"]
-    )
-    
-    code_sanitization_failures = Counter(
-        'code_sanitization_failures_total',
-        'Unsafe code patterns detected in generated code',
-        ['pattern', 'severity']
     )
     
     METRICS_ENABLED = True
@@ -137,12 +132,11 @@ async def generate_component(
             )
             
             # Record metrics for each issue
-            if METRICS_ENABLED:
-                for issue in sanitization_result.issues:
-                    code_sanitization_failures.labels(
-                        pattern=issue.type.value,
-                        severity=issue.severity.value
-                    ).inc()
+            for issue in sanitization_result.issues:
+                record_code_sanitization_failure(
+                    pattern=issue.type.value,
+                    severity=issue.severity.value
+                )
         else:
             logger.info("Code sanitization passed - no security issues detected")
         

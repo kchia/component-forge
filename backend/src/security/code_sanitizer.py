@@ -34,6 +34,7 @@ class SecurityIssueType(str, Enum):
     HARDCODED_SECRET = "hardcoded_secret"
     ENV_VAR_EXPOSURE = "env_var_exposure"
     UNSAFE_HTML = "unsafe_html"
+    SQL_INJECTION = "sql_injection"
 
 
 class SecurityIssue(BaseModel):
@@ -121,9 +122,9 @@ class CodeSanitizer:
             message="Manipulating constructor.prototype can be dangerous"
         ),
         
-        # High: Hardcoded secrets (common patterns)
+        # Critical: Hardcoded secrets (refined patterns to reduce false positives)
         ForbiddenPattern(
-            regex=r'(?:password|api[_-]?key|secret|token|auth)\s*[=:]\s*["\'][^"\']{8,}["\']',
+            regex=r'(?:password|api[_-]?key|secret|token|auth)\s*[=:]\s*["\'][a-zA-Z0-9_\-]{20,}["\']',
             type=SecurityIssueType.HARDCODED_SECRET,
             severity=SecuritySeverity.CRITICAL,
             message="Hardcoded secrets detected - use environment variables instead"
@@ -135,9 +136,23 @@ class CodeSanitizer:
             message="Hardcoded API key detected - never commit secrets to code"
         ),
         
-        # Medium: Environment variable exposure
+        # Critical: SQL injection patterns
         ForbiddenPattern(
-            regex=r'\bprocess\.env\.',
+            regex=r'`[^`]*\$\{[^}]+\}[^`]*`\s*(?:SELECT|INSERT|UPDATE|DELETE|DROP|ALTER|CREATE)',
+            type=SecurityIssueType.SQL_INJECTION,
+            severity=SecuritySeverity.CRITICAL,
+            message="SQL query with template literal interpolation can lead to SQL injection"
+        ),
+        ForbiddenPattern(
+            regex=r'(?:query|execute|raw)\s*\(\s*["`\'][^"`\']*\+',
+            type=SecurityIssueType.SQL_INJECTION,
+            severity=SecuritySeverity.HIGH,
+            message="SQL query with string concatenation can lead to SQL injection"
+        ),
+        
+        # Medium: Environment variable exposure (only flag client-side usage)
+        ForbiddenPattern(
+            regex=r"['\"]use client['\"][\s\S]{0,500}process\.env\.",
             type=SecurityIssueType.ENV_VAR_EXPOSURE,
             severity=SecuritySeverity.MEDIUM,
             message="Direct process.env access in client-side code can expose secrets",

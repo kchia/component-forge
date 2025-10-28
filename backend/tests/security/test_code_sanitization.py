@@ -168,8 +168,8 @@ const openaiKey = "sk-proj-abcdefghijklmnopqrstuvwxyz1234567890";
     def test_detect_hardcoded_password(self):
         """Test detection of hardcoded passwords."""
         code_with_password = """
-const password = "mySecretPassword123";
-const dbPassword = 'super_secure_password_456';
+const password = "mySecretPassword123456789012";
+const dbPassword = 'super_secure_password_456789012345';
         """
         
         result = self.sanitizer.sanitize(code_with_password)
@@ -187,8 +187,8 @@ const dbPassword = 'super_secure_password_456';
     def test_detect_hardcoded_secret(self):
         """Test detection of hardcoded secrets."""
         code_with_secret = """
-const secret = "my-secret-token-12345678";
-const authToken = 'bearer-token-abcdefghijk';
+const secret = "my-secret-token-12345678901234567890";
+const authToken = 'bearer-token-abcdefghijklmnopqrstuvwxyz1234567890';
         """
         
         result = self.sanitizer.sanitize(code_with_secret)
@@ -202,22 +202,75 @@ const authToken = 'bearer-token-abcdefghijk';
         ]
         assert len(secret_issues) >= 1
     
+    def test_detect_sql_injection_template_literal(self):
+        """Test detection of SQL injection via template literals."""
+        code_with_sql = """
+const userId = req.params.id;
+const query = `SELECT * FROM users WHERE id = ${userId}`;
+        """
+        
+        result = self.sanitizer.sanitize(code_with_sql)
+        
+        assert result.is_safe is False
+        assert result.critical_count >= 1
+        
+        sql_issues = [
+            issue for issue in result.issues 
+            if issue.type == SecurityIssueType.SQL_INJECTION
+        ]
+        assert len(sql_issues) >= 1
+        assert "template literal" in sql_issues[0].message.lower()
+    
+    def test_detect_sql_injection_concatenation(self):
+        """Test detection of SQL injection via string concatenation."""
+        code_with_sql = """
+const name = getUserInput();
+db.query("SELECT * FROM users WHERE name = '" + name + "'");
+        """
+        
+        result = self.sanitizer.sanitize(code_with_sql)
+        
+        assert result.is_safe is False
+        assert result.high_count >= 1
+        
+        sql_issues = [
+            issue for issue in result.issues 
+            if issue.type == SecurityIssueType.SQL_INJECTION
+        ]
+        assert len(sql_issues) >= 1
+        assert "concatenation" in sql_issues[0].message.lower()
+    
     def test_detect_process_env_exposure(self):
-        """Test detection of process.env usage."""
+        """Test detection of process.env usage in client-side code."""
         code_with_env = """
-const apiUrl = process.env.API_URL;
+'use client';
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
         """
         
         result = self.sanitizer.sanitize(code_with_env)
         
         assert result.is_safe is False
-        assert result.issues_count == 1
-        assert result.medium_count == 1
+        assert result.issues_count >= 1
+        assert result.medium_count >= 1
         
-        issue = result.issues[0]
-        assert issue.type == SecurityIssueType.ENV_VAR_EXPOSURE
-        assert issue.severity == SecuritySeverity.MEDIUM
-        assert "process.env" in issue.message
+        env_issues = [
+            issue for issue in result.issues 
+            if issue.type == SecurityIssueType.ENV_VAR_EXPOSURE
+        ]
+        assert len(env_issues) >= 1
+    
+    def test_server_side_process_env_allowed(self):
+        """Test that process.env in server-side code (without 'use client') is allowed."""
+        code_with_server_env = """
+// Server component - no 'use client' directive
+const apiUrl = process.env.API_URL;
+        """
+        
+        result = self.sanitizer.sanitize(code_with_server_env)
+        
+        # Should pass since no 'use client' directive
+        assert result.is_safe is True
+        assert result.issues_count == 0
     
     def test_detect_outer_html_assignment(self):
         """Test detection of outerHTML assignment."""
