@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Initialize logging first
 from .core.logging import init_logging_from_env, get_logger
 from .api.middleware.logging import LoggingMiddleware
+from .api.middleware.rate_limit_middleware import RateLimitMiddleware
 
 # Initialize logging configuration
 init_logging_from_env()
@@ -49,6 +50,27 @@ async def lifespan(app: FastAPI):
         logger.warning("OPENAI_API_KEY not set - token extraction will fail")
     else:
         logger.info("OpenAI API key configured")
+    
+    # Verify Redis connection for rate limiting
+    try:
+        from redis.asyncio import Redis
+        redis_host = os.getenv("REDIS_HOST", "localhost")
+        redis_port = int(os.getenv("REDIS_PORT", "6379"))
+        redis_db = int(os.getenv("REDIS_DB", "0"))
+        
+        redis_client = Redis(
+            host=redis_host,
+            port=redis_port,
+            db=redis_db,
+            decode_responses=True
+        )
+        await redis_client.ping()
+        await redis_client.aclose()
+        logger.info(f"Redis connection verified: {redis_host}:{redis_port}/{redis_db}")
+    except Exception as e:
+        logger.error(f"Redis connection failed: {e}")
+        logger.warning("Rate limiting will fail without Redis. Please ensure Redis is running.")
+    
 
     # Initialize retrieval service
     try:
@@ -157,6 +179,9 @@ app.add_middleware(
     log_request_body=False,  # Set to True in development if needed
     log_response_body=False,  # Set to True in development if needed
 )
+
+# Add rate limiting middleware (applies to expensive endpoints)
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.get("/health")
