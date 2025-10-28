@@ -158,12 +158,20 @@ curl -X POST http://localhost:8000/api/v1/generation/generate \
 
 **Note**: Since the LLM shouldn't generate unsafe code, this test requires mocking or manual injection
 
+**Note**: In the unlikely event that the LLM generates unsafe code in production:
+1. The sanitizer acts as a safety net and flags the issues
+2. Users see security warnings in the Quality tab
+3. Metrics are recorded for monitoring
+4. Users can decide whether to use the code or regenerate
+5. The system does NOT automatically block code generation - it provides transparency
+
 **Manual Test**:
 1. Temporarily modify backend to inject unsafe code for testing:
 
 ```python
 # In backend/src/api/v1/routes/generation.py, after line 100:
-# Add test code injection (REMOVE AFTER TESTING)
+# ⚠️ TEST ONLY - REMOVE IMMEDIATELY AFTER TESTING ⚠️
+# Better: Use environment variable: if os.getenv("ENABLE_SECURITY_TEST_MODE") == "true":
 if request.pattern_id == "test-unsafe":
     result.component_code = '''
 const Component = () => {

@@ -156,8 +156,8 @@ The sanitizer detects 13 security patterns across 5 categories:
 1. **eval()** - Arbitrary code execution
 2. **new Function()** - Code injection similar to eval
 3. **SQL injection (template literals)** - Database attacks
-4. **Hardcoded API keys** (20+ chars) - Secret exposure
-5. **OpenAI API keys** (sk- pattern, 20+ chars)
+4. **Hardcoded API keys** (20+ chars, defined in `code_sanitizer.py` FORBIDDEN_PATTERNS) - Secret exposure
+5. **OpenAI API keys** (sk- pattern, 20+ chars) - Specific pattern for OpenAI keys
 
 ### High Severity
 6. **dangerouslySetInnerHTML** - XSS vulnerability
@@ -274,7 +274,7 @@ WARNING: Code sanitization detected 3 security issues
 1. **No Auto-Fix**: Sanitizer only detects issues, doesn't automatically fix them
 2. **No Whitelist**: Cannot mark approved exceptions
 3. **Pattern-Based Only**: Uses regex, not semantic analysis
-4. **Client-Side Only**: Focuses on React/TypeScript patterns
+4. **React/TypeScript Focused**: Sanitizer runs on backend but focuses on patterns typically found in client-side React/TypeScript code (e.g., dangerouslySetInnerHTML, React-specific XSS vectors)
 
 ### Future Enhancements
 
