@@ -121,18 +121,20 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             return response
             
         except HTTPException as e:
-            # Record rate limit hit for metrics
+            # Record rate limit hit for metrics (only for actual rate limit errors)
             if e.status_code == 429:
-                record_rate_limit_hit(tier, category)
-                logger.info(
-                    f"Rate limit hit: user={user_id}, tier={tier}, endpoint={category}",
-                    extra={
-                        "event": "rate_limit_hit",
-                        "user_id": user_id,
-                        "tier": tier,
-                        "endpoint": category
-                    }
-                )
+                # Only record if this is from our rate limiter (has Retry-After header)
+                if e.headers and "Retry-After" in e.headers:
+                    record_rate_limit_hit(tier, category)
+                    logger.info(
+                        f"Rate limit hit: user={user_id}, tier={tier}, endpoint={category}",
+                        extra={
+                            "event": "rate_limit_hit",
+                            "user_id": user_id,
+                            "tier": tier,
+                            "endpoint": category
+                        }
+                    )
             
             # Convert HTTPException to JSONResponse for proper handling
             return JSONResponse(
