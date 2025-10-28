@@ -62,6 +62,11 @@ boto3>=1.28.0
 # Epic 8 - Regeneration
 celery[redis]>=5.3.0
 
+# Epic 3 - Safety & Guardrails
+nh3>=0.2.0
+python-magic>=0.4.27
+slowapi>=0.1.9
+
 # Document Processing
 unstructured[pdf]
 uvicorn[standard]
