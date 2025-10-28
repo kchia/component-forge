@@ -242,6 +242,71 @@ class TestImageUploadValidator:
             await ImageUploadValidator.validate_upload(upload_file)
         
         assert "corrupted" in str(exc_info.value).lower() or "invalid" in str(exc_info.value).lower()
+    
+    @pytest.mark.asyncio
+    async def test_detect_actual_mime_type_png(self):
+        """Test detection of PNG from magic numbers."""
+        png_data = self.create_test_image(100, 100, format="PNG")
+        mime = ImageUploadValidator.detect_actual_mime_type(png_data)
+        assert mime == "image/png"
+    
+    @pytest.mark.asyncio
+    async def test_detect_actual_mime_type_jpeg(self):
+        """Test detection of JPEG from magic numbers."""
+        jpeg_data = self.create_test_image(100, 100, format="JPEG")
+        mime = ImageUploadValidator.detect_actual_mime_type(jpeg_data)
+        assert mime == "image/jpeg"
+    
+    @pytest.mark.asyncio
+    async def test_is_svg_content_detects_svg(self):
+        """Test SVG content detection."""
+        svg_data = b'<svg xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="40"/></svg>'
+        assert ImageUploadValidator.is_svg_content(svg_data) is True
+    
+    @pytest.mark.asyncio
+    async def test_is_svg_content_rejects_non_svg(self):
+        """Test that non-SVG content is not detected as SVG."""
+        png_data = self.create_test_image(100, 100, format="PNG")
+        assert ImageUploadValidator.is_svg_content(png_data) is False
+    
+    @pytest.mark.asyncio
+    async def test_validate_upload_svg_with_wrong_content_type(self):
+        """Test that SVG uploaded with wrong Content-Type is still validated."""
+        svg_data = b'<?xml version="1.0"?><svg xmlns="http://www.w3.org/2000/svg"><script>alert("xss")</script></svg>'
+        
+        # Upload SVG with image/png Content-Type (spoofing attempt)
+        upload_file = self.create_upload_file(
+            svg_data,
+            filename="malicious.png",
+            content_type="image/png"
+        )
+        
+        # Should detect SVG content and run security validation
+        with pytest.raises(InputValidationError) as exc_info:
+            await ImageUploadValidator.validate_upload(upload_file)
+        
+        # Should fail because of script tag in SVG
+        assert "script" in str(exc_info.value).lower() or "forbidden" in str(exc_info.value).lower()
+    
+    @pytest.mark.asyncio
+    async def test_validate_upload_content_type_mismatch_warning(self):
+        """Test that Content-Type mismatch is logged but doesn't fail validation."""
+        # Create a PNG image but declare it as JPEG
+        png_data = self.create_test_image(100, 100, format="PNG")
+        upload_file = self.create_upload_file(
+            png_data,
+            filename="test.jpg",
+            content_type="image/jpeg"  # Wrong type
+        )
+        
+        # Should succeed but log warning
+        result = await ImageUploadValidator.validate_upload(upload_file)
+        
+        # Verify metadata includes both declared and actual types
+        assert result["declared_mime"] == "image/jpeg"
+        assert result["actual_mime"] == "image/png"
+        assert result["validated"] is True
+        assert result["content_verified"] is True
 
 
 class TestRequirementInputValidator:

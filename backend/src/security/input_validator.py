@@ -21,6 +21,16 @@ except ImportError:
     # Fallback to basic HTML stripping if nh3 not available
     import html
 
+try:
+    import magic
+    MAGIC_AVAILABLE = True
+except ImportError:
+    MAGIC_AVAILABLE = False
+
+from ..core.logging import get_logger
+
+logger = get_logger(__name__)
+
 
 class InputValidationError(Exception):
     """Exception raised for input validation errors."""
@@ -49,6 +59,60 @@ class ImageUploadValidator:
         r'<link',
         r'<meta',
     ]
+    
+    @classmethod
+    def detect_actual_mime_type(cls, contents: bytes) -> str:
+        """Detect actual MIME type from file content using magic numbers.
+        
+        Args:
+            contents: Raw file bytes
+            
+        Returns:
+            Detected MIME type
+            
+        Raises:
+            InputValidationError: If MIME type cannot be detected
+        """
+        if MAGIC_AVAILABLE:
+            try:
+                mime = magic.from_buffer(contents, mime=True)
+                return mime
+            except Exception as e:
+                logger.warning(f"python-magic detection failed: {e}")
+        
+        # Fallback: check magic numbers manually for common image types
+        if contents.startswith(b'\x89PNG\r\n\x1a\n'):
+            return 'image/png'
+        elif contents.startswith(b'\xff\xd8\xff'):
+            return 'image/jpeg'
+        elif contents.startswith(b'<?xml') or contents.startswith(b'<svg'):
+            return 'image/svg+xml'
+        elif b'<svg' in contents[:1024]:  # Check first 1KB for SVG
+            return 'image/svg+xml'
+        
+        raise InputValidationError("Unable to detect file type from content")
+    
+    @classmethod
+    def is_svg_content(cls, contents: bytes) -> bool:
+        """Check if content is SVG regardless of extension or header.
+        
+        Args:
+            contents: Raw file bytes
+            
+        Returns:
+            True if content appears to be SVG
+        """
+        # Check for SVG markers in the beginning of the file
+        try:
+            # Try to decode as text
+            text_content = contents[:2048].decode('utf-8', errors='ignore')
+            return (
+                text_content.lstrip().startswith('<?xml') or
+                text_content.lstrip().startswith('<svg') or
+                '<svg' in text_content[:512]
+            )
+        except Exception:
+            return False
     
     @classmethod
     def validate_file_type(cls, content_type: Optional[str], filename: Optional[str] = None) -> None:
@@ -141,7 +205,14 @@ class ImageUploadValidator:
     
     @classmethod
     async def validate_upload(cls, file: UploadFile) -> Dict[str, Any]:
-        """Validate uploaded image file.
+        """Validate uploaded image file with content-based detection.
+        
+        This method performs multi-layer validation:
+        1. File size check
+        2. Content-Type header validation
+        3. Actual content validation using magic numbers
+        4. SVG security checks (if SVG detected)
+        5. Image format validation
         
         Args:
             file: FastAPI UploadFile object
@@ -156,14 +227,44 @@ class ImageUploadValidator:
         contents = await file.read()
         file_size = len(contents)
         
-        # Validate file size
+        # Validate file size first
         cls.validate_file_size(file_size)
         
-        # Validate MIME type
+        # Validate Content-Type header
         cls.validate_file_type(file.content_type, file.filename)
         
-        # Handle SVG separately
-        if file.content_type == 'image/svg+xml':
+        # Detect actual MIME type from file content (magic numbers)
+        try:
+            actual_mime = cls.detect_actual_mime_type(contents)
+        except InputValidationError as e:
+            raise InputValidationError(f"File type detection failed: {str(e)}")
+        
+        # Verify actual content matches allowed types
+        if actual_mime not in cls.ALLOWED_MIME_TYPES:
+            raise InputValidationError(
+                f"File content type not allowed: {actual_mime}. "
+                f"Allowed types: PNG, JPG, JPEG, SVG"
+            )
+        
+        # Warn if Content-Type header doesn't match actual content
+        if file.content_type != actual_mime:
+            logger.warning(
+                f"Content-Type mismatch detected: header='{file.content_type}', "
+                f"actual='{actual_mime}' for file '{file.filename}'",
+                extra={
+                    "event": "content_type_mismatch",
+                    "header_type": file.content_type,
+                    "actual_type": actual_mime,
+                    "filename": file.filename
+                }
+            )
+        
+        # Check if content is SVG (regardless of declared type)
+        # This prevents SVG files from bypassing security checks
+        is_svg = actual_mime == 'image/svg+xml' or cls.is_svg_content(contents)
+        
+        # Handle SVG files with security validation
+        if is_svg:
             try:
                 svg_content = contents.decode('utf-8')
                 cls.validate_svg_content(svg_content)
@@ -172,8 +273,11 @@ class ImageUploadValidator:
             
             return {
                 "file_type": "svg",
+                "actual_mime": actual_mime,
+                "declared_mime": file.content_type,
                 "size_bytes": file_size,
                 "validated": True,
+                "content_verified": True,
             }
         
         # Validate bitmap images (PNG, JPEG)
@@ -206,12 +310,15 @@ class ImageUploadValidator:
             
             return {
                 "file_type": image.format.lower(),
+                "actual_mime": actual_mime,
+                "declared_mime": file.content_type,
                 "size_bytes": file_size,
                 "width": width,
                 "height": height,
                 "mode": image.mode,
                 "has_exif": has_exif,
                 "validated": True,
+                "content_verified": True,
             }
             
         except (IOError, OSError) as e:
