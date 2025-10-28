@@ -70,6 +70,13 @@ export interface DesignTokens {
   borderRadius: BorderRadiusTokens;
 }
 
+// PII detection result (Epic 003 Story 3.1)
+export interface PIICheckResult {
+  performed: boolean;
+  has_pii: boolean;
+  confidence: number;
+}
+
 // Token extraction response from POST /tokens/extract/screenshot
 export interface TokenExtractionResponse {
   tokens: DesignTokens;
@@ -77,6 +84,8 @@ export interface TokenExtractionResponse {
     filename: string;
     image: ImageMetadata;
     extraction_method: string;
+    security_validated?: boolean;
+    pii_check?: PIICheckResult;
   };
   confidence?: Record<string, number>;
   fallbacks_used?: string[];
