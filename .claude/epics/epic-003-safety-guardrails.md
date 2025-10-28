@@ -14,6 +14,21 @@ ComponentForge generates executable code and processes user-uploaded images, cre
 - Rate abuse and resource exhaustion
 - Prompt injection attacks on AI agents
 
+## Epic Changes (Updated 2025)
+
+**Consolidated from 6 → 3 core stories + 2 optional:**
+- **Story 3.1:** Input Safety (merged validation + PII detection) - Uses GPT-4V instead of Presidio/Tesseract
+- **Story 3.2:** Code Sanitization - Backend regex checks only, ESLint in CI/CD
+- **Story 3.3:** Rate Limiting - Core protection with Redis + slowapi
+- **Story 3.4 (Optional):** Prompt Injection - Enhanced patterns for 2024/25 models
+- **Story 3.5 (Optional):** Monitoring - Simplified with existing LangSmith + Prometheus
+
+**Key Updates:**
+- Replaced deprecated `bleach` with `nh3`
+- Leveraging GPT-4V (already in stack) for OCR + PII detection
+- Removed heavy dependencies: presidio, pytesseract, semgrep, bandit, sentry
+- Timeline: 2 days core + 1 day optional (vs original 3 days)
+
 ## Success Metrics
 
 - **Zero Critical Vulnerabilities:** Pass OWASP Top 10 security audit
@@ -25,8 +40,8 @@ ComponentForge generates executable code and processes user-uploaded images, cre
 
 ## User Stories
 
-### Story 3.1: Input Validation & Sanitization
-**As a security engineer**, I want comprehensive input validation so attackers cannot inject malicious payloads.
+### Story 3.1: Input Safety (Validation + PII Detection)
+**As a security engineer**, I want comprehensive input validation and PII protection so attackers cannot inject malicious payloads and sensitive data is protected.
 
 **Acceptance Criteria:**
 - [ ] Validate all file uploads: type, size, dimensions, content
@@ -34,12 +49,15 @@ ComponentForge generates executable code and processes user-uploaded images, cre
 - [ ] Reject files with suspicious EXIF data or embedded scripts
 - [ ] Implement file type whitelisting (PNG, JPG, SVG only)
 - [ ] Add size limits: 10MB per image, 100MB per request
-- [ ] Scan uploaded files for malware signatures
+- [ ] Detect PII in uploaded images using GPT-4V
+- [ ] Auto-block uploads containing PII (or auto-redact)
+- [ ] Log PII detection events for compliance audits
 
 **Input Validation Rules:**
 ```python
 # backend/src/security/input_validator.py
 from pydantic import BaseModel, validator, Field
+import nh3  # Modern HTML sanitizer (replaces deprecated bleach)
 
 class ImageUploadRequest(BaseModel):
     file: UploadFile
@@ -73,86 +91,56 @@ class RequirementInput(BaseModel):
 
     @validator('text')
     def sanitize_text(cls, v):
-        # Remove HTML tags
-        import bleach
-        return bleach.clean(v, strip=True)
+        # Remove HTML tags with modern sanitizer
+        return nh3.clean(v)
+```
+
+**PII Detection with GPT-4V:**
+```python
+# backend/src/security/pii_detector.py
+from langchain_openai import ChatOpenAI
+
+class PIIDetector:
+    def __init__(self):
+        self.vision_model = ChatOpenAI(model="gpt-4-vision-preview")
+
+    async def scan_image(self, image_path: str) -> dict:
+        """Use GPT-4V for OCR + PII detection in single call"""
+        prompt = """
+        Analyze this image for personally identifiable information (PII):
+        - Email addresses
+        - Phone numbers
+        - Social Security Numbers
+        - Credit card numbers
+        - Physical addresses
+        - Names with context suggesting real people
+
+        Return JSON: {"has_pii": bool, "entities_found": [list], "confidence": float}
+        """
+
+        result = await self.vision_model.ainvoke([
+            {"type": "text", "text": prompt},
+            {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{image_path}"}}
+        ])
+
+        # Parse result and auto-block if PII detected
+        pii_data = json.loads(result.content)
+        if pii_data["has_pii"]:
+            # Log for compliance
+            logger.warning(f"PII detected: {pii_data['entities_found']}")
+            raise ValueError("Upload contains PII and cannot be processed")
+
+        return pii_data
 ```
 
 **Files to Create:**
 - `backend/src/security/input_validator.py`
-- `backend/src/security/file_scanner.py`
-- `backend/tests/security/test_input_validation.py`
-
----
-
-### Story 3.2: PII Detection & Redaction
-**As a compliance officer**, I want automatic PII detection so we don't process sensitive user data.
-
-**Acceptance Criteria:**
-- [ ] Scan uploaded images for text containing PII
-- [ ] Detect: emails, phone numbers, SSN, credit cards, addresses
-- [ ] Use OCR to extract text from screenshots
-- [ ] Flag requests with PII and require user confirmation
-- [ ] Optionally redact PII from images before processing
-- [ ] Log PII detection events for compliance audits
-
-**PII Detection Pipeline:**
-```python
-# backend/src/security/pii_detector.py
-import pytesseract
-from presidio_analyzer import AnalyzerEngine
-from presidio_anonymizer import AnonymizerEngine
-
-class PIIDetector:
-    def __init__(self):
-        self.analyzer = AnalyzerEngine()
-        self.anonymizer = AnonymizerEngine()
-
-    async def scan_image(self, image_path: str) -> dict:
-        # Extract text using OCR
-        text = pytesseract.image_to_string(Image.open(image_path))
-
-        # Detect PII entities
-        results = self.analyzer.analyze(
-            text=text,
-            entities=[
-                "EMAIL_ADDRESS",
-                "PHONE_NUMBER",
-                "CREDIT_CARD",
-                "US_SSN",
-                "PERSON",
-                "LOCATION"
-            ],
-            language="en"
-        )
-
-        if results:
-            return {
-                "has_pii": True,
-                "entities_found": [r.entity_type for r in results],
-                "confidence": max(r.score for r in results),
-                "redacted_text": self.anonymizer.anonymize(text, results)
-            }
-
-        return {"has_pii": False}
-```
-
-**User Flow:**
-1. User uploads screenshot
-2. Backend runs OCR + PII detection
-3. If PII detected: Show warning modal
-   - "We detected potential personal information in your screenshot"
-   - "Would you like to: [Redact and continue] [Cancel upload] [Proceed anyway]"
-4. Log decision for compliance
-
-**Files to Create:**
 - `backend/src/security/pii_detector.py`
-- `app/src/components/upload/PIIWarningModal.tsx`
-- `backend/tests/security/test_pii_detection.py`
+- `backend/tests/security/test_input_safety.py`
 
 ---
 
-### Story 3.3: Generated Code Sanitization
+### Story 3.2: Generated Code Sanitization
 **As a developer**, I want assurance that generated code is safe so I can trust ComponentForge outputs.
 
 **Acceptance Criteria:**
@@ -160,13 +148,12 @@ class PIIDetector:
 - [ ] Block: `eval()`, `dangerouslySetInnerHTML`, `__proto__`, SQL strings
 - [ ] Detect XSS vulnerabilities (unescaped user input)
 - [ ] Check for hardcoded secrets or API keys
-- [ ] Validate accessibility: proper ARIA, semantic HTML
-- [ ] Run ESLint security rules on generated code
 - [ ] Flag suspicious patterns for human review
+- [ ] Run ESLint security rules in frontend CI/CD (not backend)
 
 **Code Sanitization Rules:**
-```typescript
-// backend/src/security/code_sanitizer.py
+```python
+# backend/src/security/code_sanitizer.py
 class CodeSanitizer:
     FORBIDDEN_PATTERNS = [
         r'eval\s*\(',                    # Arbitrary code execution
@@ -176,6 +163,7 @@ class CodeSanitizer:
         r'innerHTML\s*=',                 # XSS risk
         r'new\s+Function\s*\(',          # Code generation
         r'(password|api[_-]?key|secret)\s*=\s*["\'][^"\']+["\']',  # Hardcoded secrets
+        r'process\.env\.',                # Env var exposure
     ]
 
     def sanitize(self, code: str) -> dict:
@@ -191,28 +179,20 @@ class CodeSanitizer:
                     "severity": "high"
                 })
 
-        # Run ESLint with security plugins
-        eslint_result = subprocess.run(
-            ["eslint", "--format=json", "--stdin"],
-            input=code.encode(),
-            capture_output=True
-        )
-
         return {
             "is_safe": len(issues) == 0,
             "issues": issues,
-            "sanitized_code": self._remove_violations(code, issues)
+            "sanitized_code": self._remove_violations(code, issues) if issues else code
         }
 ```
 
 **Files to Create:**
 - `backend/src/security/code_sanitizer.py`
-- `backend/src/security/eslint_security.json` (ESLint config)
 - `backend/tests/security/test_code_sanitization.py`
 
 ---
 
-### Story 3.4: Rate Limiting & Resource Protection
+### Story 3.3: Rate Limiting & Resource Protection
 **As a platform engineer**, I want rate limiting so users cannot abuse the service or cause DoS.
 
 **Acceptance Criteria:**
@@ -285,14 +265,15 @@ class RateLimiter:
 
 ---
 
-### Story 3.5: Prompt Injection Protection
+### Story 3.4 (OPTIONAL): Prompt Injection Protection
 **As an AI safety engineer**, I want defenses against prompt injection so attackers cannot manipulate AI outputs.
+
+**Note:** This is optional for MVP. Basic input sanitization (Story 3.1) provides baseline protection. Add if time permits or post-MVP.
 
 **Acceptance Criteria:**
 - [ ] Detect prompt injection attempts in user requirements
 - [ ] Use structured prompts with clear delimiters
 - [ ] Validate AI outputs match expected schema
-- [ ] Implement output filtering for sensitive content
 - [ ] Log suspected injection attempts
 - [ ] Rate limit users with repeated injection attempts
 
@@ -304,6 +285,9 @@ class PromptGuard:
         r'ignore\s+(previous|above)\s+instructions',
         r'system\s*[:=]\s*["\']',
         r'<\|im_start\|>',
+        r'<\|endoftext\|>',               # GPT-3 special token
+        r'\[INST\]|\[/INST\]',             # Llama format
+        r'<\|system\|>',                   # ChatML
         r'assistant\s*[:=]',
         r'IMPORTANT:.*override',
     ]
@@ -362,21 +346,21 @@ Generate component code following the design tokens above.
 
 ---
 
-### Story 3.6: Security Monitoring & Alerting
-**As a DevOps engineer**, I want real-time security alerts so I can respond to threats quickly.
+### Story 3.5 (OPTIONAL): Security Monitoring & Alerting
+**As a DevOps engineer**, I want real-time security metrics so I can monitor system health.
+
+**Note:** Simplified version for MVP. Use existing LangSmith + Prometheus. Skip Sentry/Slack unless needed.
 
 **Acceptance Criteria:**
 - [ ] Log all security events: blocked requests, PII detected, rate limits hit
-- [ ] Dashboard showing security metrics at `/admin/security`
-- [ ] Alert on Slack for critical events: repeated injection attempts, DDoS patterns
-- [ ] Daily security report emailed to ops team
-- [ ] Integration with Sentry for error tracking
 - [ ] Prometheus metrics for security events
+- [ ] LangSmith tracing for AI security events
+- [ ] Basic security dashboard (if time permits)
 
 **Security Metrics:**
 ```python
 # backend/src/security/metrics.py
-from prometheus_client import Counter, Histogram
+from prometheus_client import Counter
 
 security_events = Counter(
     'security_events_total',
@@ -403,26 +387,281 @@ code_sanitization_failures = Counter(
 )
 ```
 
-**Alert Conditions:**
-- 5+ prompt injection attempts from same user in 5 minutes
-- 10+ rate limit hits in 1 minute (potential DDoS)
-- PII detected in 3+ uploads from same user (data harvesting?)
-- Generated code with 3+ security violations
-
 **Files to Create:**
 - `backend/src/security/metrics.py`
-- `backend/src/security/alerting.py`
-- `app/src/app/admin/security/page.tsx`
+- `backend/tests/security/test_metrics.py`
+
+---
+
+## Implementation Tasks (Parallel Execution)
+
+### Story 3.1: Input Safety (Validation + PII Detection)
+
+#### Backend Tasks (Agent 1)
+- **BE-3.1.1:** Create `backend/src/security/input_validator.py`
+  - Pydantic models for image upload validation
+  - File type, size, dimension checks
+  - SVG script detection
+  - Text input sanitization with `nh3`
+- **BE-3.1.2:** Create `backend/src/security/pii_detector.py`
+  - GPT-4V integration for OCR + PII detection
+  - Auto-block logic for PII uploads
+  - Compliance logging
+- **BE-3.1.3:** Add validation middleware to `/api/v1/patterns/upload` endpoint
+  - Apply input validation before processing
+  - Call PII detector on images
+  - Return clear error responses
+- **BE-3.1.4:** Write `backend/tests/security/test_input_validation.py`
+  - Test file type validation
+  - Test size limits
+  - Test SVG script detection
+  - Test text sanitization
+- **BE-3.1.5:** Write `backend/tests/security/test_pii_detection.py`
+  - Test PII detection with sample images
+  - Test auto-block behavior
+  - Test logging
+
+#### Frontend Tasks (Agent 2)
+- **FE-3.1.1:** Add client-side validation to upload component
+  - Check file type before upload (PNG, JPG, SVG only)
+  - Check file size before upload (10MB max)
+  - Show warnings for invalid files
+- **FE-3.1.2:** Create error display for validation failures
+  - Toast/alert for file type errors
+  - Toast/alert for size limit errors
+  - Toast/alert for PII detection blocks
+- **FE-3.1.3:** Update `app/src/components/upload/*` with validation UI
+  - File preview with validation status
+  - Clear error messaging
+  - Retry upload button
+- **FE-3.1.4:** Write `app/tests/components/upload.test.tsx`
+  - Test file type validation UI
+  - Test size validation UI
+  - Test error display
+- **FE-3.1.5:** Write `app/tests/e2e/upload-validation.spec.ts`
+  - Test uploading invalid file types
+  - Test uploading oversized files
+  - Test successful upload after validation
+
+#### Integration Tasks (Agent 3 - after BE + FE complete)
+- **INT-3.1.1:** Connect frontend upload to backend validation endpoint
+  - Handle 400 errors from validation
+  - Parse and display validation error messages
+- **INT-3.1.2:** Test end-to-end upload flow with validation
+  - Valid upload succeeds
+  - Invalid file type rejected
+  - Oversized file rejected
+  - PII detected and blocked
+- **INT-3.1.3:** Update API client with validation error handling
+  - Type-safe error responses
+  - Retry logic for transient errors
+
+---
+
+### Story 3.2: Code Sanitization
+
+#### Backend Tasks (Agent 1)
+- **BE-3.2.1:** Create `backend/src/security/code_sanitizer.py`
+  - Forbidden pattern regex checks
+  - Line number tracking for violations
+  - Sanitized code output
+- **BE-3.2.2:** Add sanitization to `/api/v1/generate` endpoint
+  - Run sanitizer on generated code
+  - Block unsafe code from being returned
+  - Log security violations
+- **BE-3.2.3:** Write `backend/tests/security/test_code_sanitization.py`
+  - Test detection of `eval()`, `dangerouslySetInnerHTML`, etc.
+  - Test detection of hardcoded secrets
+  - Test safe code passes
+  - Test sanitized output
+
+#### Frontend Tasks (Agent 2)
+- **FE-3.2.1:** Add security badge to generated code display
+  - Show "✓ Security Verified" badge for safe code
+  - Show "⚠ Security Issues" for flagged code
+  - Click badge to see issue details
+- **FE-3.2.2:** Create security issues modal/panel
+  - List security violations by line number
+  - Explain each violation type
+  - Show sanitized version
+- **FE-3.2.3:** Write `app/tests/components/code-display.test.tsx`
+  - Test security badge rendering
+  - Test issues modal display
+- **FE-3.2.4:** Write `app/tests/e2e/code-generation.spec.ts`
+  - Test generation with safe code
+  - Test generation blocking unsafe code
+  - Test security badge display
+
+#### Integration Tasks (Agent 3 - after BE + FE complete)
+- **INT-3.2.1:** Connect code display to sanitization API response
+  - Parse security issues from response
+  - Display issues in UI
+- **INT-3.2.2:** Test end-to-end code generation with sanitization
+  - Generate safe code → shows verified badge
+  - Generate unsafe code → shows issues and sanitized version
+- **INT-3.2.3:** Update TypeScript types for sanitization response
+  - `CodeGenerationResponse` with `security_issues`
+  - `SecurityIssue` type definition
+
+---
+
+### Story 3.3: Rate Limiting
+
+#### Backend Tasks (Agent 1)
+- **BE-3.3.1:** Create `backend/src/security/rate_limiter.py`
+  - Redis-based sliding window counter
+  - Tiered limits (Free, Pro, Enterprise)
+  - Clear error messages with retry-after
+- **BE-3.3.2:** Create `backend/src/middleware/rate_limit_middleware.py`
+  - Apply to `/api/v1/extract`, `/api/v1/generate`, `/api/v1/patterns/upload`
+  - Extract user tier from auth context
+  - Return 429 with retry headers
+- **BE-3.3.3:** Add Prometheus metrics for rate limiting
+  - Counter for rate limit hits by tier/endpoint
+  - Histogram for request latency
+- **BE-3.3.4:** Write `backend/tests/security/test_rate_limiting.py`
+  - Test rate limit enforcement by tier
+  - Test sliding window behavior
+  - Test retry-after headers
+  - Test Redis integration
+
+#### Frontend Tasks (Agent 2)
+- **FE-3.3.1:** Add rate limit error handling
+  - Detect 429 responses
+  - Parse retry-after header
+  - Show countdown timer to user
+- **FE-3.3.2:** Create rate limit warning UI
+  - Toast notification for approaching limit
+  - Modal for rate limit exceeded with countdown
+  - Link to upgrade plan (if Free tier)
+- **FE-3.3.3:** Add rate limit status display (optional)
+  - Show "X requests remaining this minute"
+  - Progress bar for usage
+- **FE-3.3.4:** Write `app/tests/api/rate-limit-handling.test.tsx`
+  - Test 429 error handling
+  - Test countdown display
+  - Test retry after countdown
+- **FE-3.3.5:** Write `app/tests/e2e/rate-limiting.spec.ts`
+  - Test hitting rate limit
+  - Test countdown and retry
+  - Test successful request after cooldown
+
+#### Integration Tasks (Agent 3 - after BE + FE complete)
+- **INT-3.3.1:** Test end-to-end rate limiting flow
+  - Make requests up to limit
+  - Verify 429 response and countdown
+  - Verify successful request after cooldown
+- **INT-3.3.2:** Test rate limit across multiple endpoints
+  - Extract endpoint rate limit
+  - Generate endpoint rate limit
+  - Upload endpoint rate limit
+- **INT-3.3.3:** Test tiered rate limiting (if auth implemented)
+  - Free tier limits
+  - Pro tier limits
+  - Enterprise tier limits
+
+---
+
+### Story 3.4 (OPTIONAL): Prompt Injection Protection
+
+#### Backend Tasks (Agent 1)
+- **BE-3.4.1:** Create `backend/src/security/prompt_guard.py`
+  - Injection pattern detection
+  - Input sanitization
+  - Confidence scoring
+- **BE-3.4.2:** Add prompt guard to requirements input
+  - Detect injection attempts before AI call
+  - Block or sanitize suspicious inputs
+  - Log suspected attacks
+- **BE-3.4.3:** Implement structured prompt templates in `backend/src/prompts/safe_templates.py`
+  - Clear delimiter patterns
+  - Instruction isolation
+- **BE-3.4.4:** Write `backend/tests/security/test_prompt_injection.py`
+  - Test detection of known injection patterns
+  - Test sanitization
+  - Test safe inputs pass through
+
+#### Frontend Tasks (Agent 2)
+- **FE-3.4.1:** Add warning for detected prompt injection attempts
+  - Toast notification
+  - Explanation of why input was blocked
+- **FE-3.4.2:** Write `app/tests/e2e/prompt-safety.spec.ts`
+  - Test submitting injection patterns
+  - Test warning display
+  - Test blocked submission
+
+#### Integration Tasks (Agent 3 - after BE + FE complete)
+- **INT-3.4.1:** Test end-to-end prompt injection protection
+  - Submit injection patterns → blocked
+  - Submit safe requirements → processed
+- **INT-3.4.2:** Test logging and rate limiting for repeat attackers
+  - Multiple injection attempts trigger rate limit
+
+---
+
+### Story 3.5 (OPTIONAL): Security Monitoring
+
+#### Backend Tasks (Agent 1)
+- **BE-3.5.1:** Create `backend/src/security/metrics.py`
+  - Prometheus counters for security events
+  - PII detection counter
+  - Rate limit hits counter
+  - Code sanitization failures counter
+- **BE-3.5.2:** Add metrics collection to all security modules
+  - Increment counters on events
+  - Add labels for event type, severity
+- **BE-3.5.3:** Create `/api/v1/admin/security/metrics` endpoint
+  - Return aggregated security metrics
+  - Require admin auth
+- **BE-3.5.4:** Write `backend/tests/security/test_metrics.py`
+  - Test counter increments
+  - Test metrics endpoint
+  - Test admin auth requirement
+
+#### Frontend Tasks (Agent 2)
+- **FE-3.5.1:** Create `app/src/app/admin/security/page.tsx`
+  - Display security metrics dashboard
+  - Charts for events over time
+  - Table of recent security events
+- **FE-3.5.2:** Add security event cards
+  - PII detections count
+  - Rate limit hits count
+  - Code violations count
+  - Prompt injection attempts count
+- **FE-3.5.3:** Write `app/tests/admin/security-dashboard.test.tsx`
+  - Test dashboard rendering
+  - Test metrics display
+  - Test admin-only access
+
+#### Integration Tasks (Agent 3 - after BE + FE complete)
+- **INT-3.5.1:** Connect dashboard to metrics endpoint
+  - Fetch and display real metrics
+  - Auto-refresh every 30s
+- **INT-3.5.2:** Test end-to-end security monitoring
+  - Trigger security events
+  - Verify metrics update
+  - Verify dashboard displays events
 
 ---
 
 ## Technical Dependencies
 
-- **Input Validation:** `bleach`, `python-magic`, `pillow`
-- **PII Detection:** `presidio-analyzer`, `presidio-anonymizer`, `pytesseract`
-- **Code Scanning:** `eslint`, `semgrep`, `bandit`
-- **Rate Limiting:** `redis`, `slowapi`
-- **Monitoring:** `prometheus-client`, `sentry-sdk`
+**Core (Required):**
+- **Input Validation:** `nh3` (modern HTML sanitizer), `pillow` (already in stack), `python-magic`
+- **PII Detection:** GPT-4V via `langchain-openai` (already in stack)
+- **Rate Limiting:** `redis` (already in stack), `slowapi`
+- **Monitoring:** `prometheus-client` (already in stack), LangSmith (already in stack)
+
+**Optional (if implementing Stories 3.4-3.5):**
+- **Prompt Injection:** Pattern matching (no new deps)
+- **Alerting:** Existing Prometheus + LangSmith
+
+**Removed (Deprecated/Unnecessary):**
+- ~~`bleach`~~ → Replaced with `nh3`
+- ~~`presidio-analyzer/anonymizer`~~ → Replaced with GPT-4V
+- ~~`pytesseract`~~ → GPT-4V handles OCR
+- ~~`semgrep`, `bandit`~~ → Moved to CI/CD, not runtime
+- ~~`sentry-sdk`~~ → LangSmith provides sufficient observability
 
 ## Security Testing
 
@@ -453,20 +692,70 @@ code_sanitization_failures = Counter(
 
 ## Success Criteria
 
-- [ ] All inputs validated and sanitized
-- [ ] PII detection running on all uploads
-- [ ] Generated code passes security audit
-- [ ] Rate limiting active on all expensive endpoints
-- [ ] Prompt injection detection deployed
-- [ ] Security dashboard live at `/admin/security`
+**Core (MVP):**
+- [ ] All inputs validated and sanitized (Story 3.1)
+- [ ] PII detection running on all uploads with GPT-4V (Story 3.1)
+- [ ] Generated code passes security audit (Story 3.2)
+- [ ] Rate limiting active on all expensive endpoints (Story 3.3)
 - [ ] Zero critical vulnerabilities in security audit
-- [ ] Monitoring and alerting operational
+- [ ] Basic Prometheus metrics operational
+
+**Optional (Post-MVP or if time permits):**
+- [ ] Prompt injection detection deployed (Story 3.4)
+- [ ] Security dashboard live at `/admin/security` (Story 3.5)
+- [ ] Advanced monitoring and alerting (Story 3.5)
+
+## Parallel Execution Strategy
+
+### Phase 1: Core Stories (2 days)
+
+**Day 1: Story 3.1 (Input Safety)**
+- **Agent 1 (Backend):** BE-3.1.1 → BE-3.1.2 → BE-3.1.3 → BE-3.1.4 → BE-3.1.5 ⏱️ ~6-8 hours
+- **Agent 2 (Frontend):** FE-3.1.1 → FE-3.1.2 → FE-3.1.3 → FE-3.1.4 → FE-3.1.5 ⏱️ ~6-8 hours
+- **Agent 3 (Integration):** INT-3.1.1 → INT-3.1.2 → INT-3.1.3 ⏱️ ~2-3 hours (after BE + FE)
+
+**Day 2: Stories 3.2 + 3.3 (Code Sanitization + Rate Limiting)**
+- **Agent 1 (Backend):** BE-3.2.1 → BE-3.2.2 → BE-3.2.3 + BE-3.3.1 → BE-3.3.2 → BE-3.3.3 → BE-3.3.4 ⏱️ ~6-8 hours
+- **Agent 2 (Frontend):** FE-3.2.1 → FE-3.2.2 → FE-3.2.3 → FE-3.2.4 + FE-3.3.1 → FE-3.3.2 → FE-3.3.3 → FE-3.3.4 → FE-3.3.5 ⏱️ ~6-8 hours
+- **Agent 3 (Integration):** INT-3.2.1 → INT-3.2.2 → INT-3.2.3 + INT-3.3.1 → INT-3.3.2 → INT-3.3.3 ⏱️ ~2-3 hours (after BE + FE)
+
+### Phase 2: Optional Stories (+1 day)
+
+**Day 3: Stories 3.4 + 3.5 (Prompt Injection + Monitoring)**
+- **Agent 1 (Backend):** BE-3.4.1 → BE-3.4.2 → BE-3.4.3 → BE-3.4.4 + BE-3.5.1 → BE-3.5.2 → BE-3.5.3 → BE-3.5.4 ⏱️ ~6-8 hours
+- **Agent 2 (Frontend):** FE-3.4.1 → FE-3.4.2 + FE-3.5.1 → FE-3.5.2 → FE-3.5.3 ⏱️ ~6-8 hours
+- **Agent 3 (Integration):** INT-3.4.1 → INT-3.4.2 + INT-3.5.1 → INT-3.5.2 ⏱️ ~2-3 hours (after BE + FE)
+
+### Agent Assignment Summary
+
+**Agent 1 (Backend Engineer):**
+- Focus: Security modules, API endpoints, Python tests
+- Skills: FastAPI, Pydantic, Redis, Prometheus, pytest
+- Tasks: All BE-* tasks
+
+**Agent 2 (Frontend Engineer):**
+- Focus: UI components, error handling, E2E tests
+- Skills: Next.js, TypeScript, shadcn/ui, Playwright
+- Tasks: All FE-* tasks
+
+**Agent 3 (Integration Engineer):**
+- Focus: API contracts, end-to-end flows, TypeScript types
+- Skills: Full-stack understanding, E2E testing
+- Tasks: All INT-* tasks (runs after BE + FE complete each story)
+
+### Critical Path
+1. Stories 3.1-3.3 must complete before production deployment
+2. Agent 3 blocked until both Agent 1 + Agent 2 complete each story
+3. Stories 3.4-3.5 can be deferred post-MVP if time constrained
 
 ## Timeline
 
-- **Day 1:** Input validation + PII detection
-- **Day 2:** Code sanitization + rate limiting
-- **Day 3:** Prompt injection protection + monitoring
+**Core Implementation (2 days):**
+- **Day 1:** Input safety - validation + PII detection (Story 3.1)
+- **Day 2:** Code sanitization + Rate limiting (Stories 3.2 + 3.3)
+
+**Optional Extensions (+1 day):**
+- **Day 3:** Prompt injection + monitoring dashboard (Stories 3.4 + 3.5)
 
 ## References
 
