@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 # Initialize logging first
 from .core.logging import init_logging_from_env, get_logger
 from .api.middleware.logging import LoggingMiddleware
+from .api.middleware.rate_limit_middleware import RateLimitMiddleware
 
 # Initialize logging configuration
 init_logging_from_env()
@@ -157,6 +158,9 @@ app.add_middleware(
     log_request_body=False,  # Set to True in development if needed
     log_response_body=False,  # Set to True in development if needed
 )
+
+# Add rate limiting middleware (applies to expensive endpoints)
+app.add_middleware(RateLimitMiddleware)
 
 
 @app.get("/health")

@@ -6,7 +6,8 @@ FastAPI middleware to apply rate limiting to protected endpoints.
 
 import logging
 from typing import Callable, Optional
-from fastapi import Request, Response
+from fastapi import Request, Response, HTTPException
+from fastapi.responses import JSONResponse
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.types import ASGIApp
 
@@ -119,10 +120,9 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
             
             return response
             
-        except Exception as e:
-            # If it's an HTTPException (429), it will be raised
-            # Record the rate limit hit for metrics
-            if hasattr(e, "status_code") and e.status_code == 429:
+        except HTTPException as e:
+            # Record rate limit hit for metrics
+            if e.status_code == 429:
                 record_rate_limit_hit(tier, category)
                 logger.info(
                     f"Rate limit hit: user={user_id}, tier={tier}, endpoint={category}",
@@ -134,8 +134,12 @@ class RateLimitMiddleware(BaseHTTPMiddleware):
                     }
                 )
             
-            # Re-raise the exception
-            raise
+            # Convert HTTPException to JSONResponse for proper handling
+            return JSONResponse(
+                status_code=e.status_code,
+                content={"detail": e.detail},
+                headers=e.headers if e.headers else {}
+            )
 
 
 def create_rate_limit_middleware(app: ASGIApp) -> RateLimitMiddleware:
