@@ -1,6 +1,7 @@
 # 🧩 ComponentForge
 
 [AI MAKERSPACE CERTIFICATION CHALLENGE WALKTHROUGH](./docs/coursework/AI_ENGINEERING_TASKS.md)
+
 [LIVE DEMO](https://www.loom.com/share/4ea3f116df1945d1b54f3cb96eb85d87?sid=fc647a7d-592a-45bb-b8fc-9652449554f7)
 
 **AI-powered design-to-code component generation** that transforms Figma designs and screenshots into production-ready, accessible React components using shadcn/ui patterns.
