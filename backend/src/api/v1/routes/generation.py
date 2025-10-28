@@ -206,7 +206,8 @@ async def generate_component(
             "status": "completed"
         }
         
-        # Add validation results if available (LLM-first pipeline)
+        # Initialize validation_results - required for security_sanitization below
+        # If LLM validation was run, use those results; otherwise use minimal defaults
         if result.validation_results:
             # Flatten validation results to match frontend schema
             response["validation_results"] = {
@@ -227,20 +228,29 @@ async def generate_component(
                 "type_safety": result.validation_results.type_safety_score,
                 "compilation": result.validation_results.compilation_success,  # Match frontend field name
             }
+        else:
+            # No LLM validation - initialize with minimal validation_results
+            # This ensures validation_results exists before adding security_sanitization
+            response["validation_results"] = {
+                "attempts": 0,
+                "final_status": "skipped",
+                "typescript_passed": True,
+                "typescript_errors": [],
+                "typescript_warnings": [],
+                "eslint_passed": True,
+                "eslint_errors": [],
+                "eslint_warnings": []
+            }
         
         # Add LLM token usage if available
         if result.metadata.llm_token_usage:
             response["metadata"]["llm_token_usage"] = result.metadata.llm_token_usage
             response["metadata"]["validation_attempts"] = result.metadata.validation_attempts
         
-        # Add security sanitization results
-        response["security_issues"] = {
+        # Add security sanitization results to validation_results (Epic 003 - Story 3.2)
+        # Frontend expects security_sanitization nested in validation_results
+        response["validation_results"]["security_sanitization"] = {
             "is_safe": sanitization_result.is_safe,
-            "issues_count": sanitization_result.issues_count,
-            "critical_count": sanitization_result.critical_count,
-            "high_count": sanitization_result.high_count,
-            "medium_count": sanitization_result.medium_count,
-            "low_count": sanitization_result.low_count,
             "issues": [
                 {
                     "type": issue.type.value,
@@ -252,7 +262,8 @@ async def generate_component(
                     "code_snippet": issue.code_snippet
                 }
                 for issue in sanitization_result.issues
-            ]
+            ],
+            "sanitized_code": None  # Optional field for future use
         }
         
         return response
