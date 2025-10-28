@@ -39,6 +39,12 @@ if PROMETHEUS_AVAILABLE:
         'Total security events',
         ['event_type', 'severity']
     )
+
+    rate_limit_hits = Counter(
+        'rate_limit_hits_total',
+        'Rate limit violations',
+        ['tier', 'endpoint']
+    )
 else:
     # Provide no-op counters when Prometheus is not available
     class NoOpCounter:
@@ -53,6 +59,7 @@ else:
     pii_detections = NoOpCounter()
     input_validation_failures = NoOpCounter()
     security_events = NoOpCounter()
+    rate_limit_hits = NoOpCounter()
 
 
 def record_code_sanitization_failure(pattern: str, severity: str):
@@ -85,3 +92,14 @@ def record_input_validation_failure(validation_type: str, reason: str):
     """
     input_validation_failures.labels(validation_type=validation_type, reason=reason).inc()
     security_events.labels(event_type="input_validation", severity="medium").inc()
+
+
+def record_rate_limit_hit(tier: str, endpoint: str):
+    """Record a rate limit hit metric.
+    
+    Args:
+        tier: User tier (free, pro, enterprise)
+        endpoint: Endpoint category (extract, generate, upload)
+    """
+    rate_limit_hits.labels(tier=tier, endpoint=endpoint).inc()
+    security_events.labels(event_type="rate_limit", severity="medium").inc()
