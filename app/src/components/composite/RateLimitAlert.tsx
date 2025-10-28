@@ -5,6 +5,7 @@
  * Displays a warning when rate limit is exceeded with countdown timer
  */
 
+import React from 'react';
 import { AlertCircle, Clock } from 'lucide-react';
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert';
 

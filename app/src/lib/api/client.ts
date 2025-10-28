@@ -47,9 +47,9 @@ apiClient.interceptors.response.use(
       // Handle rate limiting (Epic 003 Story 3.3)
       if (status === 429) {
         // Parse Retry-After header (in seconds)
-        const retryAfter = headers['retry-after'] 
-          ? parseInt(headers['retry-after'], 10) 
-          : 60; // default to 60 seconds
+        const retryAfterHeader = headers['retry-after'];
+        const parsedRetryAfter = retryAfterHeader ? parseInt(retryAfterHeader, 10) : NaN;
+        const retryAfter = !isNaN(parsedRetryAfter) ? parsedRetryAfter : 60; // default to 60 seconds if invalid
         
         let message = typeof data?.detail === 'string' 
           ? data.detail 
