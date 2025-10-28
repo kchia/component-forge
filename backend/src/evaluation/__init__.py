@@ -23,6 +23,7 @@ from .metrics import (
 )
 
 from .golden_dataset import GoldenDataset
+from .e2e_evaluator import E2EEvaluator
 
 __all__ = [
     # Types
@@ -37,4 +38,6 @@ __all__ = [
     'E2EMetrics',
     # Dataset
     'GoldenDataset',
+    # Evaluator
+    'E2EEvaluator',
 ]
