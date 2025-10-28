@@ -123,6 +123,9 @@ export interface GenerationMetadata {
     total_tokens: number;
   };
   validation_attempts?: number;  // Number of validation/fix attempts
+  // Epic 004: Observability - LangSmith trace integration
+  trace_url?: string;  // LangSmith trace URL for this generation
+  session_id?: string;  // Session ID for tracking related operations
 }
 
 // Generation timing breakdown
