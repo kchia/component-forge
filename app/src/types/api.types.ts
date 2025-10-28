@@ -125,3 +125,19 @@ export interface FigmaExtractResponse {
 export interface APIErrorResponse {
   detail: string | Record<string, any>;
 }
+
+// Rate limit error (Epic 003 Story 3.3)
+export class RateLimitError extends Error {
+  public readonly retryAfter: number; // seconds until retry is allowed
+  public readonly endpoint?: string;
+  public readonly tier?: string;
+
+  constructor(message: string, retryAfter: number, endpoint?: string, tier?: string) {
+    super(message);
+    this.name = 'RateLimitError';
+    this.retryAfter = retryAfter;
+    this.endpoint = endpoint;
+    this.tier = tier;
+    Object.setPrototypeOf(this, RateLimitError.prototype);
+  }
+}
