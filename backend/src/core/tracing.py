@@ -104,6 +104,11 @@ def traced(run_name: Optional[str] = None, metadata: Optional[Dict[str, Any]] = 
     This decorator wraps functions with LangSmith tracing when available,
     automatically including session context and custom metadata.
 
+    Note: The traceable decorator is applied at runtime (not at definition time)
+    to allow dynamic metadata that changes per request (e.g., session_id).
+    LangSmith's traceable decorator is designed to be lightweight, so the
+    overhead is minimal.
+
     Args:
         run_name: Optional name for the trace run
         metadata: Optional metadata dictionary to include in the trace
@@ -216,7 +221,14 @@ def get_current_run_id() -> Optional[str]:
     """Get current LangSmith run ID from context.
 
     Returns:
-        str: Current run ID, or None if not available
+        str: Current run ID, or None if not in a trace context or LangSmith unavailable
+
+    Note:
+        Returns None when:
+        - LangSmith tracing is disabled (LANGCHAIN_TRACING_V2=false)
+        - Not in a traced function call
+        - LangSmith packages not installed
+        This is expected behavior and should be handled gracefully by callers.
     """
     try:
         from langchain_core.tracers.context import get_run_tree
@@ -235,6 +247,10 @@ def get_trace_url(run_id: str) -> str:
 
     Returns:
         str: Full URL to view the trace in LangSmith UI
+
+    Example:
+        >>> get_trace_url("12345-abcde-67890")
+        'https://smith.langchain.com/o/default/projects/p/componentforge-dev/r/12345-abcde-67890'
     """
     config = get_tracing_config()
     base_url = "https://smith.langchain.com"

@@ -148,6 +148,9 @@ async def generate_component(
         success = True
         
         # Get trace metadata for observability
+        # Note: session_id is always available from middleware
+        # trace_url will be None if LangSmith tracing is disabled or unavailable
+        # This is expected and handled gracefully by the frontend
         session_id = get_session_id()
         run_id = get_current_run_id()
         trace_url = get_trace_url(run_id) if run_id else None
