@@ -1,0 +1,32 @@
+{
+  "screenshot_id": "alert_error",
+  "component_name": "Error Alert",
+  "expected_tokens": {
+    "colors": {
+      "background": "#FEE2E2",
+      "border": "#EF4444",
+      "text": "#991B1B",
+      "icon": "#EF4444"
+    },
+    "spacing": {
+      "padding": "12px 16px",
+      "gap": "12px"
+    },
+    "typography": {
+      "fontSize": "14px",
+      "fontWeight": "400"
+    },
+    "border": {
+      "radius": "6px",
+      "width": "1px"
+    }
+  },
+  "expected_pattern_id": "alert",
+  "expected_code_properties": {
+    "has_variant_prop": true,
+    "has_icon": true,
+    "has_accessibility": true,
+    "compiles": true
+  },
+  "notes": "Error alert with red color scheme and error icon"
+}

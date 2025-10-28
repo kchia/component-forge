@@ -1,0 +1,26 @@
+{
+  "screenshot_id": "checkbox",
+  "component_name": "Checkbox",
+  "expected_tokens": {
+    "colors": {
+      "border": "#D1D5DB",
+      "checked": "#3B82F6",
+      "checkmark": "#FFFFFF"
+    },
+    "spacing": {
+      "size": "16px"
+    },
+    "border": {
+      "radius": "4px",
+      "width": "1px"
+    }
+  },
+  "expected_pattern_id": "checkbox",
+  "expected_code_properties": {
+    "has_checked_state": true,
+    "has_accessibility": true,
+    "compiles": true,
+    "has_onchange_handler": true
+  },
+  "notes": "Standard checkbox component with checked and unchecked states"
+}

@@ -1,0 +1,30 @@
+{
+  "screenshot_id": "button_outline",
+  "component_name": "Outline Button",
+  "expected_tokens": {
+    "colors": {
+      "border": "#3B82F6",
+      "text": "#3B82F6",
+      "background": "transparent"
+    },
+    "spacing": {
+      "padding": "12px 24px"
+    },
+    "typography": {
+      "fontSize": "14px",
+      "fontWeight": "500"
+    },
+    "border": {
+      "radius": "6px",
+      "width": "1px"
+    }
+  },
+  "expected_pattern_id": "button",
+  "expected_code_properties": {
+    "has_variant_prop": true,
+    "has_accessibility": true,
+    "compiles": true,
+    "has_onclick_handler": true
+  },
+  "notes": "Outline button variant with transparent background and border"
+}
