@@ -210,7 +210,8 @@ async def generate_component(
         # If LLM validation was run, use those results; otherwise use minimal defaults
         if result.validation_results:
             # Flatten validation results to match frontend schema
-            response["validation_results"] = {
+            # Nest inside metadata as per frontend TypeScript types
+            response["metadata"]["validation_results"] = {
                 "attempts": result.validation_results.attempts,
                 "final_status": result.validation_results.final_status,
                 "typescript_passed": result.validation_results.typescript_passed,
@@ -220,9 +221,10 @@ async def generate_component(
                 "eslint_errors": [error.dict() for error in result.validation_results.eslint_errors],
                 "eslint_warnings": [error.dict() for error in result.validation_results.eslint_warnings]
             }
-            
+
             # Add quality scores with frontend-compatible field names
-            response["quality_scores"] = {
+            # Nest inside metadata as per frontend TypeScript types
+            response["metadata"]["quality_scores"] = {
                 "overall": result.validation_results.overall_score,
                 "linting": result.validation_results.linting_score,
                 "type_safety": result.validation_results.type_safety_score,
@@ -231,7 +233,8 @@ async def generate_component(
         else:
             # No LLM validation - initialize with minimal validation_results
             # This ensures validation_results exists before adding security_sanitization
-            response["validation_results"] = {
+            # Nest inside metadata as per frontend TypeScript types
+            response["metadata"]["validation_results"] = {
                 "attempts": 0,
                 "final_status": "skipped",
                 "typescript_passed": True,
@@ -248,8 +251,8 @@ async def generate_component(
             response["metadata"]["validation_attempts"] = result.metadata.validation_attempts
         
         # Add security sanitization results to validation_results (Epic 003 - Story 3.2)
-        # Frontend expects security_sanitization nested in validation_results
-        response["validation_results"]["security_sanitization"] = {
+        # Frontend expects security_sanitization nested in metadata.validation_results
+        response["metadata"]["validation_results"]["security_sanitization"] = {
             "is_safe": sanitization_result.is_safe,
             "issues": [
                 {

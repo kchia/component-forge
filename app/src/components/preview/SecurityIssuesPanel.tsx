@@ -122,7 +122,19 @@ export function SecurityIssuesPanel({
           <Alert>
             <ShieldCheck className="size-4" />
             <AlertDescription>
-              No security vulnerabilities detected! The generated code passed all security checks.
+              <strong>No security vulnerabilities detected!</strong>
+              <p className="text-sm text-muted-foreground mt-2">
+                The generated code was scanned for the following security risks:
+              </p>
+              <ul className="list-disc list-inside mt-3 space-y-1.5 text-sm text-muted-foreground">
+                <li><strong className="text-foreground">Code Injection</strong> - eval(), Function constructor</li>
+                <li><strong className="text-foreground">XSS Vulnerabilities</strong> - dangerouslySetInnerHTML, innerHTML, document.write</li>
+                <li><strong className="text-foreground">Prototype Pollution</strong> - __proto__, constructor.prototype manipulation</li>
+                <li><strong className="text-foreground">Hardcoded Secrets</strong> - API keys, passwords, tokens</li>
+                <li><strong className="text-foreground">SQL Injection</strong> - Unsafe query construction</li>
+                <li><strong className="text-foreground">Environment Variable Exposure</strong> - Client-side process.env access</li>
+                <li><strong className="text-foreground">Unsafe HTML</strong> - Direct outerHTML assignment</li>
+              </ul>
             </AlertDescription>
           </Alert>
         )}

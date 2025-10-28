@@ -6,6 +6,12 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { MetricCard } from "@/components/composite/MetricCard";
 import { DynamicCodeBlock } from "@/components/ui/DynamicCodeBlock";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
@@ -310,19 +316,33 @@ export default function PreviewPage() {
       {/* Quality Metrics (show when complete) */}
       {isComplete && metadata && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-          <MetricCard
-            title="Security"
-            value={
-              securityResults 
-                ? (securityResults.is_safe ? "✓ Safe" : `${securityResults.issues.length} Issues`)
-                : "Not Checked"
-            }
-            icon={
-              securityResults 
-                ? (securityResults.is_safe ? ShieldCheck : ShieldAlert)
-                : Shield
-            }
-          />
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <div>
+                  <MetricCard
+                    title="Security"
+                    value={
+                      securityResults
+                        ? (securityResults.is_safe ? "✓ Safe" : `${securityResults.issues.length} Issues`)
+                        : "Not Checked"
+                    }
+                    icon={
+                      securityResults
+                        ? (securityResults.is_safe ? ShieldCheck : ShieldAlert)
+                        : Shield
+                    }
+                  />
+                </div>
+              </TooltipTrigger>
+              <TooltipContent side="bottom" className="max-w-xs">
+                <p className="text-xs">
+                  Scans for code injection, XSS, prototype pollution,<br />
+                  hardcoded secrets, SQL injection, and unsafe HTML
+                </p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <MetricCard
             title="Accessibility"
             value={metadata.has_accessibility_warnings ? "Warnings" : "✓ Pass"}
