@@ -47,6 +47,17 @@ apiClient.interceptors.response.use(
       let message: string;
       if (typeof data?.detail === 'string') {
         message = data.detail;
+        
+        // Enhanced error messages for specific security scenarios
+        if (message.toLowerCase().includes('pii')) {
+          message = '🔒 Security Alert: This image contains personally identifiable information (PII) and cannot be processed for privacy protection.';
+        } else if (message.toLowerCase().includes('svg') && message.toLowerCase().includes('security')) {
+          message = '⚠️ Security Alert: This SVG file contains potentially malicious content and has been blocked for your safety.';
+        } else if (message.toLowerCase().includes('file type') || message.toLowerCase().includes('invalid file')) {
+          message = '📄 Invalid File: Please upload PNG, JPG, or SVG files only.';
+        } else if (message.toLowerCase().includes('file size') || message.toLowerCase().includes('too large')) {
+          message = '📦 File Too Large: Please compress your image to under 10MB.';
+        }
       } else if (typeof data?.detail === 'object') {
         // Validation errors from FastAPI
         message = 'Validation error. Please check your input.';

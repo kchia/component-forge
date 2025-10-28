@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import dynamic from "next/dynamic";
@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Alert } from "@/components/ui/alert";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Upload, FileImage, CheckCircle2, ArrowRight, AlertTriangle } from "lucide-react";
+import { CheckCircle2, ArrowRight, AlertTriangle } from "lucide-react";
 import { useTokenExtraction } from "@/lib/query/hooks/useTokenExtraction";
 import { useFigmaAuth } from "@/lib/query/hooks/useFigmaAuth";
 import { useFigmaExtraction } from "@/lib/query/hooks/useFigmaExtraction";
@@ -24,6 +24,7 @@ import type { TokenData } from "@/components/tokens/TokenEditor";
 import { CompactTips } from "@/components/extract/CompactTips";
 import { FigmaGuidance } from "@/components/extract/FigmaGuidance";
 import { WorkflowBreadcrumb } from "@/components/composite/WorkflowBreadcrumb";
+import { FileUploadValidator } from "@/components/extract/FileUploadValidator";
 
 // Dynamic imports to avoid SSR issues with prismjs in CodeBlock
 const TokenEditor = dynamic(
@@ -47,9 +48,6 @@ export default function TokenExtractionPage() {
   const tabParam = searchParams.get("tab");
   const [activeTab, setActiveTab] = useState(tabParam === "figma" ? "figma" : "screenshot");
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
-  const [dragActive, setDragActive] = useState(false);
-  const [validationWarnings, setValidationWarnings] = useState<string[]>([]);
 
   // Update active tab when URL param changes
   useEffect(() => {
@@ -99,152 +97,6 @@ export default function TokenExtractionPage() {
   const getConfidenceScores = (): Record<string, number> => {
     return (metadata as { confidence?: Record<string, number> })?.confidence || {};
   };
-
-  // Image validation with dimension and quality checks
-  interface ImageValidation {
-    valid: boolean;
-    errors: string[];
-    warnings: string[];
-  }
-
-  const validateImageUpload = async (file: File): Promise<ImageValidation> => {
-    const errors: string[] = [];
-    const warnings: string[] = [];
-
-    // Check file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      errors.push("File size exceeds 10MB. Please compress your image.");
-    }
-
-    // Check file type
-    const validTypes = ["image/png", "image/jpeg", "image/webp", "image/jpg"];
-    if (!validTypes.includes(file.type)) {
-      errors.push("Invalid file format. Please upload PNG, JPG, or WebP.");
-    }
-
-    // Check image dimensions
-    return new Promise<ImageValidation>((resolve) => {
-      const img = new Image();
-      const objectUrl = URL.createObjectURL(file);
-
-      img.onload = () => {
-        URL.revokeObjectURL(objectUrl);
-
-        // Check minimum width
-        if (img.width < 1024) {
-          warnings.push(
-            `Image width is ${img.width}px. For best results, use images at least 1024px wide.`
-          );
-        }
-
-        // Check if image is too small
-        if (img.width < 512 || img.height < 512) {
-          errors.push("Image is too small. Please upload a larger screenshot.");
-        }
-
-        // Check aspect ratio (very tall/wide images might be full app screenshots)
-        const aspectRatio = img.width / img.height;
-        if (aspectRatio > 3 || aspectRatio < 0.33) {
-          warnings.push(
-            "Unusual aspect ratio detected. Make sure your screenshot focuses on design tokens, not a full app layout."
-          );
-        }
-
-        resolve({
-          valid: errors.length === 0,
-          errors,
-          warnings
-        });
-      };
-
-      img.onerror = () => {
-        URL.revokeObjectURL(objectUrl);
-        errors.push("Failed to load image. Please try a different file.");
-        resolve({ valid: false, errors, warnings });
-      };
-
-      img.src = objectUrl;
-    });
-  };
-
-  // Handle file selection with validation
-  const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setValidationWarnings([]);
-
-      // Validate image
-      const validation = await validateImageUpload(file);
-
-      // Show errors
-      if (!validation.valid) {
-        showAlert('error', validation.errors.join(" "));
-        return;
-      }
-
-      // Show warnings (but allow upload)
-      if (validation.warnings.length > 0) {
-        setValidationWarnings(validation.warnings);
-      }
-
-      setSelectedFile(file);
-
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-    }
-  };
-
-  // Cleanup preview URL on unmount
-  useEffect(() => {
-    return () => {
-      if (imagePreview) {
-        URL.revokeObjectURL(imagePreview);
-      }
-    };
-  }, [imagePreview]);
-
-  // Handle drag and drop
-  const handleDrag = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (e.type === "dragenter" || e.type === "dragover") {
-      setDragActive(true);
-    } else if (e.type === "dragleave") {
-      setDragActive(false);
-    }
-  }, []);
-
-  const handleDrop = useCallback(async (e: React.DragEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-    setDragActive(false);
-
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      setValidationWarnings([]);
-
-      // Validate image
-      const validation = await validateImageUpload(file);
-
-      // Show errors
-      if (!validation.valid) {
-        showAlert('error', validation.errors.join(" "));
-        return;
-      }
-
-      // Show warnings (but allow upload)
-      if (validation.warnings.length > 0) {
-        setValidationWarnings(validation.warnings);
-      }
-
-      setSelectedFile(file);
-
-      // Create preview URL
-      const previewUrl = URL.createObjectURL(file);
-      setImagePreview(previewUrl);
-    }
-  }, [showAlert]);
 
   // Handle upload with success tracking
   const handleUpload = () => {
@@ -343,106 +195,30 @@ export default function TokenExtractionPage() {
               <CardTitle>Upload Screenshot</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
-              {/* Compact Upload Zone */}
-              {!selectedFile && !tokens && (
-                <div
-                  className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                    dragActive
-                      ? "border-primary bg-primary/5"
-                      : "border-muted-foreground/25"
-                  }`}
-                  onDragEnter={handleDrag}
-                  onDragLeave={handleDrag}
-                  onDragOver={handleDrag}
-                  onDrop={handleDrop}
-                >
-                  <div className="flex flex-col items-center gap-3">
-                    <Upload className="h-8 w-8 text-muted-foreground" />
-                    <div className="space-y-2">
-                      <p className="text-sm font-medium">
-                        Drag and drop your screenshot here, or
-                      </p>
-                      <label htmlFor="file-upload">
-                        <Button variant="outline" asChild>
-                          <span>Browse Files</span>
-                        </Button>
-                        <input
-                          id="file-upload"
-                          type="file"
-                          accept="image/png,image/jpeg,image/jpg"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </label>
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      PNG or JPEG, max 10MB
-                    </p>
-                  </div>
-                </div>
+              {/* File Upload with Validation */}
+              {!tokens && (
+                <FileUploadValidator
+                  onFileSelected={(file) => {
+                    setSelectedFile(file);
+                    setUploadedFile(file);
+                  }}
+                  onFileRemoved={() => {
+                    setSelectedFile(null);
+                  }}
+                  acceptedFileTypes="image/png,image/jpeg,image/jpg,image/svg+xml"
+                  maxFileSizeMB={10}
+                  disabled={isPending}
+                />
               )}
 
-              {/* Selected File with Preview */}
+              {/* Extract Button */}
               {selectedFile && !tokens && (
-                <div className="space-y-4">
-                  {/* Image Preview */}
-                  {imagePreview && (
-                    <div className="relative rounded-lg overflow-hidden border bg-gray-50">
-                      <img
-                        src={imagePreview}
-                        alt="Screenshot preview"
-                        className="w-full h-auto max-h-[500px] object-contain"
-                      />
-                    </div>
-                  )}
-
-                  {/* File Info and Actions */}
-                  <div className="flex items-center justify-between gap-4">
-                    <div className="flex items-center gap-3">
-                      <FileImage className="h-5 w-5 text-muted-foreground" />
-                      <div>
-                        <p className="text-sm font-medium">
-                          {selectedFile.name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {(selectedFile.size / 1024).toFixed(0)} KB
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <label htmlFor="file-upload-change">
-                        <Button variant="outline" size="sm" asChild>
-                          <span>Change</span>
-                        </Button>
-                        <input
-                          id="file-upload-change"
-                          type="file"
-                          accept="image/png,image/jpeg,image/jpg"
-                          onChange={handleFileChange}
-                          className="hidden"
-                        />
-                      </label>
-                      <Button onClick={handleUpload} disabled={isPending} size="sm">
-                        {isPending ? "Extracting..." : "Extract Tokens"}
-                      </Button>
-                    </div>
-                  </div>
+                <div className="flex justify-end">
+                  <Button onClick={handleUpload} disabled={isPending} size="lg">
+                    {isPending ? "Extracting..." : "Extract Tokens"}
+                    {!isPending && <ArrowRight className="ml-2 h-4 w-4" />}
+                  </Button>
                 </div>
-              )}
-
-              {/* NEW: Validation Warnings */}
-              {validationWarnings.length > 0 && (
-                <Alert variant="warning">
-                  <AlertTriangle className="h-4 w-4" />
-                  <div className="ml-2">
-                    <p className="font-medium text-sm">Quality Warnings</p>
-                    <ul className="text-xs mt-1 space-y-1">
-                      {validationWarnings.map((warning, i) => (
-                        <li key={i}>• {warning}</li>
-                      ))}
-                    </ul>
-                  </div>
-                </Alert>
               )}
 
               {/* Progress */}
@@ -467,22 +243,11 @@ export default function TokenExtractionPage() {
               {tokens && metadata && hasTokens() && (
                 <div className="space-y-4">
                   <Alert variant="success">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <p className="font-medium">✓ Tokens Extracted Successfully!</p>
-                        <p className="text-sm mt-1">
-                          From: {metadata.filename || 'Unknown file'}
-                        </p>
-                      </div>
-                      {imagePreview && (
-                        <div className="flex-shrink-0">
-                          <img
-                            src={imagePreview}
-                            alt="Uploaded screenshot"
-                            className="w-24 h-24 object-cover rounded border"
-                          />
-                        </div>
-                      )}
+                    <div>
+                      <p className="font-medium">✓ Tokens Extracted Successfully!</p>
+                      <p className="text-sm mt-1">
+                        From: {metadata.filename || 'Unknown file'}
+                      </p>
                     </div>
                   </Alert>
                 </div>
