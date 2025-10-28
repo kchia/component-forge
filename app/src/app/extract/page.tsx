@@ -436,6 +436,16 @@ export default function TokenExtractionPage() {
                 </div>
               )}
 
+              {/* Rate Limit Alert (Epic 003 Story 3.3) */}
+              {rateLimitState.isRateLimited && (
+                <RateLimitAlert
+                  retryAfter={rateLimitState.retryAfter}
+                  message={rateLimitState.message}
+                  endpoint={rateLimitState.endpoint}
+                  onDismiss={clearRateLimit}
+                />
+              )}
+
               {/* Cache Indicator */}
               {metadata?.cached && metadata?.extractionMethod === 'figma' && (
                 <Alert>

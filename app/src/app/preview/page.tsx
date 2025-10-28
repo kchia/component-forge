@@ -23,6 +23,8 @@ import {
 import { downloadGeneratedCode } from "@/lib/api";
 import { copyToClipboard, openInCodeSandbox } from "@/lib/utils";
 import { WorkflowStep, GenerationStage, GenerationResponse } from "@/types";
+import { useRateLimitHandler } from "@/hooks/useRateLimitHandler";
+import { RateLimitAlert } from "@/components/composite/RateLimitAlert";
 import {
   ArrowLeft,
   Download,
@@ -59,6 +61,9 @@ export default function PreviewPage() {
   const clearSelection = usePatternSelection((state) => state.clearSelection);
   const clearComparison = usePatternSelection((state) => state.clearComparison);
 
+  // Rate limit handling (Epic 003 Story 3.3)
+  const { rateLimitState, handleRateLimitError, clearRateLimit, isRateLimitError } = useRateLimitHandler();
+
   // Local state to persist generated code across re-renders
   const [generatedCode, setGeneratedCode] = useState<GenerationResponse | null>(
     null
@@ -81,6 +86,10 @@ export default function PreviewPage() {
     },
     onError: (error) => {
       console.error("[Preview] Generation FAILED:", error);
+      // Handle rate limit errors (Epic 003 Story 3.3)
+      if (isRateLimitError(error)) {
+        handleRateLimitError(error);
+      }
       // Stop timer
       setStartTime(null);
     }
@@ -277,8 +286,18 @@ export default function PreviewPage() {
         />
       )}
 
+      {/* Rate Limit Alert (Epic 003 Story 3.3) */}
+      {rateLimitState.isRateLimited && (
+        <RateLimitAlert
+          retryAfter={rateLimitState.retryAfter}
+          message={rateLimitState.message}
+          endpoint={rateLimitState.endpoint}
+          onDismiss={clearRateLimit}
+        />
+      )}
+
       {/* Error State */}
-      {hasFailed && (
+      {hasFailed && !rateLimitState.isRateLimited && (
         <Card className="border-destructive">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center text-center space-y-4">
