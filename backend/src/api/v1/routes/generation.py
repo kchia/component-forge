@@ -6,6 +6,18 @@ from fastapi import APIRouter, HTTPException, status
 from fastapi.responses import JSONResponse
 import time
 
+# Try to import LangSmith for tracing (optional dependency)
+try:
+    from langsmith import traceable
+    LANGSMITH_AVAILABLE = True
+except ImportError:
+    # Create a no-op decorator if LangSmith is not available
+    def traceable(*args, **kwargs):
+        def decorator(func):
+            return func
+        return decorator
+    LANGSMITH_AVAILABLE = False
+
 from ....core.logging import get_logger
 from ....core.tracing import get_current_run_id, get_trace_url
 from ....generation.generator_service import GeneratorService
@@ -41,6 +53,7 @@ except ImportError:
 
 
 @router.post("/generate")
+@traceable(run_type="chain", name="generate_component_api")
 async def generate_component(
     request: GenerationRequest
 ) -> Dict[str, Any]:

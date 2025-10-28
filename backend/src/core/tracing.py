@@ -231,30 +231,45 @@ def get_current_run_id() -> Optional[str]:
         This is expected behavior and should be handled gracefully by callers.
     """
     try:
-        from langchain_core.tracers.context import get_run_tree
+        from langsmith.run_helpers import get_current_run_tree
 
-        run_tree = get_run_tree()
+        run_tree = get_current_run_tree()
         return str(run_tree.id) if run_tree else None
     except Exception:
         return None
 
 
-def get_trace_url(run_id: str) -> str:
+def get_trace_url(run_id: str) -> Optional[str]:
     """Get the LangSmith URL for a specific trace run.
 
     Args:
         run_id: The run ID from LangSmith
 
     Returns:
-        str: Full URL to view the trace in LangSmith UI
+        str: Full URL to view the trace in LangSmith UI, or None if unavailable
 
     Example:
         >>> get_trace_url("12345-abcde-67890")
-        'https://smith.langchain.com/o/default/projects/p/componentforge-dev/r/12345-abcde-67890'
+        'https://smith.langchain.com/o/59e7.../projects/p/c60ad.../r/12345-abcde-67890'
     """
-    config = get_tracing_config()
+    if not run_id:
+        return None
+
+    # Get org and project IDs from environment variables
+    org_id = os.getenv("LANGSMITH_ORG_ID")
+    project_id = os.getenv("LANGSMITH_PROJECT_ID")
+
+    if not org_id or not project_id:
+        logger.warning(
+            "LANGSMITH_ORG_ID or LANGSMITH_PROJECT_ID not set. "
+            "Trace URL will not be available."
+        )
+        return None
+
+    # Construct the full LangSmith trace URL
+    # Format: https://smith.langchain.com/o/{org_id}/projects/p/{project_id}/r/{run_id}
     base_url = "https://smith.langchain.com"
-    return f"{base_url}/o/default/projects/p/{config.project}/r/{run_id}"
+    return f"{base_url}/o/{org_id}/projects/p/{project_id}/r/{run_id}"
 
 
 # Initialize tracing on module import if configured

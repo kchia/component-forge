@@ -154,6 +154,7 @@ export default function PreviewPage() {
       setStartTime(Date.now());
       generation.mutate({
         pattern_id: patternId,
+        component_name: componentType,
         tokens,
         requirements: allRequirements
       });
@@ -222,6 +223,7 @@ export default function PreviewPage() {
 
     generation.mutate({
       pattern_id: patternId,
+      component_name: componentType,
       tokens: tokens!,
       requirements: allRequirements
     });

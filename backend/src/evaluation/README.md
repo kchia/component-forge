@@ -19,7 +19,7 @@ Location: `backend/data/golden_dataset/`
 
 - **15 component screenshots** covering 8 types
 - **Ground truth JSON files** with expected tokens, pattern IDs, and code properties
-- **Comprehensive coverage**: Button (3), Card (2), Badge (3), Input (2), Checkbox, Alert (2), Select, Switch
+- **Comprehensive coverage**: Button (3), Card (2), Badge (3), Input (2), Checkbox, Radio, Switch, Tabs, Alert (2), Select
 
 See `backend/data/golden_dataset/README.md` for format details.
 

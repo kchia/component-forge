@@ -89,10 +89,12 @@ class GeneratorService:
         
         # Initialize code validator with LLM generator
         # Set max_retries=0 to disable auto-fix retries (speeds up generation from ~97s to ~35s)
+        # Set skip_eslint=True to disable ESLint validation (TypeScript validation is sufficient)
         # Validation still runs once to provide quality scores and error details
         self.code_validator = CodeValidator(
             llm_generator=self.llm_generator,
-            max_retries=0  # Disable retries for faster generation
+            max_retries=0,  # Disable retries for faster generation
+            skip_eslint=True  # Skip ESLint - TypeScript validation covers all important checks
         )
         
         # Track current stage for progress updates

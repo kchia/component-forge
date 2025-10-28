@@ -47,6 +47,37 @@ You are an expert UI/UX designer analyzing component screenshots. Your task is t
    - Common patterns: Success message, error alert, warning banner
    - Colors: Uses semantic colors matching severity
 
+7. **Switch**: Toggle control with pill-shaped track and sliding thumb
+   - Visual cues: Pill/rounded track (~44×24px) with circular knob (~20px) that slides
+   - States: Gray track with left knob (off), colored track with right knob (on)
+   - Layout: Compact inline element, often paired with label
+   - Common patterns: "Enable notifications", "Dark mode", settings toggles
+   - Cursor: `pointer` on the switch
+   - **Key differentiator from Select**: No text field, no dropdown arrow, compact pill shape with visible circular knob
+
+8. **Checkbox**: Square box that displays checkmark when selected
+   - Visual cues: Square outline (~16-24px), checkmark or check icon when checked
+   - States: Empty box (unchecked), box with checkmark (checked), indeterminate (dash)
+   - Layout: Often appears in vertical lists or forms
+   - Common patterns: Terms acceptance, multi-select lists, filter options
+   - Multiple checkboxes can be checked simultaneously
+   - **Key differentiator from Radio**: Square shape, allows multiple selections
+
+9. **Radio**: Circular button for mutually exclusive choices
+   - Visual cues: Circular outline (~16-24px), filled dot/circle when selected
+   - States: Empty circle (unselected), circle with inner dot (selected)
+   - Layout: Always appears in groups of 2+ options
+   - Common patterns: Gender selection, payment method, single-choice questions
+   - Only one radio in a group can be selected at a time
+   - **Key differentiator from Checkbox**: Circular shape, mutual exclusivity (only one selectable)
+
+10. **Tabs**: Horizontal navigation with active indicator
+   - Visual cues: Row of text labels, one highlighted with underline/background/border
+   - Layout: Horizontal list with active tab visually distinguished
+   - Common patterns: Content sections, view switcher, navigation segments
+   - Active tab shown with underline, different background, or border
+   - **Key differentiator from Buttons**: Connected navigation bar, mutual exclusivity, underline/border styling
+
 {figma_context}
 
 ## Classification Guidelines
@@ -116,7 +147,22 @@ You are an expert UI/UX designer analyzing component screenshots. Your task is t
 **Classification**: Badge (confidence: 0.90)
 **Rationale**: Compact status indicator with semantic color
 
-### Example 5: Ambiguous Case - Clickable Card vs Large Button
+### Example 5: Toggle Switch (NOT Select)
+**Visual Description**: Pill-shaped track (~44×24px) in gray, white circular knob (~20px) on left side, label "Dark mode" next to it
+**Analysis**:
+- Shape: Rounded pill/oval track with circular thumb → Switch candidate
+- Visual elements: Visible circular knob inside track → Confirms Switch
+- NO dropdown arrow → Rules out Select
+- NO text field showing value → Rules out Select
+- Size: Compact, single-line → Not Card/Alert
+**Classification**: Switch (confidence: 0.95)
+**Candidates**: [
+  {{"type": "Switch", "confidence": 0.95}},
+  {{"type": "Select", "confidence": 0.25}}
+]
+**Rationale**: Clear toggle switch with pill-shaped track and circular sliding knob. The absence of dropdown arrow and text field distinguishes this from Select dropdown.
+
+### Example 6: Ambiguous Case - Clickable Card vs Large Button
 **Visual Description**: Large rectangular element, light background, icon + "Upload File" text, full width
 **Analysis**:
 - Could be Button: Has action text, single clickable element
@@ -135,7 +181,7 @@ Return a JSON object with this exact structure:
 
 ```json
 {{
-  "component_type": "Button|Card|Input|Select|Badge|Alert",
+  "component_type": "Button|Card|Input|Select|Checkbox|Radio|Switch|Tabs|Badge|Alert",
   "confidence": 0.0-1.0,
   "candidates": [
     {{"type": "ComponentType", "confidence": 0.0-1.0}}
@@ -145,7 +191,7 @@ Return a JSON object with this exact structure:
 ```
 
 **Rules**:
-1. `component_type` must be one of the 6 supported types (exact match)
+1. `component_type` must be one of the 10 supported types (exact match)
 2. `confidence` must be between 0.0 and 1.0
 3. If confidence < 0.8, provide 2-3 alternative candidates
 4. `rationale` must cite specific visual cues from the image

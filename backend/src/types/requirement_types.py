@@ -20,11 +20,15 @@ class RequirementCategory(str, Enum):
 
 class ComponentType(str, Enum):
     """Supported component types for classification."""
-    
+
     BUTTON = "Button"
     CARD = "Card"
     INPUT = "Input"
     SELECT = "Select"
+    CHECKBOX = "Checkbox"
+    RADIO = "Radio"
+    SWITCH = "Switch"
+    TABS = "Tabs"
     BADGE = "Badge"
     ALERT = "Alert"
 

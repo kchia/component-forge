@@ -13,6 +13,10 @@ from .api.middleware.session_tracking import SessionTrackingMiddleware
 init_logging_from_env()
 logger = get_logger(__name__)
 
+# Initialize LangSmith tracing for observability
+from .core.tracing import init_tracing
+init_tracing()
+
 # Try to import optional packages with proper error handling
 try:
     from fastapi.responses import PlainTextResponse

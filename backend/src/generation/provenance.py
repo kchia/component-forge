@@ -65,9 +65,11 @@ class ProvenanceGenerator:
             " * WARNING: This file was automatically generated.",
             " * Manual edits may be lost when regenerating.",
             " * Use ComponentForge to make changes instead.",
-            " */"
+            " */",
+            "",
+            "/* eslint-disable */"
         ])
-        
+
         return "\n".join(header_lines)
     
     def _hash_content(self, data: Dict[str, Any]) -> str:

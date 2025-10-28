@@ -18,7 +18,7 @@ Reference: notebooks/evaluation/tasks_6_7_consolidated_evaluation.ipynb
 from typing import List, Dict
 
 
-# Keyword-heavy queries (7)
+# Keyword-heavy queries (10)
 # These queries use explicit component names and technical terms
 KEYWORD_QUERIES = [
     {
@@ -62,6 +62,24 @@ KEYWORD_QUERIES = [
         "expected_pattern": "alert",
         "category": "keyword",
         "description": "Alert with notification keyword"
+    },
+    {
+        "query": "Switch toggle component",
+        "expected_pattern": "switch",
+        "category": "keyword",
+        "description": "Switch with toggle keyword"
+    },
+    {
+        "query": "Radio button group selection",
+        "expected_pattern": "radio",
+        "category": "keyword",
+        "description": "Radio with button group keyword"
+    },
+    {
+        "query": "Tabs navigation panel",
+        "expected_pattern": "tabs",
+        "category": "keyword",
+        "description": "Tabs with navigation keyword"
     },
 ]
 
@@ -193,7 +211,7 @@ def get_all_queries() -> List[Dict]:
     Get all test queries.
 
     Returns:
-        List of all 22 test queries
+        List of all 25 test queries
     """
     return TEST_QUERIES
 

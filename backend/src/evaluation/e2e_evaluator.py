@@ -406,6 +406,18 @@ class E2EEvaluator:
                 "description": "Toggle switch component",
                 "component_type": "switch",
             },
+            {
+                "id": "radio",
+                "name": "Radio",
+                "description": "Radio button group component",
+                "component_type": "radio",
+            },
+            {
+                "id": "tabs",
+                "name": "Tabs",
+                "description": "Tabbed navigation component",
+                "component_type": "tabs",
+            },
         ]
 
     def _result_to_dict(self, result: E2EResult) -> Dict:
