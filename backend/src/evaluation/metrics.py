@@ -30,10 +30,12 @@ class TokenExtractionMetrics:
 
         Compares extracted tokens against ground truth.
         Returns accuracy as float 0.0-1.0.
+        
+        Excludes unmappable tokens (e.g., dimensions) from calculation.
 
         Args:
             expected: Ground truth tokens from golden dataset
-            extracted: Tokens extracted by GPT-4V
+            extracted: Tokens extracted by GPT-4V (normalized)
 
         Returns:
             Accuracy score (0.0-1.0)
@@ -41,7 +43,10 @@ class TokenExtractionMetrics:
         total_tokens = 0
         correct_tokens = 0
 
-        for category in ['colors', 'spacing', 'typography', 'border']:
+        # Exclude dimensions category (not extractable from vision)
+        mappable_categories = ['colors', 'spacing', 'typography', 'border']
+        
+        for category in mappable_categories:
             if category in expected:
                 expected_cat = expected[category]
                 extracted_cat = extracted.get(category, {})
