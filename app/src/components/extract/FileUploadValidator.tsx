@@ -4,12 +4,18 @@ import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Alert } from "@/components/ui/alert";
-import { Upload, FileImage, X, CheckCircle2, AlertTriangle } from "lucide-react";
+import {
+  Upload,
+  FileImage,
+  X,
+  CheckCircle2,
+  AlertTriangle
+} from "lucide-react";
 import {
   validateImageUpload,
   formatFileSize,
   type ImageValidationResult,
-  type ImageValidationConfig,
+  type ImageValidationConfig
 } from "@/lib/validation/image-upload-validator";
 
 export interface FileUploadValidatorProps {
@@ -29,12 +35,13 @@ export function FileUploadValidator({
   acceptedFileTypes = "image/png,image/jpeg,image/jpg,image/svg+xml",
   maxFileSizeMB = 10,
   className = "",
-  disabled = false,
+  disabled = false
 }: FileUploadValidatorProps) {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
-  const [validationResult, setValidationResult] = useState<ImageValidationResult | null>(null);
+  const [validationResult, setValidationResult] =
+    useState<ImageValidationResult | null>(null);
   const [isValidating, setIsValidating] = useState(false);
 
   // Handle file selection with validation
@@ -63,7 +70,7 @@ export function FileUploadValidator({
     setSelectedFile(file);
 
     // Create preview URL for non-SVG images
-    if (file.type !== 'image/svg+xml') {
+    if (file.type !== "image/svg+xml") {
       const previewUrl = URL.createObjectURL(file);
       setImagePreview(previewUrl);
     } else {
@@ -175,7 +182,9 @@ export function FileUploadValidator({
           <CardContent className="p-6">
             <div className="flex items-center gap-3">
               <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-              <p className="text-sm text-muted-foreground">Validating file...</p>
+              <p className="text-sm text-muted-foreground">
+                Validating file...
+              </p>
             </div>
           </CardContent>
         </Card>
@@ -221,21 +230,25 @@ export function FileUploadValidator({
 
             {/* Success Indicator */}
             <Alert variant="success">
-              <CheckCircle2 className="h-4 w-4" />
-              <p className="text-sm ml-2">File validated successfully</p>
+              <div className="flex items-center">
+                <CheckCircle2 className="h-4 w-4 flex-shrink-0" />
+                <p className="text-sm ml-2">File validated successfully</p>
+              </div>
             </Alert>
 
             {/* Warnings */}
             {validationResult.warnings.length > 0 && (
               <Alert variant="warning">
-                <AlertTriangle className="h-4 w-4" />
-                <div className="ml-2">
-                  <p className="font-medium text-sm">Quality Warnings</p>
-                  <ul className="text-xs mt-1 space-y-1">
-                    {validationResult.warnings.map((warning, i) => (
-                      <li key={i}>• {warning}</li>
-                    ))}
-                  </ul>
+                <div className="flex items-start">
+                  <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+                  <div className="ml-2">
+                    <p className="font-medium text-sm">Quality Warnings</p>
+                    <ul className="text-xs mt-1 space-y-1">
+                      {validationResult.warnings.map((warning, i) => (
+                        <li key={i}>• {warning}</li>
+                      ))}
+                    </ul>
+                  </div>
                 </div>
               </Alert>
             )}
@@ -246,28 +259,30 @@ export function FileUploadValidator({
       {/* Validation Errors */}
       {validationResult && !validationResult.valid && (
         <Alert variant="error">
-          <AlertTriangle className="h-4 w-4" />
-          <div className="ml-2">
-            <p className="font-medium text-sm">Validation Failed</p>
-            <ul className="text-xs mt-1 space-y-1">
-              {validationResult.errors.map((error, i) => (
-                <li key={i}>• {error}</li>
-              ))}
-            </ul>
-            <div className="mt-3">
-              <label htmlFor="file-upload-retry">
-                <Button variant="outline" size="sm" asChild>
-                  <span>Try Another File</span>
-                </Button>
-                <input
-                  id="file-upload-retry"
-                  type="file"
-                  accept={acceptedFileTypes}
-                  onChange={handleInputChange}
-                  className="hidden"
-                  disabled={disabled}
-                />
-              </label>
+          <div className="flex items-start">
+            <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
+            <div className="ml-2">
+              <p className="font-medium text-sm">Validation Failed</p>
+              <ul className="text-xs mt-1 space-y-1">
+                {validationResult.errors.map((error, i) => (
+                  <li key={i}>• {error}</li>
+                ))}
+              </ul>
+              <div className="mt-3">
+                <label htmlFor="file-upload-retry">
+                  <Button variant="outline" size="sm" asChild>
+                    <span>Try Another File</span>
+                  </Button>
+                  <input
+                    id="file-upload-retry"
+                    type="file"
+                    accept={acceptedFileTypes}
+                    onChange={handleInputChange}
+                    className="hidden"
+                    disabled={disabled}
+                  />
+                </label>
+              </div>
             </div>
           </div>
         </Alert>

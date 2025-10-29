@@ -11,3 +11,5 @@ export type { ComparisonTableProps } from "./ComparisonTable";
 export { ExportButton } from "./ExportButton";
 
 export { EvaluationWrapper } from "./EvaluationWrapper";
+
+export { LogViewer } from "./LogViewer";

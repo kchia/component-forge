@@ -9,10 +9,18 @@ This script evaluates the complete screenshot-to-code pipeline:
 - Overall pipeline success rate
 
 Usage:
+    # From backend directory with virtual environment activated:
+    cd backend
+    source venv/bin/activate
+    python scripts/run_e2e_evaluation.py
+    
+    # Or use the activation script from project root:
+    source activate_env.sh
     cd backend
     python scripts/run_e2e_evaluation.py
 
 Requirements:
+    - Virtual environment activated with backend dependencies installed
     - OPENAI_API_KEY environment variable must be set
     - Golden dataset must exist in backend/data/golden_dataset/
     - Services must be properly configured
@@ -25,8 +33,8 @@ import os
 from pathlib import Path
 from datetime import datetime
 
-# Add src to path
-sys.path.insert(0, str(Path(__file__).parent.parent / 'src'))
+# Add backend directory to path for proper imports
+sys.path.insert(0, str(Path(__file__).parent.parent))
 
 from src.evaluation.e2e_evaluator import E2EEvaluator
 from src.core.logging import get_logger
@@ -68,7 +76,9 @@ async def main():
     print("📊 Initializing evaluator...")
     try:
         evaluator = E2EEvaluator(api_key=api_key)
-        print(f"   Loaded {len(evaluator.dataset)} screenshots from golden dataset")
+        dataset_size = len(evaluator.dataset)
+        print(f"   Loaded {dataset_size} samples from golden dataset")
+        print(f"   Note: Samples without screenshot files will be skipped")
     except Exception as e:
         print(f"❌ ERROR: Failed to initialize evaluator: {e}")
         sys.exit(1)
@@ -93,7 +103,8 @@ async def main():
     overall = results['overall']
 
     print_section("📈 OVERALL METRICS")
-    print(f"   Dataset Size: {results['dataset_size']} screenshots")
+    print(f"   Total Samples: {results['dataset_size']}")
+    print(f"   Evaluated: {len(results['per_screenshot'])} (samples with screenshots)")
     print(f"   Pipeline Success Rate: {overall['pipeline_success_rate']:.1%}")
     print(f"   Average Latency: {overall['avg_latency_ms']:.0f}ms")
     print()

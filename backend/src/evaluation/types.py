@@ -6,7 +6,7 @@ at each stage of the screenshot-to-code pipeline.
 """
 
 from dataclasses import dataclass
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 
 
 @dataclass
@@ -40,6 +40,9 @@ class GenerationResult:
     quality_score: float  # From code validator
     validation_errors: List[str]
     generation_time_ms: float
+    security_issues_count: int = 0
+    security_severity: Optional[str] = None  # 'critical', 'high', 'medium', 'low'
+    is_code_safe: bool = True
 
 
 @dataclass

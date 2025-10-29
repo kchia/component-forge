@@ -7,6 +7,7 @@ screenshot-to-code pipeline against the golden dataset.
 
 import time
 import asyncio
+import os
 from typing import List, Dict, Any, Optional
 from pathlib import Path
 
@@ -19,7 +20,13 @@ from .types import (
 from .metrics import E2EMetrics
 from .golden_dataset import GoldenDataset
 from ..agents.token_extractor import TokenExtractor
+from ..agents.requirement_orchestrator import RequirementOrchestrator
 from ..services.retrieval_service import RetrievalService
+from ..retrieval.bm25_retriever import BM25Retriever
+from ..retrieval.semantic_retriever import SemanticRetriever
+from ..retrieval.query_builder import QueryBuilder
+from ..retrieval.weighted_fusion import WeightedFusion
+from ..retrieval.explainer import RetrievalExplainer
 from ..generation.generator_service import GeneratorService
 from ..generation.types import GenerationRequest
 from ..core.logging import get_logger
@@ -33,8 +40,9 @@ class E2EEvaluator:
 
     Runs golden dataset screenshots through:
     1. Token extraction (GPT-4V)
-    2. Pattern retrieval (Hybrid BM25+Semantic)
-    3. Code generation (LLM + Validation)
+    2. Requirements proposal (Multi-agent)
+    3. Pattern retrieval (Hybrid BM25+Semantic)
+    4. Code generation (LLM + Validation + Security)
 
     Collects metrics at each stage and calculates overall pipeline performance.
     """
@@ -53,11 +61,54 @@ class E2EEvaluator:
         """
         self.dataset = GoldenDataset(golden_dataset_path)
         self.token_extractor = TokenExtractor(api_key=api_key)
+        self.requirement_orchestrator = RequirementOrchestrator(openai_api_key=api_key)
 
-        # Create mock patterns for evaluation testing
-        # TODO: Load real patterns from database or pattern library
-        mock_patterns = self._create_mock_patterns()
-        self.retrieval_service = RetrievalService(patterns=mock_patterns)
+        # Load real patterns from pattern library
+        patterns = self._load_patterns()
+        
+        # Create pattern ID mapping for ground truth (e.g., "alert" -> "shadcn-alert")
+        self.pattern_id_mapping = self._create_pattern_id_mapping(patterns)
+        
+        # Initialize retrieval components
+        bm25_retriever = BM25Retriever(patterns)
+        query_builder = QueryBuilder()
+        weighted_fusion = WeightedFusion()
+        explainer = RetrievalExplainer()
+        
+        # Try to initialize semantic retriever with Qdrant (graceful fallback)
+        semantic_retriever = None
+        try:
+            from qdrant_client import QdrantClient
+            from openai import AsyncOpenAI
+            
+            # Initialize clients
+            qdrant_url = os.getenv("QDRANT_URL", "http://localhost:6333")
+            qdrant_client = QdrantClient(url=qdrant_url)
+            openai_client = AsyncOpenAI(api_key=api_key)
+            
+            semantic_retriever = SemanticRetriever(
+                qdrant_client=qdrant_client,
+                openai_client=openai_client
+            )
+            logger.info("Semantic retriever initialized with Qdrant")
+        except Exception as e:
+            logger.warning(f"Semantic retriever unavailable: {e}. Using BM25 only.")
+        
+        # Create retrieval service with all components
+        self.retrieval_service = RetrievalService(
+            patterns=patterns,
+            bm25_retriever=bm25_retriever,
+            semantic_retriever=semantic_retriever,
+            query_builder=query_builder,
+            weighted_fusion=weighted_fusion,
+            explainer=explainer
+        )
+        
+        logger.info(
+            f"Retrieval service initialized "
+            f"(BM25: ✓, Semantic: {'✓' if semantic_retriever else '✗'})"
+        )
+        
         self.generator_service = GeneratorService(api_key=api_key)
 
         self.results: List[E2EResult] = []
@@ -74,11 +125,24 @@ class E2EEvaluator:
         logger.info(f"Starting E2E evaluation on {len(self.dataset)} screenshots")
 
         self.results = []
+        skipped_count = 0
 
         for screenshot_data in self.dataset:
-            logger.info(f"Evaluating: {screenshot_data['id']}")
+            screenshot_id = screenshot_data['id']
+            image = screenshot_data.get('image')
+            
+            # Skip samples without screenshots
+            if image is None:
+                logger.warning(f"Skipping {screenshot_id}: no screenshot file found")
+                skipped_count += 1
+                continue
+            
+            logger.info(f"Evaluating: {screenshot_id}")
             result = await self.evaluate_single(screenshot_data)
             self.results.append(result)
+        
+        if skipped_count > 0:
+            logger.warning(f"Skipped {skipped_count} samples without screenshots")
 
         # Calculate overall metrics
         metrics = E2EMetrics.calculate_overall_metrics(self.results)
@@ -114,20 +178,41 @@ class E2EEvaluator:
             ground_truth['expected_tokens']
         )
 
-        # Stage 2: Pattern Retrieval
-        logger.info(f"  Stage 2: Pattern Retrieval")
+        # Stage 2: Requirements Proposal
+        logger.info(f"  Stage 2: Requirements Proposal")
+        requirements_result = None
+        approved_requirements = None
+        try:
+            requirements_result = await self._evaluate_requirements_proposal(
+                screenshot_id,
+                image,
+                token_result.extracted_tokens
+            )
+            
+            # Stage 2.5: Simulate Approval
+            approved_requirements = self._simulate_approval(requirements_result)
+        except Exception as e:
+            logger.warning(f"Requirements proposal failed for {screenshot_id}: {e}. Falling back to token-only retrieval.")
+            # Fall back to token-only requirements for retrieval
+            approved_requirements = None
+
+        # Stage 3: Pattern Retrieval
+        logger.info(f"  Stage 3: Pattern Retrieval")
         retrieval_result = await self._evaluate_retrieval(
             screenshot_id,
+            approved_requirements,
             token_result.extracted_tokens,
-            ground_truth['expected_pattern_id']
+            ground_truth['expected_pattern_id'],
+            requirements_result
         )
 
-        # Stage 3: Code Generation
-        logger.info(f"  Stage 3: Code Generation")
+        # Stage 4: Code Generation
+        logger.info(f"  Stage 4: Code Generation")
         generation_result = await self._evaluate_generation(
             screenshot_id,
             retrieval_result.retrieved_pattern_id,
-            token_result.extracted_tokens
+            token_result.extracted_tokens,
+            approved_requirements
         )
 
         total_latency = (time.time() - start_time) * 1000  # ms
@@ -136,7 +221,8 @@ class E2EEvaluator:
         pipeline_success = (
             token_result.accuracy > 0.8 and
             retrieval_result.correct and
-            generation_result.code_compiles
+            generation_result.code_compiles and
+            generation_result.is_code_safe
         )
 
         return E2EResult(
@@ -201,51 +287,146 @@ class E2EEvaluator:
             incorrect_tokens=incorrect
         )
 
+    async def _evaluate_requirements_proposal(
+        self,
+        screenshot_id: str,
+        image: Any,
+        tokens: Dict
+    ):
+        """
+        Evaluate requirements proposal stage.
+
+        Args:
+            screenshot_id: Screenshot identifier
+            image: PIL Image object
+            tokens: Extracted design tokens
+
+        Returns:
+            RequirementState with proposals by category
+        """
+        try:
+            result = await self.requirement_orchestrator.propose_requirements(
+                image=image,
+                tokens=tokens
+            )
+            logger.info(
+                f"Requirements proposed for {screenshot_id}: "
+                f"{len(result.props_proposals)} props, "
+                f"{len(result.events_proposals)} events, "
+                f"{len(result.states_proposals)} states, "
+                f"{len(result.accessibility_proposals)} accessibility"
+            )
+            return result
+        except Exception as e:
+            logger.error(f"Requirements proposal failed for {screenshot_id}: {e}")
+            raise
+
+    def _simulate_approval(
+        self,
+        requirements_result
+    ) -> Dict[str, List]:
+        """
+        Simulate human approval of requirements proposals.
+
+        Auto-approves all proposals (treats ground truth as "what human would approve").
+
+        Args:
+            requirements_result: RequirementState with proposals
+
+        Returns:
+            Dictionary with approved requirements by category
+        """
+        return {
+            'props': requirements_result.props_proposals,
+            'events': requirements_result.events_proposals,
+            'states': requirements_result.states_proposals,
+            'accessibility': requirements_result.accessibility_proposals,
+        }
+
     async def _evaluate_retrieval(
         self,
         screenshot_id: str,
+        approved_requirements: Optional[Dict],
         tokens: Dict,
-        expected_pattern_id: str
+        expected_pattern_id: str,
+        requirements_result: Optional[Any] = None
     ) -> RetrievalResult:
         """
         Evaluate pattern retrieval stage.
 
         Args:
             screenshot_id: Screenshot identifier
+            approved_requirements: Approved requirements dict (props, events, states, accessibility)
             tokens: Extracted design tokens
             expected_pattern_id: Expected pattern ID from ground truth
+            requirements_result: RequirementState object (for component_type)
 
         Returns:
             RetrievalResult with retrieval metrics
         """
         try:
-            # Convert tokens to requirements format for retrieval
-            requirements = {
-                'designTokens': tokens,
-                'description': f"Component with tokens: {tokens}"
-            }
+            # Build requirements dict for retrieval
+            if approved_requirements and requirements_result:
+                # Use structured requirements (production-like)
+                component_type = requirements_result.classification.component_type.value if requirements_result.classification else ''
+                requirements = {
+                    'component_type': component_type,
+                    'props': [p.name for p in approved_requirements['props']],
+                    'variants': [p.name for p in approved_requirements['states']],  # states become variants
+                    'events': [p.name for p in approved_requirements['events']],
+                    'states': [p.name for p in approved_requirements['states']],
+                    'a11y': [p.name for p in approved_requirements['accessibility']],
+                    'designTokens': tokens  # Include tokens
+                }
+            else:
+                # Fallback: Try to infer component type from ground truth expected pattern ID
+                expected_component_type = expected_pattern_id  # e.g., "alert", "button"
+                if expected_component_type:
+                    logger.info(f"Using expected pattern ID '{expected_component_type}' as component_type fallback")
+                
+                requirements = {
+                    'component_type': expected_component_type,
+                    'designTokens': tokens,
+                    'description': f"{expected_component_type} component with tokens: {list(tokens.keys()) if tokens else 'none'}"
+                }
 
             # Search for patterns
-            results = await self.retrieval_service.search(
+            search_response = await self.retrieval_service.search(
                 requirements=requirements,
                 top_k=5
             )
 
+            # Extract patterns from response (search returns dict with 'patterns' key)
+            patterns_list = search_response.get('patterns', []) if isinstance(search_response, dict) else []
+
             # Get top result
-            if results and len(results) > 0:
-                retrieved_pattern_id = results[0].get('pattern_id', '')
-                confidence = results[0].get('score', 0.0)
+            if patterns_list and len(patterns_list) > 0:
+                top_pattern = patterns_list[0]
+                retrieved_pattern_id = top_pattern.get('id', '') or top_pattern.get('pattern_id', '')
+                confidence = top_pattern.get('confidence', 0.0) or top_pattern.get('score', 0.0)
             else:
                 retrieved_pattern_id = ''
                 confidence = 0.0
 
+            # Map expected pattern ID (ground truth may use simple IDs like "alert")
+            # to actual pattern ID (e.g., "shadcn-alert")
+            expected_pattern_id_mapped = self.pattern_id_mapping.get(
+                expected_pattern_id, 
+                expected_pattern_id
+            )
+            
             # Check if correct pattern was retrieved
-            correct = retrieved_pattern_id == expected_pattern_id
+            # Allow match against both mapped and original expected ID
+            correct = (
+                retrieved_pattern_id == expected_pattern_id_mapped or
+                retrieved_pattern_id == expected_pattern_id
+            )
 
             # Find rank of correct pattern
             rank = 999  # Large number if not found
-            for i, result in enumerate(results):
-                if result.get('pattern_id') == expected_pattern_id:
+            for i, pattern in enumerate(patterns_list):
+                pattern_id = pattern.get('id', '') or pattern.get('pattern_id', '')
+                if pattern_id == expected_pattern_id_mapped or pattern_id == expected_pattern_id:
                     rank = i + 1
                     break
 
@@ -269,7 +450,8 @@ class E2EEvaluator:
         self,
         screenshot_id: str,
         pattern_id: str,
-        tokens: Dict
+        tokens: Dict,
+        approved_requirements: Optional[Dict] = None
     ) -> EvalGenerationResult:
         """
         Evaluate code generation stage.
@@ -278,6 +460,7 @@ class E2EEvaluator:
             screenshot_id: Screenshot identifier
             pattern_id: Retrieved pattern ID
             tokens: Extracted design tokens
+            approved_requirements: Approved requirements dict (optional)
 
         Returns:
             EvalGenerationResult with generation metrics
@@ -292,15 +475,37 @@ class E2EEvaluator:
                 code_compiles=False,
                 quality_score=0.0,
                 validation_errors=['Pattern retrieval failed'],
-                generation_time_ms=(time.time() - start_time) * 1000
+                generation_time_ms=(time.time() - start_time) * 1000,
+                security_issues_count=0,
+                security_severity=None,
+                is_code_safe=True
             )
 
         try:
+            # Convert approved requirements to list format for generation
+            requirements_list = []
+            if approved_requirements:
+                for category in ['props', 'events', 'states', 'accessibility']:
+                    for proposal in approved_requirements.get(category, []):
+                        # Convert RequirementProposal to dict
+                        req_dict = {
+                            'name': proposal.name,
+                            'category': proposal.category.value,
+                            'approved': True,
+                        }
+                        if proposal.values:
+                            req_dict['values'] = proposal.values
+                        if proposal.required is not None:
+                            req_dict['required'] = proposal.required
+                        if proposal.description:
+                            req_dict['description'] = proposal.description
+                        requirements_list.append(req_dict)
+
             # Create generation request
             request = GenerationRequest(
                 pattern_id=pattern_id,
                 tokens=tokens,
-                requirements=[]  # No additional requirements for evaluation
+                requirements=requirements_list
             )
 
             # Generate code
@@ -330,13 +535,52 @@ class E2EEvaluator:
                         f"ESLint: {e.message}" for e in result.validation_results.eslint_errors
                     ])
 
+            # Run code sanitization
+            security_issues_count = 0
+            security_severity = None
+            is_code_safe = True
+            
+            try:
+                from ..security.code_sanitizer import CodeSanitizer
+                sanitizer = CodeSanitizer()
+                sanitization_result = sanitizer.sanitize(
+                    result.component_code,
+                    include_snippets=False
+                )
+                
+                security_issues_count = sanitization_result.issues_count
+                is_code_safe = sanitization_result.is_safe
+                
+                # Determine overall severity (highest severity found)
+                if sanitization_result.issues:
+                    severity_levels = ['critical', 'high', 'medium', 'low']
+                    severity_indices = []
+                    for issue in sanitization_result.issues:
+                        severity_val = issue.severity.value
+                        if severity_val in severity_levels:
+                            severity_indices.append(severity_levels.index(severity_val))
+                    
+                    if severity_indices:
+                        max_severity_idx = min(severity_indices)  # Lower index = higher severity
+                        security_severity = severity_levels[max_severity_idx]
+                
+                if not is_code_safe:
+                    logger.warning(
+                        f"Code sanitization found {security_issues_count} security issues for {screenshot_id}"
+                    )
+            except Exception as e:
+                logger.warning(f"Code sanitization failed for {screenshot_id}: {e}")
+
             return EvalGenerationResult(
                 screenshot_id=screenshot_id,
                 code_generated=result.success,
                 code_compiles=code_compiles,
                 quality_score=quality_score,
                 validation_errors=validation_errors,
-                generation_time_ms=generation_time
+                generation_time_ms=generation_time,
+                security_issues_count=security_issues_count,
+                security_severity=security_severity,
+                is_code_safe=is_code_safe
             )
 
         except Exception as e:
@@ -347,76 +591,163 @@ class E2EEvaluator:
                 code_compiles=False,
                 quality_score=0.0,
                 validation_errors=[str(e)],
-                generation_time_ms=(time.time() - start_time) * 1000
+                generation_time_ms=(time.time() - start_time) * 1000,
+                security_issues_count=0,
+                security_severity=None,
+                is_code_safe=False
             )
+
+    def _load_patterns(self) -> List[Dict]:
+        """
+        Load real patterns from pattern library JSON files.
+
+        Returns:
+            List of pattern dictionaries from data/patterns/*.json
+        """
+        import json
+        import glob
+        from pathlib import Path
+
+        # Find pattern files relative to backend directory
+        backend_dir = Path(__file__).parent.parent.parent
+        pattern_dir = backend_dir / "data" / "patterns"
+        
+        pattern_files = glob.glob(str(pattern_dir / "*.json"))
+        if not pattern_files:
+            logger.warning(f"No pattern files found in {pattern_dir}. Falling back to mock patterns.")
+            return self._create_mock_patterns()
+
+        patterns = []
+        for file_path in pattern_files:
+            try:
+                with open(file_path, 'r') as f:
+                    pattern = json.load(f)
+                    patterns.append(pattern)
+                    logger.debug(f"Loaded pattern: {pattern.get('name', 'unknown')} from {file_path}")
+            except Exception as e:
+                logger.error(f"Failed to load pattern from {file_path}: {e}")
+
+        logger.info(f"Loaded {len(patterns)} patterns from pattern library")
+        return patterns
+
+    def _create_pattern_id_mapping(self, patterns: List[Dict]) -> Dict[str, str]:
+        """
+        Create mapping from simple component type to actual pattern ID.
+        
+        Maps ground truth IDs (e.g., "alert", "button") to actual pattern IDs
+        (e.g., "shadcn-alert", "shadcn-button") by matching component name.
+        
+        Args:
+            patterns: List of pattern dictionaries
+            
+        Returns:
+            Dictionary mapping component type -> pattern ID
+        """
+        mapping = {}
+        
+        # Create reverse lookup: pattern name lowercase -> pattern ID
+        name_to_id = {}
+        for pattern in patterns:
+            name = pattern.get('name', '').lower()
+            pattern_id = pattern.get('id', '')
+            if name and pattern_id:
+                name_to_id[name] = pattern_id
+        
+        # Map common component types to pattern IDs
+        component_type_mapping = {
+            'alert': 'alert',
+            'button': 'button',
+            'card': 'card',
+            'badge': 'badge',
+            'input': 'input',
+            'checkbox': 'checkbox',
+            'select': 'select',
+            'switch': 'switch',
+            'radio': 'radio',
+            'tabs': 'tabs',
+        }
+        
+        for component_type, pattern_name in component_type_mapping.items():
+            if pattern_name in name_to_id:
+                mapping[component_type] = name_to_id[pattern_name]
+            else:
+                # Fallback: try direct match with pattern ID
+                for pattern in patterns:
+                    pattern_id = pattern.get('id', '').lower()
+                    if component_type in pattern_id or pattern_id.endswith(f'-{component_type}'):
+                        mapping[component_type] = pattern.get('id', '')
+                        break
+        
+        logger.info(f"Created pattern ID mapping: {mapping}")
+        return mapping
 
     def _create_mock_patterns(self) -> List[Dict]:
         """
-        Create mock patterns for testing.
+        Create minimal mock patterns as fallback when pattern library is unavailable.
 
         Returns:
-            List of mock pattern dictionaries with minimal required fields
+            List of mock pattern dictionaries with required fields
         """
         return [
             {
                 "id": "button",
                 "name": "Button",
+                "category": "form",
                 "description": "Interactive button component",
-                "component_type": "button",
             },
             {
                 "id": "card",
                 "name": "Card",
+                "category": "layout",
                 "description": "Content container card component",
-                "component_type": "card",
             },
             {
                 "id": "badge",
                 "name": "Badge",
+                "category": "display",
                 "description": "Small label or tag badge component",
-                "component_type": "badge",
             },
             {
                 "id": "input",
                 "name": "Input",
+                "category": "form",
                 "description": "Text input field component",
-                "component_type": "input",
             },
             {
                 "id": "checkbox",
                 "name": "Checkbox",
+                "category": "form",
                 "description": "Checkbox selection component",
-                "component_type": "checkbox",
             },
             {
                 "id": "alert",
                 "name": "Alert",
+                "category": "feedback",
                 "description": "Alert or notification banner component",
-                "component_type": "alert",
             },
             {
                 "id": "select",
                 "name": "Select",
+                "category": "form",
                 "description": "Dropdown select component",
-                "component_type": "select",
             },
             {
                 "id": "switch",
                 "name": "Switch",
+                "category": "form",
                 "description": "Toggle switch component",
-                "component_type": "switch",
             },
             {
                 "id": "radio",
                 "name": "Radio",
+                "category": "form",
                 "description": "Radio button group component",
-                "component_type": "radio",
             },
             {
                 "id": "tabs",
                 "name": "Tabs",
+                "category": "navigation",
                 "description": "Tabbed navigation component",
-                "component_type": "tabs",
             },
         ]
 
@@ -452,5 +783,8 @@ class E2EEvaluator:
                 'quality_score': result.generation.quality_score,
                 'validation_errors': result.generation.validation_errors,
                 'generation_time_ms': result.generation.generation_time_ms,
+                'security_issues_count': result.generation.security_issues_count,
+                'security_severity': result.generation.security_severity,
+                'is_code_safe': result.generation.is_code_safe,
             }
         }

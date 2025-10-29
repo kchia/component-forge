@@ -13,19 +13,32 @@ import {
   AlertDialogDescription,
   AlertDialogFooter,
   AlertDialogHeader,
-  AlertDialogTitle,
+  AlertDialogTitle
 } from "@/components/ui/alert-dialog";
 import { useWorkflowStore } from "@/stores/useWorkflowStore";
 import { useTokenStore } from "@/stores/useTokenStore";
 import { usePatternSelection } from "@/store/patternSelectionStore";
 import { useOnboardingStore } from "@/stores/useOnboardingStore";
 import { WorkflowStep } from "@/types";
-import { Home, Upload, Menu, X, HelpCircle, RotateCcw } from "lucide-react";
+import {
+  Home,
+  Upload,
+  Menu,
+  X,
+  HelpCircle,
+  RotateCcw,
+  BarChart3
+} from "lucide-react";
 import { useState } from "react";
 
 const allNavItems = [
   { href: "/", label: "Dashboard", icon: Home, step: WorkflowStep.DASHBOARD },
-  { href: "/extract", label: "Extract", icon: Upload, step: WorkflowStep.EXTRACT },
+  {
+    href: "/extract",
+    label: "Extract",
+    icon: Upload,
+    step: WorkflowStep.EXTRACT
+  }
 ];
 
 export function Navigation() {
@@ -34,7 +47,9 @@ export function Navigation() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [resetDialogOpen, setResetDialogOpen] = useState(false);
   const progress = useWorkflowStore((state) => state.progress);
-  const getAvailableSteps = useWorkflowStore((state) => state.getAvailableSteps);
+  const getAvailableSteps = useWorkflowStore(
+    (state) => state.getAvailableSteps
+  );
   const resetWorkflow = useWorkflowStore((state) => state.resetWorkflow);
   const availableSteps = getAvailableSteps();
   const clearTokens = useTokenStore((state) => state.clearTokens);
@@ -43,7 +58,12 @@ export function Navigation() {
   const { resetOnboarding } = useOnboardingStore();
 
   // Filter navigation items to only show available steps
-  const navItems = allNavItems.filter(item => availableSteps.includes(item.step));
+  const navItems = allNavItems.filter((item) =>
+    availableSteps.includes(item.step)
+  );
+
+  // Check if admin features are enabled (via environment variable)
+  const isAdminModeEnabled = process.env.NEXT_PUBLIC_ENABLE_ADMIN === "true";
 
   // Handle start over - reset all workflow state
   const handleStartOver = () => {
@@ -66,9 +86,13 @@ export function Navigation() {
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
             <div className="h-8 w-8 rounded-md bg-primary flex items-center justify-center">
-              <span className="text-primary-foreground font-bold text-sm">CF</span>
+              <span className="text-primary-foreground font-bold text-sm">
+                CF
+              </span>
             </div>
-            <span className="font-bold text-lg hidden sm:inline">ComponentForge</span>
+            <span className="font-bold text-lg hidden sm:inline">
+              ComponentForge
+            </span>
           </Link>
 
           {/* Desktop Navigation */}
@@ -92,7 +116,7 @@ export function Navigation() {
                 </Link>
               );
             })}
-            
+
             {/* Help Button */}
             <Button
               variant="ghost"
@@ -104,6 +128,25 @@ export function Navigation() {
               <HelpCircle className="h-4 w-4" />
               Help
             </Button>
+
+            {/* Evaluation Button (Admin Only) */}
+            {isAdminModeEnabled && (
+              <Link href="/evaluation">
+                <Button
+                  variant={pathname === "/evaluation" ? "default" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "gap-2",
+                    pathname === "/evaluation" &&
+                      "bg-primary text-primary-foreground"
+                  )}
+                  aria-label="Evaluation metrics dashboard"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Evaluation
+                </Button>
+              </Link>
+            )}
 
             {/* Start Over Button */}
             <Button
@@ -173,7 +216,7 @@ export function Navigation() {
                 </Link>
               );
             })}
-            
+
             {/* Help Button in Mobile Menu */}
             <Button
               variant="ghost"
@@ -188,6 +231,25 @@ export function Navigation() {
               <HelpCircle className="h-4 w-4" />
               Help
             </Button>
+
+            {/* Evaluation Button in Mobile Menu (Admin Only) */}
+            {isAdminModeEnabled && (
+              <Link href="/evaluation" onClick={() => setMobileMenuOpen(false)}>
+                <Button
+                  variant={pathname === "/evaluation" ? "default" : "ghost"}
+                  size="sm"
+                  className={cn(
+                    "w-full justify-start gap-2",
+                    pathname === "/evaluation" &&
+                      "bg-primary text-primary-foreground"
+                  )}
+                  aria-label="Evaluation metrics dashboard"
+                >
+                  <BarChart3 className="h-4 w-4" />
+                  Evaluation
+                </Button>
+              </Link>
+            )}
 
             {/* Start Over Button in Mobile Menu */}
             <Button
@@ -210,7 +272,9 @@ export function Navigation() {
           <AlertDialogHeader>
             <AlertDialogTitle>Start Over?</AlertDialogTitle>
             <AlertDialogDescription>
-              This will clear all your progress including extracted tokens, requirements, and patterns. You'll be redirected to the dashboard to begin a new component.
+              This will clear all your progress including extracted tokens,
+              requirements, and patterns. You'll be redirected to the dashboard
+              to begin a new component.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

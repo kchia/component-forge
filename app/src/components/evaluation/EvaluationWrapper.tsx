@@ -4,10 +4,13 @@ import { useEffect, useState } from "react";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Loader2 } from "lucide-react";
 import {
   MetricCard,
   ComparisonTable,
-  ExportButton
+  ExportButton,
+  LogViewer
 } from "@/components/evaluation";
 import type { EvaluationMetrics } from "@/types/evaluation";
 
@@ -21,15 +24,28 @@ export function EvaluationWrapper({ initialMetrics }: EvaluationWrapperProps) {
   const [metrics, setMetrics] = useState<EvaluationMetrics | null>(
     initialMetrics
   );
-  const [isLoading, setIsLoading] = useState(!initialMetrics);
+  const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [status, setStatus] = useState<string>("loading");
+  const [status, setStatus] = useState<string>("");
+  const [systemStatus, setSystemStatus] = useState<any>(null);
 
+  // Load system status (lightweight check, doesn't run evaluation)
   useEffect(() => {
-    if (!initialMetrics) {
-      fetchMetrics();
+    fetchSystemStatus();
+  }, []);
+
+  const fetchSystemStatus = async () => {
+    try {
+      const res = await fetch(`${API_BASE_URL}/api/v1/evaluation/status`);
+      if (res.ok) {
+        const data = await res.json();
+        setSystemStatus(data);
+      }
+    } catch (err) {
+      // Silently fail - status is optional
+      console.error("Failed to fetch system status:", err);
     }
-  }, [initialMetrics]);
+  };
 
   const fetchMetrics = async () => {
     try {
@@ -82,22 +98,106 @@ export function EvaluationWrapper({ initialMetrics }: EvaluationWrapperProps) {
     }
   };
 
-  if (error || !metrics) {
+  if (!metrics && !isLoading) {
     return (
       <div className="container mx-auto py-8 px-4">
-        <h1 className="text-3xl font-bold mb-6">Evaluation Metrics</h1>
-        <Alert variant="error">
-          <AlertDescription>
-            <strong>Failed to load evaluation metrics</strong>
-            {error && <p className="mt-2">{error}</p>}
-            <ul className="list-disc list-inside mt-3 space-y-1">
-              <li>The backend server is running at {API_BASE_URL}</li>
-              <li>Check OPENAI_API_KEY configuration</li>
-              <li>Verify the golden dataset exists</li>
-              <li>Review backend logs for errors</li>
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h1 className="text-3xl font-bold">Evaluation Metrics</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Run evaluation to view pipeline metrics
+            </p>
+          </div>
+          <Button onClick={fetchMetrics} disabled={isLoading} size="lg">
+            {isLoading ? (
+              <>
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                Running...
+              </>
+            ) : (
+              "Run Evaluation"
+            )}
+          </Button>
+        </div>
+
+        {/* System Status */}
+        {systemStatus && (
+          <Card className="mb-6">
+            <CardHeader>
+              <CardTitle>System Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    API Key Configured:
+                  </span>
+                  <Badge
+                    variant={
+                      systemStatus.api_key_configured ? "success" : "warning"
+                    }
+                  >
+                    {systemStatus.api_key_configured ? "✓" : "✗"}
+                  </Badge>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-muted-foreground">
+                    Golden Dataset:
+                  </span>
+                  <Badge
+                    variant={
+                      systemStatus.golden_dataset?.loaded
+                        ? "success"
+                        : "warning"
+                    }
+                  >
+                    {systemStatus.golden_dataset?.loaded
+                      ? `✓ ${systemStatus.golden_dataset.size} samples`
+                      : "✗ Not loaded"}
+                  </Badge>
+                </div>
+                {systemStatus.message && (
+                  <p className="text-sm text-muted-foreground mt-2">
+                    {systemStatus.message}
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Error Display */}
+        {error && (
+          <Alert variant="error" className="mb-6">
+            <AlertDescription>
+              <strong>Failed to run evaluation</strong>
+              {error && <p className="mt-2">{error}</p>}
+            </AlertDescription>
+          </Alert>
+        )}
+
+        {/* Info about evaluation */}
+        <Card className="mb-6">
+          <CardHeader>
+            <CardTitle>About Evaluation</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-sm text-muted-foreground mb-2">
+              Running evaluation will process all screenshots in the golden
+              dataset through the complete pipeline. This may take several
+              minutes.
+            </p>
+            <ul className="text-sm text-muted-foreground list-disc list-inside space-y-1">
+              <li>Tests token extraction accuracy</li>
+              <li>Validates pattern retrieval performance</li>
+              <li>Checks code generation quality</li>
+              <li>Measures end-to-end pipeline success</li>
             </ul>
-          </AlertDescription>
-        </Alert>
+          </CardContent>
+        </Card>
+
+        {/* Log Viewer - Always visible */}
+        <LogViewer />
       </div>
     );
   }
@@ -109,28 +209,11 @@ export function EvaluationWrapper({ initialMetrics }: EvaluationWrapperProps) {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
-              <svg
-                className="animate-spin h-8 w-8 text-blue-600"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
+              <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
               <div>
-                <p className="font-medium">{status}</p>
+                <p className="font-medium">
+                  {status || "Running evaluation..."}
+                </p>
                 <p className="text-sm text-gray-600 dark:text-gray-400">
                   This may take several minutes for large datasets
                 </p>
@@ -434,6 +517,11 @@ export function EvaluationWrapper({ initialMetrics }: EvaluationWrapperProps) {
             </Card>
           ))}
         </div>
+      </section>
+
+      {/* Log Viewer */}
+      <section className="mb-8">
+        <LogViewer />
       </section>
     </div>
   );

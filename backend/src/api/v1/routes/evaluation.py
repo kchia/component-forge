@@ -4,11 +4,16 @@ Evaluation API routes for E2E pipeline metrics.
 Endpoints:
 - GET /api/v1/evaluation/metrics - Run full evaluation and return metrics
 - GET /api/v1/evaluation/status - Check evaluation system readiness
+- GET /api/v1/evaluation/logs - List available evaluation log files
+- GET /api/v1/evaluation/logs/{filename} - Fetch a specific evaluation log file
 """
 
 from fastapi import APIRouter, HTTPException
 from typing import Dict, Any
 import os
+import json
+from pathlib import Path
+from datetime import datetime
 
 from ....evaluation.e2e_evaluator import E2EEvaluator
 from ....evaluation.golden_dataset import GoldenDataset
@@ -236,6 +241,150 @@ async def get_evaluation_status() -> Dict[str, Any]:
             else "Evaluation system not ready. Check API key and golden dataset."
         )
     }
+
+
+@router.get("/logs")
+async def list_evaluation_logs() -> Dict[str, Any]:
+    """
+    List available evaluation log files.
+    
+    Returns metadata about all evaluation JSON reports in backend/logs/.
+    
+    Returns:
+        Dictionary with list of log files and their metadata
+    """
+    try:
+        # Find logs directory (backend/logs/)
+        # __file__ is at: backend/src/api/v1/routes/evaluation.py
+        # Go up: routes -> v1 -> api -> src -> backend
+        backend_dir = Path(__file__).parent.parent.parent.parent.parent
+        logs_dir = backend_dir / "logs"
+        
+        if not logs_dir.exists():
+            return {
+                "logs": [],
+                "logs_dir": str(logs_dir),
+                "message": "Logs directory does not exist"
+            }
+        
+        # Find all evaluation JSON files
+        log_files = sorted(
+            logs_dir.glob("e2e_evaluation_*.json"),
+            key=lambda p: p.stat().st_mtime,
+            reverse=True  # Most recent first
+        )
+        
+        logs = []
+        for log_file in log_files:
+            try:
+                stat = log_file.stat()
+                # Try to read timestamp from filename (e2e_evaluation_YYYYMMDD_HHMMSS.json)
+                filename = log_file.stem
+                timestamp_str = filename.replace("e2e_evaluation_", "")
+                
+                logs.append({
+                    "filename": log_file.name,
+                    "path": str(log_file.relative_to(backend_dir)),
+                    "size_bytes": stat.st_size,
+                    "modified_at": datetime.fromtimestamp(stat.st_mtime).isoformat(),
+                    "timestamp": timestamp_str,
+                })
+            except Exception as e:
+                logger.warning(f"Failed to process log file {log_file}: {e}")
+                continue
+        
+        return {
+            "logs": logs,
+            "logs_dir": str(logs_dir),
+            "count": len(logs),
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list evaluation logs: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to list logs: {str(e)}"
+        )
+
+
+@router.get("/logs/{filename}")
+async def get_evaluation_log(filename: str) -> Dict[str, Any]:
+    """
+    Fetch a specific evaluation log file.
+    
+    Args:
+        filename: Name of the log file (e.g., "e2e_evaluation_20250109_143045.json")
+    
+    Returns:
+        JSON content of the log file
+    
+    Raises:
+        HTTPException: If file not found or invalid
+    """
+    try:
+        # Security: Only allow JSON files matching expected pattern
+        if not filename.startswith("e2e_evaluation_") or not filename.endswith(".json"):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid log filename. Must match pattern: e2e_evaluation_*.json"
+            )
+        
+        # Prevent path traversal
+        if ".." in filename or "/" in filename or "\\" in filename:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid filename: path traversal not allowed"
+            )
+        
+        # Find logs directory
+        # __file__ is at: backend/src/api/v1/routes/evaluation.py
+        # Go up: routes -> v1 -> api -> src -> backend
+        backend_dir = Path(__file__).parent.parent.parent.parent.parent
+        log_file = backend_dir / "logs" / filename
+        
+        if not log_file.exists():
+            raise HTTPException(
+                status_code=404,
+                detail=f"Log file not found: {filename}"
+            )
+        
+        # Verify it's within logs directory (extra security)
+        try:
+            log_file.resolve().relative_to((backend_dir / "logs").resolve())
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid log file path"
+            )
+        
+        # Read and parse JSON
+        with open(log_file, 'r') as f:
+            log_data = json.load(f)
+        
+        # Add metadata
+        stat = log_file.stat()
+        log_data['_metadata'] = {
+            'filename': filename,
+            'size_bytes': stat.st_size,
+            'modified_at': datetime.fromtimestamp(stat.st_mtime).isoformat(),
+        }
+        
+        return log_data
+        
+    except HTTPException:
+        raise
+    except json.JSONDecodeError as e:
+        logger.error(f"Failed to parse JSON log file {filename}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Invalid JSON in log file: {str(e)}"
+        )
+    except Exception as e:
+        logger.error(f"Failed to fetch evaluation log {filename}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to fetch log: {str(e)}"
+        )
 
 
 def _create_mock_patterns():
