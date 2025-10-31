@@ -75,6 +75,7 @@ cd app && npm run test:e2e
 ## Key Endpoints
 
 - Frontend: http://localhost:3000
+- Evaluation Dashboard: http://localhost:3000/evaluation
 - Backend API docs: http://localhost:8000/docs
 - Health check: http://localhost:8000/health
 - Metrics: http://localhost:8000/metrics
@@ -142,6 +143,7 @@ npx shadcn-ui@latest add component-name
 **Composite Components:**
 - RequirementCard, PatternCard, MetricCard, ComponentRow, TokenDisplay
 - ProgressStages, EditModal, CodePreviewModal
+- EvaluationDashboard, EvaluationWrapper, LogViewer (evaluation system)
 
 See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage examples.
 
@@ -208,6 +210,9 @@ See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage e
 - Use Pillow for image preprocessing before vision model calls
 - Implement confidence scoring for AI outputs
 - Use proper agent state management patterns
+- Use token normalizer for evaluation metrics (see `backend/src/evaluation/token_normalizer.py`)
+- See `docs/backend/caching-analysis.md` for caching strategy guidance
+- See `docs/backend/guardrails-analysis.md` for security guardrails assessment
 
 ### Security Patterns
 

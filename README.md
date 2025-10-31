@@ -186,6 +186,7 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 - **[Deployment](./docs/deployment/README.md)** - Production deployment and security guidelines
 - **[Development](./docs/development/README.md)** - Setup guides and best practices
 - **[Backend Docs](./backend/docs/README.md)** - Backend-specific documentation
+- **[Backend Analysis](./docs/backend/)** - Caching strategy, guardrails assessment, and technical analysis
 
 ## 🏗️ AI Pipeline Architecture
 
@@ -481,6 +482,7 @@ ComponentForge includes a comprehensive end-to-end evaluation system that valida
 ### Golden Dataset
 
 15 component screenshots with ground truth data:
+
 - 8 component types: Button (3), Card (2), Badge (3), Input (2), Checkbox, Alert (2), Select, Switch
 - Expected tokens, pattern IDs, and code properties
 - Located in `backend/data/golden_dataset/`
@@ -516,34 +518,38 @@ Returns comprehensive JSON with E2E and retrieval-only metrics.
 
 #### Dashboard (Visual UI)
 
-Navigate to: http://localhost:3000/evaluation
+Navigate to: **http://localhost:3000/evaluation**
 
 Features:
+
 - Overall pipeline metrics (success rate, latency)
-- Stage-by-stage performance
+- Stage-by-stage performance breakdown
 - Retrieval comparison (E2E vs isolated)
-- Per-screenshot results
+- Per-screenshot results with detailed logs
+- Visual log viewer for debugging pipeline failures
 - Export JSON functionality
 
 ### Metrics & Targets
 
-| Metric | Target | Description |
-|--------|--------|-------------|
-| Pipeline Success Rate | ≥ 80% | % producing valid code end-to-end |
-| Token Extraction | ≥ 85% | % of tokens correctly extracted |
-| Retrieval MRR | ≥ 0.90 | Context precision (mean reciprocal rank) |
-| Retrieval Hit@3 | ≥ 90% | Context recall (correct pattern in top-3) |
-| Code Compilation | ≥ 90% | % of generated code that compiles |
-| Quality Score | ≥ 0.85 | Average code quality from validator |
-| E2E Latency | < 20s | Time from screenshot to valid code |
+| Metric                | Target | Description                               |
+| --------------------- | ------ | ----------------------------------------- |
+| Pipeline Success Rate | ≥ 80%  | % producing valid code end-to-end         |
+| Token Extraction      | ≥ 85%  | % of tokens correctly extracted           |
+| Retrieval MRR         | ≥ 0.90 | Context precision (mean reciprocal rank)  |
+| Retrieval Hit@3       | ≥ 90%  | Context recall (correct pattern in top-3) |
+| Code Compilation      | ≥ 90%  | % of generated code that compiles         |
+| Quality Score         | ≥ 0.85 | Average code quality from validator       |
+| E2E Latency           | < 20s  | Time from screenshot to valid code        |
 
 All metrics align with industry-standard RAGAS framework.
 
 ### Documentation
 
 - Full docs: `backend/src/evaluation/README.md`
-- Demo materials: `DEMO_METRICS.md`
+- Demo materials: `docs/coursework/DEMO_METRICS.md`
 - Dataset format: `backend/data/golden_dataset/README.md`
+- Evaluation fixes: `backend/src/evaluation/EVALUATION_FIXES.md`
+- Pipeline gaps analysis: `backend/src/evaluation/EVALUATION_GAPS.md`
 
 ## 📊 AI Pipeline Monitoring
 
@@ -719,6 +725,73 @@ python scripts/seed_patterns.py
 - **Type Safety**: Strict TypeScript across the entire stack
 - **Accessibility**: Built-in axe-core testing prevents WCAG violations
 - **Production Ready**: Docker containerization for easy deployment
+
+## Future Enhancements
+
+ComponentForge is designed to scale from atomic components to complex compositions and full page layouts. Current release focuses on establishing quality foundations; future versions will tackle increasing complexity.
+
+### Phase 1: Atomic Components (Current - v1.0)
+
+**Focus:** Single-component generation with quality validation
+
+- Basic shadcn/ui components (Button, Card, Input, Badge, etc.)
+- Design token extraction with 85%+ accuracy
+- Pattern retrieval from vector database
+- Validation pipeline (TypeScript, ESLint, axe-core)
+- **Success metrics:** 90% compilation rate, 80% pipeline success
+
+### Phase 2: Complex Compositions (Q2 2025 - v1.5)
+
+**Focus:** Multi-component generation with compositional reasoning
+
+- **Composite components:** ProductCard, DataTable, MultiStepForm, NavigationMenu
+- **Multi-pattern retrieval:** AI selects and composes 5-10 sub-components
+- **Prop threading:** Automatically connects parent/child component data
+- **State scaffolding:** Generates Zustand stores for complex state
+- **Examples:**
+  - ProductCard = Card + AspectRatio + Image + Badge + Typography + Button
+  - DataTable = Table + Select (filters) + Pagination + Dropdown (actions)
+  - MultiStepForm = Tabs + FormFields[] + ValidationLogic + ProgressIndicator
+
+### Phase 3: Full Page Layouts (Q4 2025 - v2.0)
+
+**Focus:** Complete page generation with architectural decisions
+
+- **Full dashboard pages:** Sidebar + Header + MetricCards + DataTables + Charts
+- **Landing pages:** Hero + Features + Testimonials + CTA sections
+- **Application pages:** Settings (Tabs + Forms), Profile (Layout + Cards)
+- **Architectural AI:**
+  - Layout detection (Grid, Flex, responsive breakpoints)
+  - Routing decisions (Next.js App Router patterns)
+  - State management strategy (global vs local state)
+  - API mocking (fake endpoints for development)
+- **Multi-file generation:**
+  - `app/page.tsx` - Main page component
+  - `components/*.tsx` - Extracted components
+  - `stores/*.ts` - State management
+  - `api/*.ts` - Mock API routes
+
+### Near-Term Enhancements (All Phases)
+
+1. **Design System Import** - Upload Figma Design System → Auto-populate vector DB
+2. **Learning System (Phase 4)** - AI learns from user edits and preferences
+3. **Custom Component Libraries** - Support Material-UI, Chakra UI, Ant Design
+4. **Multi-framework Support** - Vue, Svelte, Angular code generation
+5. **Advanced Testing** - Auto-generate unit, integration, and E2E tests
+6. **Real-time Collaboration** - WebSocket support for team editing
+7. **Version Control** - Component versioning and diff tracking
+8. **Performance Optimization** - Bundle analysis and optimization suggestions
+
+### Why the Phased Approach?
+
+- **Quality first:** Atomic components establish 90% quality baseline before scaling
+- **Infrastructure reuse:** Multi-agent system, vector DB, validation pipeline built for all phases
+- **Learning foundation:** Phase 1 builds pattern library that Phase 2 and 3 depend on
+- **Risk management:** If complex generation fails, atomic generation still provides value
+- **Technical scaling:** Compositional reasoning requires validated atomic patterns first
+
+**Current state:** Phase 1 complete with production-ready infrastructure.
+**Vision:** Full design-to-code automation from screenshots to complete applications.
 
 ## 🤝 Contributing
 

@@ -15,6 +15,11 @@ Backend-specific technical documentation for ComponentForge.
 - [Monitoring](./monitoring.md) - Observability and LangSmith setup
 - [Troubleshooting](./troubleshooting.md) - Common issues and solutions
 
+## Technical Analysis
+
+- **[Caching Analysis](./caching-analysis.md)** - Comprehensive analysis of caching strategies (prompt, embedding, result caching)
+- **[Guardrails Analysis](./guardrails-analysis.md)** - Security guardrails assessment and implementation review
+
 ## Quick Reference
 
 ### Running the Backend

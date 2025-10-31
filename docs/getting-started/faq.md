@@ -628,42 +628,87 @@ results = search("product card")
 
 ### Objection 3: "Button generation is trivial, why is this useful?"
 
-**Answer:** You're right about buttons. Here's what's **not trivial**:
+**Answer:** You're absolutely right—a single button is trivial. ComponentForge is designed to scale beyond atomic components to complex compositions and full page layouts.
 
-**Complex pattern:** Data table with sorting, filtering, pagination
-- shadcn/ui Table + Select (filters) + Pagination + Button (actions)
-- **Manual:** 3-4 hours to code
-- **ComponentForge:** 30 seconds to generate scaffold
+**Current state (v1.0): Atomic Components**
+- Basic shadcn/ui components with quality validation
+- Establishes pattern library and validation pipeline
+- 90% compilation rate, 80% pipeline success
 
-**Example:**
-```
-Screenshot: Admin dashboard with user table (avatar, name, email, role, status, actions)
+**Near future (v1.5): Complex Compositions**
+Multi-component systems generated from single screenshots:
 
-AI extraction:
-✅ Identifies: Table, Avatar, Badge (status), Dropdown (actions)
-✅ Retrieves: DataTable pattern from vector DB (similarity: 0.91)
-✅ Generates: TypeScript component with:
-   - Sortable columns
-   - Row selection
-   - Action dropdown
-   - Pagination
-   - Responsive mobile view
-   - ARIA tables, keyboard navigation
-✅ Storybook: 8 stories (empty state, loading, error, full data)
-✅ Tests: Accessibility, sorting, filtering
+**Example 1: Data Table with Actions**
+- Screenshot: Admin dashboard user table
+- AI identifies: Table + Avatar + Badge (status) + Dropdown (actions) + Pagination + Search
+- Generated output:
+  - Sortable columns with TypeScript types
+  - Row selection and bulk actions
+  - Action dropdown per row
+  - Pagination with state management
+  - Responsive mobile view
+  - ARIA tables, keyboard navigation
+  - Storybook: 8 stories (empty, loading, error, full data)
+- **Manual time:** 3-4 hours
+- **ComponentForge:** 30 seconds generation + 15 minutes customization
 
-Total time: 30 seconds vs 4 hours manual
-```
+**Example 2: Multi-Step Form**
+- Screenshot: Checkout flow (3 steps)
+- AI identifies: Tabs + FormFields[] + ValidationLogic + ProgressIndicator + Navigation
+- Generated output:
+  - Step 1: Contact information (5 inputs with validation)
+  - Step 2: Shipping address (autocomplete, address validation)
+  - Step 3: Payment (card input with masking)
+  - Progress tracking and step navigation
+  - Form state management (Zustand)
+  - Error handling per field
+  - Accessibility (ARIA live regions, focus management)
+- **Manual time:** 5-6 hours
+- **ComponentForge:** 45 seconds generation + 30 minutes business logic
 
-**More examples of complex patterns:**
-- Multi-step forms with validation
-- Responsive navigation menus with dropdowns
-- Dashboard cards with charts and metrics
-- Product grids with filtering and search
-- Comment threads with nested replies
-- File upload zones with drag-and-drop
-- Calendar/date picker components
-- Rich text editors with formatting
+**Vision (v2.0): Full Page Layouts**
+Complete application pages generated from screenshots:
+
+**Example: Dashboard Page**
+- Screenshot: Admin dashboard (20+ components)
+- AI detects: Sidebar + Header + 4 MetricCards + DataTable + Chart + Filters
+- Generated output:
+  - `app/dashboard/page.tsx` - Main layout
+  - `app/dashboard/layout.tsx` - Sidebar + Header
+  - `components/MetricCard.tsx` - Reusable metric display
+  - `components/UsersTable.tsx` - Data table with actions
+  - `stores/dashboardStore.ts` - Zustand state management
+  - `api/users/route.ts` - Mock API endpoint
+  - Responsive grid layout (desktop/tablet/mobile)
+  - Routing between dashboard sections
+  - Real-time data updates with React Query
+- **Manual time:** 10-15 hours
+- **ComponentForge:** 60 seconds generation + 2-3 hours customization
+
+**More examples of complex patterns (coming in v1.5):**
+- E-commerce product grid with filtering and search
+- Responsive navigation with nested dropdowns
+- Dashboard cards with charts and real-time metrics
+- Comment threads with nested replies and reactions
+- File upload zones with drag-and-drop and previews
+- Calendar/scheduler with event management
+- Rich text editor with formatting toolbar
+- Settings pages with tabs and form sections
+
+**Why start with "trivial" atomic components?**
+1. **Quality foundation:** 90% accuracy on buttons → 80% on compositions → 70% on full pages
+2. **Pattern library:** Atomic patterns are building blocks for compositions
+3. **Validation pipeline:** TypeScript, ESLint, axe-core work same for simple and complex
+4. **Risk management:** Atomic generation provides value even if complex generation fails
+
+**The engineering challenge:**
+- Phase 1: Single-component generation (token extraction + pattern matching)
+- Phase 2: Compositional reasoning (identify sub-components + nest correctly + thread props)
+- Phase 3: Architectural decisions (routing + state management + API structure)
+
+Each phase requires the previous infrastructure. We're at Phase 1 with a clear path to Phase 3.
+
+**Bottom line:** ComponentForge isn't a button generator—it's compositional design-to-code infrastructure starting with quality-validated atomic components and scaling to full application pages.
 
 ---
 
