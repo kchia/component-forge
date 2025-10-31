@@ -740,7 +740,7 @@ ComponentForge is designed to scale from atomic components to complex compositio
 - Validation pipeline (TypeScript, ESLint, axe-core)
 - **Success metrics:** 90% compilation rate, 80% pipeline success
 
-### Phase 2: Complex Compositions (Q2 2025 - v1.5)
+### Phase 2: Complex Compositions (v1.5)
 
 **Focus:** Multi-component generation with compositional reasoning
 
@@ -753,7 +753,7 @@ ComponentForge is designed to scale from atomic components to complex compositio
   - DataTable = Table + Select (filters) + Pagination + Dropdown (actions)
   - MultiStepForm = Tabs + FormFields[] + ValidationLogic + ProgressIndicator
 
-### Phase 3: Full Page Layouts (Q4 2025 - v2.0)
+### Phase 3: Full Page Layouts (v2.0)
 
 **Focus:** Complete page generation with architectural decisions
 
