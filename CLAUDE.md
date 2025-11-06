@@ -58,8 +58,9 @@ cd app && npm run test:e2e
 ### Backend (`/backend`)
 
 - **FastAPI** for high-performance API
-- **LangChain/LangGraph** for AI workflows and multi-agent orchestration
-- **LangSmith** for AI observability and monitoring
+- **OpenAI SDK** (`AsyncOpenAI`) for direct GPT-4V and GPT-4o integration
+- **Custom Multi-Agent System** with 6 specialized agents (token extraction, classification, requirements)
+- **LangSmith** for optional AI observability and tracing (gracefully degrades if unavailable)
 - **Pillow** for image processing and screenshot analysis
 - **SQLAlchemy** with async PostgreSQL
 - **Qdrant client** for vector database operations
@@ -91,7 +92,7 @@ Copy `.env.example` files and configure:
 ## Tech Stack Dependencies
 
 - **Node.js 18+**, **Python 3.11+**, **Docker Desktop**
-- AI: OpenAI, LangChain, LangGraph, LangSmith
+- AI: OpenAI SDK (AsyncOpenAI), LangSmith (optional tracing)
 - Vector: Qdrant, sentence-transformers
 - Database: PostgreSQL with asyncpg, SQLAlchemy, Alembic
 - UI: shadcn/ui, Radix UI, Tailwind CSS v4, Lucide React icons
@@ -193,23 +194,25 @@ See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage e
 - Cache frequently accessed data appropriately
 - Monitor database performance and query efficiency
 
-### AI/ML Patterns (LangChain/LangGraph)
+### AI/ML Patterns (Custom Multi-Agent System)
 
-- Structure LangChain workflows as composable functions
-- Use LangGraph for multi-agent orchestration and state management
-- Use LangSmith for comprehensive AI observability and tracing
+- Use **OpenAI SDK** (`AsyncOpenAI`) for all LLM calls - no LangChain abstractions
+- Implement **custom agents** as Python classes extending `BaseRequirementProposer` (see `backend/src/agents/`)
+- Use **asyncio.gather()** for parallel agent execution (see `RequirementOrchestrator.propose_requirements_parallel()`)
+- Use **LangSmith tracing** optionally via `@traced` decorator from `src.core.tracing` (gracefully degrades if unavailable)
+- Structure agent workflows with explicit state management using Pydantic models (see `RequirementState`)
 - Use proper error handling for AI model calls with retries
 - Implement streaming responses for long-running AI operations
-- Use proper vector search patterns with Qdrant
-- Cache expensive AI operations appropriately
-- Log AI interactions for debugging and monitoring
-- Use environment variables for model configurations
-- Implement proper prompt templates and versioning
-- Handle AI model failures gracefully with fallbacks
-- Follow LangGraph patterns for complex AI workflows
+- Use **Qdrant** for semantic vector search and **BM25** for keyword search (hybrid retrieval)
+- Cache expensive AI operations appropriately with Redis
+- Log AI interactions for debugging and monitoring with structured logging
+- Use environment variables for model configurations (OPENAI_API_KEY, LANGSMITH_API_KEY)
+- Implement proper prompt templates in `backend/src/prompts/` directory
+- Handle AI model failures gracefully with fallbacks (see `MockLLMGenerator`)
+- Use **manual orchestration patterns** - no LangGraph state machines
 - Use Pillow for image preprocessing before vision model calls
-- Implement confidence scoring for AI outputs
-- Use proper agent state management patterns
+- Implement confidence scoring for AI outputs (see `BaseRequirementProposer.calculate_confidence()`)
+- Use proper agent state management with Pydantic `RequirementState` model
 - Use token normalizer for evaluation metrics (see `backend/src/evaluation/token_normalizer.py`)
 - See `docs/backend/caching-analysis.md` for caching strategy guidance
 - See `docs/backend/guardrails-analysis.md` for security guardrails assessment
@@ -257,7 +260,7 @@ See `.claude/BASE-COMPONENTS.md` for complete specifications, props, and usage e
 18. **USE** shadcn/ui components as the primary UI building blocks
 19. **IMPLEMENT** proper accessibility with axe-core testing
 20. **USE** Zustand for client state, TanStack Query for server state
-21. **USE** LangSmith for all AI operation monitoring and debugging
+21. **USE** OpenAI SDK directly for AI operations; optionally enable LangSmith tracing for observability
 
 ## Common Anti-Patterns to Avoid
 

@@ -14,11 +14,11 @@ ComponentForge's backend is a high-performance, async-first Python application b
 - **Uvicorn** - ASGI server
 
 **AI/ML Stack:**
-- **LangChain 0.1+** - LLM application framework
-- **LangGraph 0.0.13+** - Multi-agent orchestration
-- **LangSmith** - Observability and tracing
-- **OpenAI API** - GPT-4V (vision), GPT-4 (text generation)
+- **OpenAI SDK** (`AsyncOpenAI`) - Direct API integration for GPT-4V (vision), GPT-4o (text generation)
+- **Custom Multi-Agent System** - 6 specialized agents with asyncio orchestration
+- **LangSmith** - Optional observability and tracing (gracefully degrades if unavailable)
 - **Qdrant** - Vector database for semantic search
+- **sentence-transformers** - Text embeddings for semantic retrieval
 
 **Infrastructure:**
 - **PostgreSQL 16** - Primary database
@@ -277,13 +277,14 @@ ComponentForgeError (Base)
 
 #### `tracing.py` - LangSmith Tracing
 
-**Purpose**: AI operation observability
+**Purpose**: Optional AI operation observability (gracefully degrades if LangSmith is unavailable)
 
 **Features:**
-- Automatic tracing of LLM calls
+- Automatic tracing of LLM calls when LangSmith is configured
 - Custom trace decorators
 - Performance metrics
 - Error tracking
+- Fallback to normal operation if tracing unavailable
 
 **Usage:**
 ```python
@@ -291,13 +292,14 @@ from ..core.tracing import traced
 
 @traced(run_name="extract_tokens")
 async def extract_tokens(image: Image.Image):
-    # Automatically traced in LangSmith
+    # Automatically traced in LangSmith if configured
+    # Falls back to normal execution if not
     result = await llm.generate(...)
     return result
 ```
 
-**Traced Operations:**
-- LLM generation calls
+**Traced Operations (when enabled):**
+- LLM generation calls via OpenAI SDK
 - Vector search queries
 - Pattern retrieval
 - Code validation
@@ -460,9 +462,10 @@ class BaseRequirementProposer:
    - Includes confidence scores
 
 3. **RequirementOrchestrator** (`requirement_orchestrator.py`)
-   - Coordinates all requirement proposers
-   - Parallel execution of proposers
+   - Coordinates all requirement proposers using manual asyncio orchestration
+   - Parallel execution via `asyncio.gather()` for performance
    - Aggregates and deduplicates results
+   - Explicit state management with Pydantic `RequirementState` model
 
 4. **PropsProposer** (`props_proposer.py`)
    - Proposes component props
@@ -519,9 +522,10 @@ async def orchestrate(self, image, classification, tokens):
 - Enforces validation constraints
 
 **3. LLMGenerator** (`llm_generator.py`)
-- Uses OpenAI GPT-4 for generation
-- Structured JSON output
+- Uses OpenAI SDK (`AsyncOpenAI`) directly for GPT-4o generation
+- Structured JSON output via `response_format={"type": "json_object"}`
 - Retry logic with exponential backoff
+- Optional LangSmith tracing via `@traceable` decorator
 
 **4. CodeValidator** (`code_validator.py`)
 - Parallel TypeScript + ESLint validation
@@ -1097,7 +1101,7 @@ active_connections = Gauge('active_connections', 'Active database connections')
 
 ## See Also
 
-- [AI Pipeline Documentation](./ai-pipeline.md) - LangChain/LangGraph details
+- [AI Pipeline Documentation](./ai-pipeline.md) - Custom multi-agent system details
 - [Database Schema](./database-schema.md) - Database design
 - [API Reference](../api/overview.md) - API endpoints
 - [Deployment Guide](../deployment.md) - Production deployment

@@ -12,7 +12,7 @@ ComponentForge is an AI-powered design-to-code platform that transforms Figma de
 ├─────────────────┬─────────────────────┬─────────────────┬──────────────────┤
 │                 │                     │                 │                  │
 │  🎨 Frontend    │   🤖 Backend API   │   🗄️ Services   │  🔍 AI Layer     │
-│  (Next.js 15)   │   (FastAPI)        │   (Docker)      │  (LangGraph)     │
+│  (Next.js 15)   │   (FastAPI)        │   (Docker)      │  (OpenAI SDK)    │
 │                 │                     │                 │                  │
 │  ┌───────────┐  │   ┌─────────────┐  │  ┌──────────┐   │  ┌────────────┐  │
 │  │   Pages   │  │   │   Routes    │  │  │PostgreSQL│   │  │   Agents   │  │
@@ -21,9 +21,9 @@ ComponentForge is an AI-powered design-to-code platform that transforms Figma de
 │                 │                     │                 │  │ Generation │  │
 │  ┌───────────┐  │   ┌─────────────┐  │  ┌──────────┐   │  └────────────┘  │
 │  │Components │  │   │  AI Agents  │  │  │  Qdrant  │   │                  │
-│  │ shadcn/ui │  │   │  LangGraph  │──┼──│ Vectors  │   │  ┌────────────┐  │
+│  │ shadcn/ui │  │   │   Custom    │──┼──│ Vectors  │   │  ┌────────────┐  │
 │  └───────────┘  │   └─────────────┘  │  └──────────┘   │  │ LangSmith  │  │
-│                 │                     │                 │  │  Tracing   │  │
+│                 │                     │                 │  │  (Optional)│  │
 │  ┌───────────┐  │   ┌─────────────┐  │  ┌──────────┐   │  └────────────┘  │
 │  │   State   │  │   │   Models    │  │  │  Redis   │   │                  │
 │  │  Zustand  │  │   │ SQLAlchemy  │  │  │  Cache   │   │                  │
@@ -69,12 +69,12 @@ ComponentForge is an AI-powered design-to-code platform that transforms Figma de
 - **Uvicorn** - ASGI server
 
 **AI & ML:**
-- **LangChain** - LLM framework
-- **LangGraph** - Multi-agent orchestration
-- **LangSmith** - AI observability and tracing
-- **OpenAI GPT-4** - Text generation
-- **GPT-4V** - Vision/image analysis
-- **text-embedding-3-small** - Text embeddings
+- **OpenAI SDK** (`AsyncOpenAI`) - Direct API integration for all LLM calls
+- **Custom Multi-Agent System** - 6 specialized agents with manual asyncio orchestration
+- **LangSmith** - Optional AI observability and tracing (gracefully degrades if unavailable)
+- **OpenAI GPT-4o** - Text generation for code
+- **GPT-4V** - Vision/image analysis for screenshots
+- **text-embedding-3-small** - Text embeddings for semantic search
 
 **Data & Storage:**
 - **PostgreSQL 16** - Relational database
@@ -113,7 +113,7 @@ Frontend (Next.js)
     ↓ HTTP POST /api/v1/generate
 Backend API (FastAPI)
     ↓
-LangGraph Orchestrator
+Custom Agent Orchestrator (asyncio)
     ↓
 ┌─────────────────────────────────────┐
 │  Multi-Agent Pipeline               │

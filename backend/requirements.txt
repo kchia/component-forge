@@ -7,11 +7,13 @@ fastapi
 httpx
 
 # AI Stack (Latest Compatible Versions)
-langchain
-langchain-openai
-langgraph
-langsmith
-openai
+# NOTE: LangChain/LangGraph dependencies are ONLY used for LangSmith tracing (optional observability)
+# Actual AI implementation uses OpenAI SDK directly (AsyncOpenAI) with custom multi-agent system
+langchain  # Required only for LangSmith integration (src/core/tracing.py)
+langchain-openai  # Minimal usage - only in optional PII detector fallback
+langgraph  # Listed for compatibility but NOT actively used
+langsmith  # Optional: AI observability and tracing (gracefully degrades if unavailable)
+openai  # PRIMARY AI DEPENDENCY - All LLM calls use AsyncOpenAI client directly
 
 # Monitoring
 prometheus-client

@@ -1,26 +1,27 @@
 # AI Pipeline Documentation
 
-Comprehensive guide to ComponentForge's AI pipeline, covering LangChain, LangGraph, multi-agent orchestration, and LangSmith observability.
+Comprehensive guide to ComponentForge's AI pipeline, covering the custom multi-agent system, OpenAI SDK integration, and optional LangSmith observability.
 
 ## Overview
 
-ComponentForge's AI pipeline powers the entire design-to-code transformation using a sophisticated multi-agent architecture built on LangChain and LangGraph.
+ComponentForge's AI pipeline powers the entire design-to-code transformation using a sophisticated custom multi-agent architecture built directly on the OpenAI SDK with manual asyncio orchestration.
 
 **Technology Stack:**
-- **LangChain 0.1+** - LLM application framework
-- **LangGraph 0.0.13+** - Multi-agent orchestration
-- **LangSmith** - Observability, tracing, and monitoring
+- **OpenAI SDK** (`AsyncOpenAI`) - Direct API integration for all LLM calls
+- **Custom Multi-Agent System** - 6 specialized agents with manual orchestration via asyncio
+- **LangSmith** - Optional observability and tracing (gracefully degrades if unavailable)
 - **OpenAI GPT-4V** - Vision model for screenshot analysis
-- **OpenAI GPT-4** - Text generation for code
+- **OpenAI GPT-4o** - Text generation for code
 - **text-embedding-3-small** - Semantic search embeddings (1536 dims)
 
 **Key Features:**
-- 🤖 Multi-agent system with 7 specialized agents
-- 🔍 LangSmith tracing for all AI operations
+- 🤖 Multi-agent system with 6 specialized agents
+- 🔍 Optional LangSmith tracing for AI operations (when configured)
 - ♻️ Automatic retry logic with exponential backoff
 - 📊 Token usage tracking and cost monitoring
-- ⚡ Parallel agent execution
-- 🎯 Structured output validation
+- ⚡ Parallel agent execution via `asyncio.gather()`
+- 🎯 Structured JSON output via OpenAI's `response_format`
+- 🔄 Graceful degradation when LangSmith unavailable
 
 ## Architecture
 
@@ -41,8 +42,8 @@ Epic 1: Token Extraction (GPT-4V)
 Epic 2: Requirement Extraction (Multi-Agent)
        ↓
 ┌──────────────────────────────────────────────────────────────┐
-│  RequirementOrchestrator (LangGraph)                         │
-│  Coordinates 5 specialized agents                            │
+│  RequirementOrchestrator (Custom asyncio)                    │
+│  Coordinates 5 specialized agents via asyncio.gather()       │
 ├──────────────────────────────────────────────────────────────┤
 │                                                              │
 │  Agent 1: ComponentClassifier                                │
@@ -105,11 +106,12 @@ Epic 4: Code Generation (GPT-4)
 └──────────────────────┬───────────────────────────────────────┘
                        ↓
 ┌──────────────────────────────────────────────────────────────┐
-│  LangSmith Tracing (All Operations)                         │
-│  • Trace every LLM call                                      │
+│  LangSmith Tracing (Optional - when configured)             │
+│  • Trace every LLM call (via @traced decorator)              │
 │  • Track token usage and costs                               │
 │  • Monitor latency and errors                                │
 │  • Debug with full context                                   │
+│  • Gracefully degrades if unavailable                        │
 └──────────────────────────────────────────────────────────────┘
 ```
 
@@ -206,10 +208,16 @@ ComponentClassification(
 ```python
 @traced(run_name="classify_component")
 async def classify_component(self, image, figma_data):
-    # Automatically traced in LangSmith
+    # Automatically traced in LangSmith (if configured)
+    # Falls back to normal execution if LangSmith unavailable
     response = await self.openai_client.chat.completions.create(...)
     return self._parse_response(response)
 ```
+
+**OpenAI SDK Usage:**
+- Uses `AsyncOpenAI` client directly (no LangChain abstractions)
+- Structured output via OpenAI's JSON mode
+- Retry logic with exponential backoff built-in
 
 ### Agent: PropsProposer
 

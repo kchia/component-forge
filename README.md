@@ -10,7 +10,7 @@ Transform design assets into high-quality TypeScript components in seconds, not 
 
 [![Next.js](https://img.shields.io/badge/Next.js-15.5.4-black?style=flat-square&logo=next.js)](https://nextjs.org/)
 [![shadcn/ui](https://img.shields.io/badge/shadcn%2Fui-Latest-black?style=flat-square)](https://ui.shadcn.com/)
-[![LangGraph](https://img.shields.io/badge/LangGraph-0.6.8-blue?style=flat-square&logo=langchain)](https://github.com/langchain-ai/langgraph)
+[![OpenAI](https://img.shields.io/badge/OpenAI-AsyncOpenAI-blue?style=flat-square&logo=openai)](https://platform.openai.com/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9.3-blue?style=flat-square&logo=typescript)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 
@@ -20,14 +20,14 @@ Transform design assets into high-quality TypeScript components in seconds, not 
 
 - **📷 Screenshot Processing**: Extract design tokens from any UI screenshot using GPT-4V
 - **🎯 Figma Integration**: Direct token extraction from Figma files (colors, typography, spacing)
-- **🤖 Multi-Agent Pipeline**: LangGraph orchestration for complex AI workflows
-- **📐 Pattern Matching**: Intelligent retrieval of shadcn/ui component patterns
+- **🤖 Multi-Agent Pipeline**: Custom 6-agent system with parallel execution via asyncio
+- **📐 Pattern Matching**: Intelligent retrieval of shadcn/ui component patterns (hybrid BM25 + semantic search)
 - **✨ Code Generation**: Production-ready TypeScript + Storybook components
 
 ### 🛠️ **Production-Ready Stack**
 
 - **⚡ Modern Frontend**: Next.js 15.5.4 + React 19 + shadcn/ui + Tailwind CSS v4
-- **🚀 Powerful Backend**: FastAPI + LangChain + LangGraph + LangSmith observability
+- **🚀 Powerful Backend**: FastAPI + OpenAI SDK + Custom Multi-Agent System + LangSmith observability
 - **♿ Accessibility First**: Built-in axe-core testing for WCAG compliance
 - **📊 State Management**: Zustand (client) + TanStack Query (server state)
 - **🗄️ Vector Database**: Qdrant for semantic search and pattern retrieval
@@ -53,7 +53,7 @@ This will:
 - Install npm packages (shadcn/ui, TanStack Query, Zustand, axe-core)
 - Install Playwright browsers for E2E testing
 - Create Python virtual environment
-- Install AI dependencies (LangChain, LangGraph, LangSmith, Pillow)
+- Install AI dependencies (OpenAI SDK, LangSmith for tracing, Pillow)
 - Copy environment templates (`.env` and `.env.local.example`)
 
 ### 2. Start Development Environment
@@ -210,10 +210,10 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 │   Frontend      │    │   Backend       │    │   Services      │
 │   (Next.js)     │◄──►│   (FastAPI)     │◄──►│   (Docker)      │
 │                 │    │                 │    │                 │
-│ • Next.js 15    │    │ • LangGraph     │    │ • PostgreSQL    │
-│ • shadcn/ui     │    │ • LangSmith     │    │ • Qdrant Vector │
-│ • Zustand       │    │ • GPT-4V        │    │ • Redis Cache   │
-│ • TanStack      │    │ • Pillow        │    │                 │
+│ • Next.js 15    │    │ • OpenAI SDK    │    │ • PostgreSQL    │
+│ • shadcn/ui     │    │ • Custom Agents │    │ • Qdrant Vector │
+│ • Zustand       │    │ • LangSmith     │    │ • Redis Cache   │
+│ • TanStack      │    │ • GPT-4V        │    │                 │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -233,13 +233,14 @@ Comprehensive documentation is available in the [`docs/`](./docs) directory:
 **Backend (`/backend`)**
 
 - **FastAPI** for high-performance async API
-- **LangGraph** for multi-agent AI orchestration
-- **LangSmith** for AI observability and monitoring
-- **LangChain** for AI workflow composition
+- **OpenAI SDK** (`AsyncOpenAI`) for direct GPT-4V and GPT-4o integration
+- **Custom Multi-Agent System** with 6 specialized agents (token extraction, classification, requirements)
+- **LangSmith** for optional AI observability and tracing (gracefully degrades if unavailable)
 - **GPT-4V** for vision and screenshot processing
 - **Pillow** for image preprocessing
 - **SQLAlchemy** with async PostgreSQL
 - **Pydantic** for data validation
+- **asyncio** for parallel agent orchestration
 
 **Services (`docker-compose.yml`)**
 
@@ -335,14 +336,14 @@ component-forge/
 │
 ├── backend/                                # FastAPI Backend
 │   ├── src/
-│   │   ├── agents/                        # 6 AI agents (LangGraph)
+│   │   ├── agents/                        # 6 AI agents (custom system)
 │   │   │   ├── token_extractor.py         # GPT-4V token extraction
 │   │   │   ├── component_classifier.py    # Component type classification
 │   │   │   ├── props_proposer.py          # Props inference
 │   │   │   ├── events_proposer.py         # Event handlers inference
 │   │   │   ├── states_proposer.py         # State management inference
 │   │   │   ├── a11y_proposer.py           # Accessibility requirements
-│   │   │   └── requirement_orchestrator.py # Parallel agent orchestration
+│   │   │   └── requirement_orchestrator.py # asyncio-based parallel orchestration
 │   │   ├── api/                           # API routes and endpoints
 │   │   ├── cache/                         # Redis caching layer
 │   │   ├── core/                          # Core utilities and database
@@ -447,8 +448,10 @@ REDIS_URL=redis://localhost:6379
 
 # AI Services - Required for ComponentForge
 OPENAI_API_KEY=your-openai-api-key
-LANGCHAIN_API_KEY=your-langchain-api-key
-LANGCHAIN_TRACING_V2=true
+
+# Optional: LangSmith Tracing (for AI observability)
+LANGCHAIN_API_KEY=your-langsmith-api-key  # Optional: Only if using LangSmith
+LANGCHAIN_TRACING_V2=true                   # Optional: Enable LangSmith tracing
 LANGCHAIN_ENDPOINT=https://api.smith.langchain.com
 LANGCHAIN_PROJECT=component-forge
 
@@ -720,7 +723,8 @@ python scripts/seed_patterns.py
 
 ## 📝 Development Notes
 
-- **AI-First Architecture**: Every component uses LangSmith for observability
+- **AI-First Architecture**: Direct OpenAI SDK integration with optional LangSmith tracing
+- **Custom Agent System**: 6 specialized agents with manual asyncio orchestration
 - **Hot Reloading**: Both frontend and backend support instant updates
 - **Type Safety**: Strict TypeScript across the entire stack
 - **Accessibility**: Built-in axe-core testing prevents WCAG violations
