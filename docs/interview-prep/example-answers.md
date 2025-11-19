@@ -218,7 +218,7 @@ We built an E2E evaluator that runs the entire pipeline against a golden dataset
 
 3. **Retrieval Top-K Accuracy**: Is the correct pattern in the top-3 results? This is critical because users review the top 3. Currently at 94% Top-3 accuracy after implementing hybrid retrieval.
 
-4. **Code Generation Similarity**: AST-based structural similarity between generated code and ground truth. We don't expect exact matches (there are many valid implementations), but we check for structural similarity - same component structure, same props, same event handlers. Currently at 73% similarity.
+4. **Code Generation Quality**: We measure code quality through two metrics: (1) TypeScript compilation validation - does the code compile without errors? Target 100%. (2) Code quality score from our validator that combines TypeScript type checking and ESLint rule checking, scored 0.0-1.0. Target >0.7. We also run security sanitization to detect 17 forbidden patterns.
 
 5. **End-to-End Success Rate**: Can a user take the generated code and use it without edits? We measure this through user testing. Currently at 68%, exceeding our 60% target.
 

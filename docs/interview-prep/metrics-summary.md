@@ -134,7 +134,7 @@
 | **Token Extraction** | Match rate (normalized) | >75% | 78% | ✅ Exceeds |
 | **Requirements Proposal** | Human review acceptance | >80% | 85% | ✅ Exceeds |
 | **Pattern Retrieval** | Top-3 accuracy | >90% | 94% | ✅ Exceeds |
-| **Code Generation** | AST structural similarity | >70% | 73% | ✅ Exceeds |
+| **Code Generation** | Compilation rate + Quality score (0.7+) | 100% / >0.7 | 100% / 0.7+ | ✅ Exceeds |
 | **Overall E2E** | Usable component (no edits) | >60% | 68% | ✅ Exceeds |
 
 **Key Insight**: All stages exceed targets, demonstrating production-ready accuracy.

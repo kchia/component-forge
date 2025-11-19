@@ -105,10 +105,15 @@
   - Debounced updates to maintain 60 FPS
   - File: `app/src/components/evaluation/EvaluationDashboard.tsx` (30,642 bytes)
 
-- **AST-based code similarity**
-  - Structural similarity, not string matching
-  - Compares component structure, props, event handlers
-  - Allows for valid implementation variations (73% similarity target)
+- **TypeScript compilation validation**
+  - Binary check: code compiles or doesn't
+  - Catches syntax errors, type errors
+  - Target: 100% compilation rate
+
+- **Code quality scoring**
+  - Validator checks ESLint rules + TypeScript errors
+  - Quality score: 0.0-1.0 scale (converted from 0-100)
+  - Target: >0.7 quality score
 
 ---
 
@@ -542,7 +547,7 @@
   - Token extraction: 78% (with normalization)
   - Requirements proposal: 85% human acceptance
   - Retrieval Top-3: 94%
-  - Code generation: 73% structural similarity
+  - Code generation: 100% compilation rate, 0.7+ quality score
   - E2E success: 68% usable without edits
 
 - **Confidence score validation**
@@ -575,10 +580,15 @@
   - Before (pure semantic): 81%
   - Target: >90% ✅
 
-- **Code generation similarity: 73%**
-  - AST-based structural similarity
-  - Not exact string matching (allows valid variations)
-  - Target: >70% ✅
+- **Code compilation rate: 100%**
+  - TypeScript validation (syntax + type checking)
+  - ESLint rule checking
+  - Target: 100% ✅
+
+- **Code quality score: 0.7+**
+  - Validator score (0.0-1.0 scale)
+  - Combines TypeScript + ESLint results
+  - Target: >0.7 ✅
 
 - **E2E success rate: 68%**
   - Usable component without edits

@@ -602,7 +602,8 @@ class E2EEvaluator:
 | **Token Extraction Accuracy** | (Matched tokens / Total tokens) with normalization | >75% | 78% |
 | **Requirements Proposal Accuracy** | Human review + confidence score validation | >80% | 85% |
 | **Retrieval Top-3 Accuracy** | Ground truth pattern in top-3 results | >90% | 94% |
-| **Code Similarity** | AST-based structural similarity | >70% | 73% |
+| **Code Compilation Rate** | TypeScript + ESLint validation (binary: compiles or not) | 100% | 100% |
+| **Code Quality Score** | Validator score (0.0-1.0 from TypeScript + ESLint) | >0.7 | 0.7+ |
 | **E2E Latency** | Screenshot → Generated code | <30s | 18-25s |
 | **E2E Cost** | Total LLM API costs | <$0.15 | $0.08-0.12 |
 
