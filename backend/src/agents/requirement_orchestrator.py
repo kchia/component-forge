@@ -59,7 +59,7 @@ class RequirementOrchestrator:
         5. Propose accessibility requirements
         
         Args:
-            image: Component screenshot as PIL Image
+            image: Component screenshot
             figma_data: Optional Figma metadata
             tokens: Optional design tokens from Epic 1
             

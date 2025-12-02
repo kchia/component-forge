@@ -7,7 +7,7 @@
 
 ## 📚 Documentation Structure
 
-This interview prep guide consists of four complementary documents:
+This interview prep guide consists of five complementary documents:
 
 ### 1. [Technical Challenges Guide](./technical-challenges-guide.md) (Main Comprehensive Guide)
 **When to use**: Deep preparation, understanding the full technical story
